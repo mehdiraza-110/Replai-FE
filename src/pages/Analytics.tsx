@@ -24,6 +24,7 @@ import {
   TrendingUp,
   UserCheck,
 } from "lucide-react";
+import { LoadingState } from "../components/ui/LoadingState";
 import { analyticsService } from "../services/api";
 import type { AnalyticsOverview, AnalyticsSummaryMetric, AnalyticsTrainingImpact, AnalyticsWeeklyLoopItem } from "../types";
 
@@ -129,7 +130,13 @@ export function Analytics() {
       ) : null}
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {isLoading ? <SummarySkeleton /> : getSummary(data.summary).map((item) => <SummaryCard item={item} key={item.label} />)}
+        {isLoading ? (
+          <div className="sm:col-span-2 xl:col-span-4">
+            <LoadingState minHeight={100} size="md" />
+          </div>
+        ) : (
+          getSummary(data.summary).map((item) => <SummaryCard item={item} key={item.label} />)
+        )}
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[1.25fr_0.75fr]">
@@ -145,7 +152,7 @@ export function Analytics() {
           </Card.Header>
           <Card.Content className="p-0 pt-5">
             {isLoading ? (
-              <BlockSkeleton rows={7} />
+              <LoadingState minHeight={200} size="md" />
             ) : loopRows.length === 0 ? (
               <EmptyBlock>No reply activity has been recorded for this range.</EmptyBlock>
             ) : (
@@ -189,7 +196,7 @@ export function Analytics() {
           </Card.Header>
           <Card.Content className="space-y-4 p-0 pt-5">
             {isLoading ? (
-              <BlockSkeleton rows={5} />
+              <LoadingState minHeight={160} size="md" />
             ) : data.intentMix.length === 0 ? (
               <EmptyBlock>No intent labels have been recorded yet.</EmptyBlock>
             ) : data.intentMix.map((intent) => (
@@ -215,7 +222,7 @@ export function Analytics() {
           </Card.Header>
           <Card.Content className="space-y-4 p-0 pt-5">
             {isLoading ? (
-              <BlockSkeleton rows={5} />
+              <LoadingState minHeight={160} size="md" />
             ) : data.reviewTriggers.length === 0 ? (
               <EmptyBlock>No review triggers have been recorded yet.</EmptyBlock>
             ) : data.reviewTriggers.map((trigger) => (
@@ -246,11 +253,9 @@ export function Analytics() {
           </Card.Header>
           <Card.Content className="grid gap-3 p-0 pt-5 sm:grid-cols-3">
             {isLoading ? (
-              <>
-                <MiniCardSkeleton />
-                <MiniCardSkeleton />
-                <MiniCardSkeleton />
-              </>
+              <div className="sm:col-span-3">
+                <LoadingState minHeight={100} size="md" />
+              </div>
             ) : data.trainingImpact.length === 0 ? (
               <div className="sm:col-span-3"><EmptyBlock>No draft quality data is available yet.</EmptyBlock></div>
             ) : data.trainingImpact.map((item) => <TrainingCard item={item} key={item.label} />)}
@@ -446,49 +451,13 @@ function TrainingCard({ item }: { item: AnalyticsTrainingImpact }) {
   );
 }
 
-function SummarySkeleton() {
-  return (
-    <>
-      {Array.from({ length: 4 }).map((_, index) => (
-        <Card className="border border-border/70 bg-surface p-4" key={index}>
-          <Card.Content className="p-0">
-            <div className="h-9 w-9 animate-pulse rounded-full bg-default-100" />
-            <div className="mt-5 h-7 w-20 animate-pulse rounded bg-default-100" />
-            <div className="mt-3 h-3 w-28 animate-pulse rounded bg-default-100" />
-          </Card.Content>
-        </Card>
-      ))}
-    </>
-  );
-}
-
-function BlockSkeleton({ rows }: { rows: number }) {
-  return (
-    <div className="space-y-3">
-      {Array.from({ length: rows }).map((_, index) => (
-        <div className="h-7 animate-pulse rounded-full bg-default-100" key={index} />
-      ))}
-    </div>
-  );
-}
-
-function MiniCardSkeleton() {
-  return <div className="h-[128px] animate-pulse rounded-[14px] bg-background/70" />;
-}
-
 function TableSkeleton() {
   return (
-    <>
-      {Array.from({ length: 4 }).map((_, rowIndex) => (
-        <tr className="border-b border-border/70 last:border-b-0" key={rowIndex}>
-          {Array.from({ length: 7 }).map((__, cellIndex) => (
-            <td className="py-3 pr-4" key={cellIndex}>
-              <div className="h-4 w-full max-w-[140px] animate-pulse rounded bg-default-100" />
-            </td>
-          ))}
-        </tr>
-      ))}
-    </>
+    <tr>
+      <td className="py-3 pr-4" colSpan={7}>
+        <LoadingState />
+      </td>
+    </tr>
   );
 }
 

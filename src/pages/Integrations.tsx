@@ -3,8 +3,9 @@ import type { ComponentType } from "react";
 
 import { Button, Card, Chip, Input, Modal, useOverlayState } from "@heroui/react";
 import { ArrowRight, CheckCircle2, RefreshCw, TestTube2, X } from "lucide-react";
-import { plusVibeService } from "../services/api";
-import type { PlusVibeConnection } from "../services/api";
+import { LoadingState } from "../components/ui/LoadingState";
+import { ghlService, plusVibeService } from "../services/api";
+import type { GhlConnection, PlusVibeConnection } from "../services/api";
 
 type LogoProps = {
   className?: string;
@@ -58,6 +59,10 @@ export function Integrations() {
   const [error, setError] = useState<string | null>(null);
   const plusVibeModal = useOverlayState({});
 
+  const [ghlConnection, setGhlConnection] = useState<GhlConnection | null>(null);
+  const [isGhlLoading, setIsGhlLoading] = useState(true);
+  const ghlModal = useOverlayState({});
+
   useEffect(() => {
     let isActive = true;
 
@@ -80,6 +85,28 @@ export function Integrations() {
     };
   }, []);
 
+  useEffect(() => {
+    let isActive = true;
+
+    ghlService
+      .getConnection()
+      .then((data) => {
+        if (!isActive) return;
+        setGhlConnection(data);
+      })
+      .catch((requestError: Error) => {
+        if (!isActive) return;
+        setError(requestError.message || "Unable to load GHL connection");
+      })
+      .finally(() => {
+        if (isActive) setIsGhlLoading(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
   const plusVibeIntegration = useMemo<Integration>(() => ({
     name: "PlusVibe",
     description: "Primary outbound campaign source for replies, lead context, and send-back actions.",
@@ -87,6 +114,14 @@ export function Integrations() {
     status: connection?.connectionStatus || "Disconnected",
     logo: PlusVibeLogo,
   }), [connection]);
+
+  const ghlIntegration = useMemo<Integration>(() => ({
+    name: "GoHighLevel",
+    description: "Sends every AI-approved or auto-sent lead reply into GHL Conversations.",
+    action: ghlConnection?.id ? "Manage GHL" : "Connect GHL",
+    status: ghlConnection?.connectionStatus || "Disconnected",
+    logo: GhlLogo,
+  }), [ghlConnection]);
 
   async function refreshPlusVibe() {
     setIsRefreshing(true);
@@ -119,6 +154,13 @@ export function Integrations() {
           onRefresh={refreshPlusVibe}
         />
 
+        <GhlPanel
+          connection={ghlConnection}
+          integration={ghlIntegration}
+          isLoading={isGhlLoading}
+          onManage={ghlModal.open}
+        />
+
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {otherIntegrations.map((integration) => (
             <IntegrationCard integration={integration} key={integration.name} />
@@ -132,6 +174,17 @@ export function Integrations() {
         onSaved={(data) => {
           setConnection(data);
           setNotice("PlusVibe connection saved.");
+          setError(null);
+        }}
+        onError={setError}
+      />
+
+      <GhlModal
+        connection={ghlConnection}
+        state={ghlModal}
+        onSaved={(data) => {
+          setGhlConnection(data);
+          setNotice("GHL connection saved.");
           setError(null);
         }}
         onError={setError}
@@ -176,21 +229,19 @@ function PlusVibePanel({
 
       <Card.Content className="grid gap-4 p-5 lg:grid-cols-[1fr_280px]">
         <div className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {isLoading ? (
-              Array.from({ length: 6 }).map((_, index) => <SkeletonMetric key={index} />)
-            ) : (
-              <>
-                <Metric label="Workspace" value={connection?.workspaceName || connection?.workspaceId || "Not configured"} />
-                <Metric label="API Status" value={connection?.apiStatus || "Not configured"} />
-                <Metric label="Webhook Status" value={connection?.webhookStatus || "Not configured"} />
-                <Metric label="Webhook Event" value={connection?.webhookEventType || "ALL_EMAIL_REPLIES"} />
-                <Metric label="Connected Inboxes" value={String(connection?.connectedInboxes ?? 0)} />
-                <Metric label="Synced Campaigns" value={String(connection?.syncedCampaigns ?? 0)} />
-                <Metric label="Last Sync" value={formatDate(connection?.lastSync)} />
-              </>
-            )}
-          </div>
+          {isLoading ? (
+            <LoadingState minHeight={120} size="md" />
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <Metric label="Workspace" value={connection?.workspaceName || connection?.workspaceId || "Not configured"} />
+              <Metric label="API Status" value={connection?.apiStatus || "Not configured"} />
+              <Metric label="Webhook Status" value={connection?.webhookStatus || "Not configured"} />
+              <Metric label="Webhook Event" value={connection?.webhookEventType || "ALL_EMAIL_REPLIES"} />
+              <Metric label="Connected Inboxes" value={String(connection?.connectedInboxes ?? 0)} />
+              <Metric label="Synced Campaigns" value={String(connection?.syncedCampaigns ?? 0)} />
+              <Metric label="Last Sync" value={formatDate(connection?.lastSync)} />
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col justify-between gap-3 rounded-xl bg-surface-secondary p-4">
@@ -364,6 +415,182 @@ function PlusVibeModal({
   );
 }
 
+function GhlPanel({
+  connection,
+  integration,
+  isLoading,
+  onManage,
+}: {
+  connection: GhlConnection | null;
+  integration: Integration;
+  isLoading: boolean;
+  onManage: () => void;
+}) {
+  const Logo = integration.logo;
+
+  return (
+    <Card className="apple-shadow border border-border/70 bg-surface">
+      <Card.Header className="border-b border-border/70">
+        <div className="flex w-full flex-wrap items-start justify-between gap-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <Logo className="mt-0.5 size-9 shrink-0" aria-hidden />
+            <div>
+              <Card.Title className="text-base">{integration.name}</Card.Title>
+              <Card.Description className="mt-1 max-w-[72ch]">{integration.description}</Card.Description>
+            </div>
+          </div>
+          <IntegrationStatus status={integration.status} />
+        </div>
+      </Card.Header>
+
+      <Card.Content className="grid gap-4 p-5 lg:grid-cols-[1fr_280px]">
+        <div className="space-y-3">
+          {isLoading ? (
+            <LoadingState minHeight={120} size="md" />
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <Metric label="Location" value={connection?.locationName || connection?.locationId || "Not configured"} />
+              <Metric label="API Status" value={connection?.apiStatus || "Not configured"} />
+              <Metric label="Leads Synced" value={String(connection?.syncedLeads ?? 0)} />
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col justify-between gap-3 rounded-xl bg-surface-secondary p-4">
+          <div>
+            <p className="text-sm font-semibold text-foreground">Sends replies to</p>
+            <p className="mt-1 text-[12px] leading-5 text-muted">
+              Every AI-approved or auto-sent lead reply is logged into GHL Conversations for this location.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button className="h-[34px] rounded-full px-4 text-[14px] font-semibold leading-none" size="sm" onClick={onManage}>
+              {integration.action}
+              <ArrowRight className="size-4" />
+            </Button>
+          </div>
+        </div>
+      </Card.Content>
+    </Card>
+  );
+}
+
+function GhlModal({
+  connection,
+  onError,
+  onSaved,
+  state,
+}: {
+  connection: GhlConnection | null;
+  onError: (message: string | null) => void;
+  onSaved: (connection: GhlConnection) => void;
+  state: ReturnType<typeof useOverlayState>;
+}) {
+  const [apiKey, setApiKey] = useState("");
+  const [locationId, setLocationId] = useState("");
+  const [locationName, setLocationName] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!state.isOpen) return;
+
+    setApiKey("");
+    setLocationId(connection?.locationId || "");
+    setLocationName(connection?.locationName || "");
+    setLocalError(null);
+  }, [connection, state.isOpen]);
+
+  async function saveConnection() {
+    setIsSaving(true);
+    setLocalError(null);
+
+    try {
+      const data = await ghlService.saveConnection({ apiKey, locationId, locationName });
+      onSaved(data);
+      state.close();
+    } catch (requestError) {
+      const message = requestError instanceof Error ? requestError.message : "Unable to save GHL connection";
+      setLocalError(message);
+      onError(message);
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function testConnection() {
+    setIsTesting(true);
+    setLocalError(null);
+
+    try {
+      const data = await ghlService.testConnection({ apiKey, locationId });
+      onSaved(data);
+    } catch (requestError) {
+      const message = requestError instanceof Error ? requestError.message : "Unable to test GHL connection";
+      setLocalError(message);
+      onError(message);
+    } finally {
+      setIsTesting(false);
+    }
+  }
+
+  return (
+    <Modal state={state}>
+      <Modal.Backdrop className="bg-foreground/30 backdrop-blur-[2px]">
+        <Modal.Container className="w-[min(640px,calc(100vw-32px))]" placement="center" scroll="inside" size="lg">
+          <Modal.Dialog className="overflow-hidden rounded-[20px] border border-border/70 bg-surface shadow-[0_8px_30px_color-mix(in_oklch,var(--foreground)_18%,transparent)]">
+            <Modal.Header className="flex items-start justify-between gap-4 border-b border-border/70 px-5 py-4">
+              <div>
+                <Modal.Heading className="text-base font-semibold leading-6 text-foreground">GHL connection</Modal.Heading>
+                <p className="mt-1 text-[13px] leading-5 text-muted">Connect a GoHighLevel location to log AI-sent lead replies as conversations.</p>
+              </div>
+              <Modal.CloseTrigger className="grid size-8 shrink-0 place-items-center rounded-full bg-default-100 text-foreground transition hover:bg-default-200" aria-label="Close">
+                <X className="size-4" />
+              </Modal.CloseTrigger>
+            </Modal.Header>
+
+            <Modal.Body className="thin-scrollbar max-h-[72vh] overflow-y-auto px-5 py-5">
+              <div className="grid items-start gap-4 md:grid-cols-2">
+                <TextField
+                  label="Private Integration Token"
+                  placeholder={connection?.apiKeyConfigured ? "Leave blank to keep existing key" : "Paste GHL API key"}
+                  type="password"
+                  value={apiKey}
+                  onChange={setApiKey}
+                />
+                <TextField label="Location ID" placeholder="ve9EPM428h8vShlRW1KT" value={locationId} onChange={setLocationId} />
+                <TextField label="Location Name" placeholder="PLWH Sales" value={locationName} onChange={setLocationName} />
+
+                <div className="rounded-xl bg-surface-secondary p-3 md:col-span-2">
+                  <p className="text-sm font-semibold text-foreground">What this connects</p>
+                  <p className="mt-2 text-[12px] leading-5 text-muted">Once a lead's AI reply is approved or auto-sent, ReplyOS upserts the lead as a contact in this location and logs the reply into GHL Conversations.</p>
+                </div>
+
+                {localError ? <p className="text-sm font-medium text-danger md:col-span-2">{localError}</p> : null}
+              </div>
+            </Modal.Body>
+
+            <Modal.Footer className="flex flex-wrap justify-between gap-2 border-t border-border/70 px-5 py-4">
+              <Button isDisabled={isTesting || (!apiKey && !connection?.apiKeyConfigured) || !locationId} size="sm" variant="secondary" onClick={testConnection}>
+                <TestTube2 className="size-4" />
+                {isTesting ? "Testing..." : "Test Connection"}
+              </Button>
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button isDisabled={isSaving} size="sm" variant="secondary" onClick={state.close}>Cancel</Button>
+                <Button isDisabled={isSaving || (!apiKey && !connection?.apiKeyConfigured) || !locationId} size="sm" onClick={saveConnection}>
+                  <CheckCircle2 className="size-4" />
+                  {isSaving ? "Saving..." : "Save GHL"}
+                </Button>
+              </div>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
+    </Modal>
+  );
+}
+
 function IntegrationCard({ integration }: { integration: Integration }) {
   const Logo = integration.logo;
 
@@ -413,15 +640,6 @@ function Metric({ label, value }: { label: string; value: string }) {
     <div className="rounded-xl bg-surface-secondary px-3 py-2">
       <p className="text-[11px] font-medium text-muted">{label}</p>
       <p className="mt-1 truncate text-sm font-semibold text-foreground">{value}</p>
-    </div>
-  );
-}
-
-function SkeletonMetric() {
-  return (
-    <div className="rounded-xl bg-surface-secondary px-3 py-3">
-      <div className="h-3 w-20 animate-pulse rounded bg-surface-tertiary" />
-      <div className="mt-2 h-4 w-32 animate-pulse rounded bg-surface-tertiary" />
     </div>
   );
 }
@@ -496,6 +714,12 @@ function formatDate(value?: string | null) {
 function PlusVibeLogo(props: LogoProps) {
   return (
     <img src="/plusvibe.svg" alt="" {...props} />
+  );
+}
+
+function GhlLogo({ className, ...props }: LogoProps) {
+  return (
+    <img className={`rounded-md object-contain ${className ?? ""}`} src="/ghl_logo.png" alt="" {...props} />
   );
 }
 

@@ -17,6 +17,18 @@ export interface AuthUser {
   }>;
 }
 
+export interface ProfileUpdatePayload {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+}
+
+export interface ChangePasswordPayload {
+  currentPassword: string;
+  newPassword: string;
+}
+
 export type ConversationIntent =
   | "Interested"
   | "Question"
@@ -30,6 +42,23 @@ export interface Metric {
   value: string;
   change: string;
   tone: StatusTone;
+}
+
+export interface NotificationItem {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  tone: StatusTone;
+  createdAt: string;
+}
+
+export interface NotificationPage {
+  items: NotificationItem[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
 }
 
 export interface AnalyticsSummaryMetric {
@@ -230,6 +259,7 @@ export interface Agent {
   salesRules?: string | null;
   safetyRules?: string | null;
   knowledgeSources?: string | null;
+  knowledgeSourceIds?: number[];
   trainingExamples?: string | null;
   aiProvider?: string;
   model: string;
@@ -263,11 +293,39 @@ export interface PlusVibeCampaign {
   updatedAt: string;
 }
 
+export interface KnowledgeSourceAgent {
+  id: number;
+  name: string;
+}
+
 export interface KnowledgeItem {
+  id: number;
   title: string;
   category: string;
+  sourceType: "Text" | "Document" | "URL" | "FAQ";
+  owner: string;
   status: "Published" | "Draft" | "Review";
-  updated: string;
+  contentText?: string | null;
+  usageGuidance?: string | null;
+  sourceUrl?: string | null;
+  fileName?: string | null;
+  fileMimeType?: string | null;
+  fileSize?: number | null;
+  fileStoragePath?: string | null;
+  chunks: number;
+  agents: KnowledgeSourceAgent[];
+  lastIndexedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  updated?: string;
+}
+
+export interface KnowledgePage {
+  items: KnowledgeItem[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
 }
 
 export interface ReviewItem {
@@ -349,22 +407,23 @@ export interface LeadPage {
   stats: LeadStats;
 }
 
-export interface LeadDestination {
-  name: string;
-  description: string;
-  status: "Connected" | "Available";
-  destinationType: "CRM" | "Automation" | "Webhook";
-  lastForwarded: string;
-  leadsForwarded: number;
+export interface ForwardedLeadRecord {
+  id: number;
+  leadEmail: string | null;
+  platform: string;
+  destination: string | null;
+  status: "Forwarded" | "Failed";
+  contactId: string | null;
+  errorMessage: string | null;
+  createdAt: string;
 }
 
-export interface LeadRoutingRule {
-  name: string;
-  criteria: string;
-  destination: string;
-  status: "Active" | "Paused";
-  forwardedToday: number;
-  lastRun: string;
+export interface ForwardedLeadPage {
+  items: ForwardedLeadRecord[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
 }
 
 export interface TrainingExample {

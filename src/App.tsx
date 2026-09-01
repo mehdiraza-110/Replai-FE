@@ -8,13 +8,15 @@ import { Auth } from "./pages/Auth";
 import { CreateAgent } from "./pages/CreateAgent";
 import { Dashboard } from "./pages/Dashboard";
 import { EventLogs } from "./pages/EventLogs";
+import { ForwardedLeads } from "./pages/ForwardedLeads";
 import { HumanReview } from "./pages/HumanReview";
 import { InboxManagers } from "./pages/InboxManagers";
 import { Integrations } from "./pages/Integrations";
 import { KnowledgeBase } from "./pages/KnowledgeBase";
-import { LeadRouting } from "./pages/LeadRouting";
+import { KnowledgeForm } from "./pages/KnowledgeForm";
 import { Leads } from "./pages/Leads";
 import { Messages } from "./pages/Messages";
+import { Notifications } from "./pages/Notifications";
 import { PlusVibeCampaigns } from "./pages/PlusVibeCampaigns";
 import { Settings } from "./pages/Settings";
 import { Training } from "./pages/Training";
@@ -39,13 +41,15 @@ export default function App() {
         <Route path="review" element={<HumanReview />} />
         <Route path="inbox" element={<InboxManagers />} />
         <Route path="messages" element={<Messages />} />
+        <Route path="notifications" element={<Notifications />} />
         <Route path="leads" element={<Leads />} />
-        <Route path="lead-routing" element={<LeadRouting />} />
+        <Route path="forwarded-leads" element={<ForwardedLeads />} />
         <Route path="agents" element={<AIAgents />} />
         <Route path="agents/new" element={<CreateAgent />} />
         <Route path="agents/:id/edit" element={<CreateAgent />} />
         <Route path="campaigns" element={<PlusVibeCampaigns />} />
         <Route path="knowledge" element={<KnowledgeBase />} />
+        <Route path="knowledge/new" element={<KnowledgeForm />} />
         <Route path="training" element={<Training />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="integrations" element={<Integrations />} />

@@ -6,8 +6,6 @@ import type {
   InboxManager,
   KnowledgeItem,
   Lead,
-  LeadDestination,
-  LeadRoutingRule,
   Metric,
   ReviewItem,
   TrainingExample,
@@ -198,10 +196,10 @@ export const agents: Agent[] = [
 ];
 
 export const knowledgeItems: KnowledgeItem[] = [
-  { title: "Pricing FAQ", category: "Sales FAQs", status: "Published", updated: "2h ago" },
-  { title: "Agency objection handling", category: "Objection Handling", status: "Published", updated: "Yesterday" },
-  { title: "PlusVibe integration overview", category: "Product Details", status: "Review", updated: "Aug 28" },
-  { title: "Claims the AI must never make", category: "Policies", status: "Published", updated: "Aug 25" },
+  { id: 1, title: "Pricing FAQ", category: "Sales FAQs", sourceType: "FAQ", owner: "Revenue Ops", status: "Published", chunks: 3, agents: [], updated: "2h ago" },
+  { id: 2, title: "Agency objection handling", category: "Objection Handling", sourceType: "Text", owner: "Sales Enablement", status: "Published", chunks: 2, agents: [], updated: "Yesterday" },
+  { id: 3, title: "PlusVibe integration overview", category: "Product Details", sourceType: "Document", owner: "Product", status: "Review", chunks: 0, agents: [], updated: "Aug 28" },
+  { id: 4, title: "Claims the AI must never make", category: "Policies", sourceType: "Text", owner: "Compliance", status: "Published", chunks: 2, agents: [], updated: "Aug 25" },
 ];
 
 export const reviewQueue: ReviewItem[] = [
@@ -288,60 +286,6 @@ export const leads: Lead[] = [
     stage: "Meeting",
     owner: "Human Managed",
     updated: "52 min ago",
-  },
-];
-
-export const leadDestinations: LeadDestination[] = [
-  {
-    name: "GoHighLevel",
-    description: "Forward qualified replies into the PLWH Sales pipeline.",
-    status: "Connected",
-    destinationType: "CRM",
-    lastForwarded: "11 minutes ago",
-    leadsForwarded: 38,
-  },
-  {
-    name: "HubSpot",
-    description: "Create or update contacts when enterprise leads reach evaluation.",
-    status: "Available",
-    destinationType: "CRM",
-    lastForwarded: "Not connected",
-    leadsForwarded: 0,
-  },
-  {
-    name: "Custom Webhook",
-    description: "POST qualified lead payloads to an internal sales operations endpoint.",
-    status: "Available",
-    destinationType: "Webhook",
-    lastForwarded: "Not connected",
-    leadsForwarded: 0,
-  },
-];
-
-export const leadRoutingRules: LeadRoutingRule[] = [
-  {
-    name: "High-intent meeting requests",
-    criteria: "Intent is Meeting Request and confidence is above 90%",
-    destination: "GoHighLevel",
-    status: "Active",
-    forwardedToday: 12,
-    lastRun: "9 minutes ago",
-  },
-  {
-    name: "Pricing evaluation leads",
-    criteria: "Sales stage is Evaluation and campaign is Enterprise Reply Automation",
-    destination: "GoHighLevel",
-    status: "Active",
-    forwardedToday: 7,
-    lastRun: "18 minutes ago",
-  },
-  {
-    name: "Positive discovery replies",
-    criteria: "Sentiment is Positive and interest level is High",
-    destination: "GoHighLevel",
-    status: "Paused",
-    forwardedToday: 0,
-    lastRun: "Yesterday",
   },
 ];
 

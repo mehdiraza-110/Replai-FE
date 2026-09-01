@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Button, Card, Checkbox, Input, ListBox, Select, TextArea as HeroTextArea } from "@heroui/react";
 import { ArrowLeft, ArrowRight, Check, CheckCircle2, ShieldCheck, TriangleAlert } from "lucide-react";
+import { LoadingState } from "../components/ui/LoadingState";
 import { StatusPill } from "../components/ui/StatusPill";
-import { ApiRequestError, aiAgentService, aiModelService } from "../services/api";
-import type { Agent } from "../types";
+import { ApiRequestError, aiAgentService, aiModelService, knowledgeService } from "../services/api";
+import type { Agent, KnowledgeItem } from "../types";
 
 const steps = [
   "Basics",
@@ -39,6 +40,7 @@ type AgentForm = {
   autoDetectLanguage: boolean;
   responseRules: string;
   knowledgeSources: string;
+  knowledgeSourceIds: number[];
   trainingExamples: string;
   aiProvider: string;
   model: string;
@@ -64,6 +66,7 @@ const initialForm: AgentForm = {
   autoDetectLanguage: true,
   responseRules: "Keep replies concise. Ask one question at a time. Never invent facts, pricing, or guarantees.",
   knowledgeSources: "Pricing FAQ, objection handling, PlusVibe integration overview",
+  knowledgeSourceIds: [],
   trainingExamples: "Use high-quality objection, pricing, and meeting-booked examples.",
   aiProvider: "OpenAI",
   model: "gpt-5",
@@ -71,6 +74,41 @@ const initialForm: AgentForm = {
   confidenceThreshold: "95",
   humanReview: true,
 };
+
+const automationModeExplainers: Record<string, { title: string; body: string }> = {
+  Manual: {
+    title: "Manual mode",
+    body: "ReplyOS stores interested PlusVibe replies and keeps the conversation ready for a human-written response. The AI will not draft or send replies in this mode.",
+  },
+  "AI Draft": {
+    title: "AI draft mode",
+    body: "The agent can prepare a suggested reply when you generate one, but nothing is sent until a human reviews and sends it manually.",
+  },
+  "AI + Approval": {
+    title: "AI + approval mode",
+    body: "Interested PlusVibe replies automatically get an AI draft and appear in Human Review. A human must approve or edit the response before it is sent.",
+  },
+  "AI Auto-Reply": {
+    title: "AI auto-reply mode",
+    body: "The agent can send high-confidence replies automatically. Lower-confidence replies can still be routed to Human Review when review routing is enabled.",
+  },
+};
+
+function getConfidenceGateCopy(form: AgentForm) {
+  if (form.automationMode === "AI Auto-Reply") {
+    return `The gate is the minimum AI confidence required before ReplyOS can send automatically. At ${form.confidenceThreshold || "0"}%, only drafts scored at or above that level are eligible to auto-send.`;
+  }
+
+  if (form.automationMode === "AI + Approval") {
+    return "Because this mode always requires approval, the gate works as a reviewer signal instead of an auto-send trigger.";
+  }
+
+  if (form.automationMode === "AI Draft") {
+    return "Because drafts are generated for review, the gate is only used to mark how confident the AI is before a human decides what to do.";
+  }
+
+  return "Manual mode does not use the gate for sending. It is saved with the agent in case you switch to an AI-assisted mode later.";
+}
 
 export function CreateAgent() {
   const { id } = useParams();
@@ -84,6 +122,9 @@ export function CreateAgent() {
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsError, setModelsError] = useState<string | null>(null);
   const [modelErrorCode, setModelErrorCode] = useState<string | null>(null);
+  const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeItem[]>([]);
+  const [knowledgeLoading, setKnowledgeLoading] = useState(false);
+  const [knowledgeError, setKnowledgeError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
@@ -178,6 +219,31 @@ export function CreateAgent() {
     };
   }, [form.aiProvider, isLoadingAgent]);
 
+  useEffect(() => {
+    let isActive = true;
+
+    setKnowledgeLoading(true);
+    setKnowledgeError(null);
+
+    knowledgeService
+      .list({ limit: 100, status: "Published" })
+      .then((data) => {
+        if (!isActive) return;
+        setKnowledgeSources(data.items);
+      })
+      .catch((error: Error) => {
+        if (!isActive) return;
+        setKnowledgeError(error.message || "Unable to load knowledge sources");
+      })
+      .finally(() => {
+        if (isActive) setKnowledgeLoading(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
   async function nextStep() {
     setSubmitError(null);
 
@@ -243,14 +309,13 @@ export function CreateAgent() {
         </Card.Header>
         <Card.Content className="thin-scrollbar min-h-0 flex-1 overflow-y-auto p-5">
           {isLoadingAgent ? (
-            <div className="space-y-3">
-              {Array.from({ length: 5 }).map((_, index) => (
-                <div className="h-10 animate-pulse rounded-xl bg-surface-secondary" key={index} />
-              ))}
-            </div>
+            <LoadingState />
           ) : (
             <StepContent
               form={form}
+              knowledgeError={knowledgeError}
+              knowledgeLoading={knowledgeLoading}
+              knowledgeSources={knowledgeSources}
               modelErrorCode={modelErrorCode}
               modelOptions={modelsByProvider[form.aiProvider] || []}
               modelsError={modelsError}
@@ -318,6 +383,7 @@ function buildAgentPayload(form: AgentForm) {
     autoDetectLanguage: form.autoDetectLanguage,
     responseRules: form.responseRules,
     knowledgeSources: form.knowledgeSources,
+    knowledgeSourceIds: form.knowledgeSourceIds,
     trainingExamples: form.trainingExamples,
     aiProvider: form.aiProvider,
     model: form.model,
@@ -346,6 +412,7 @@ function agentToForm(agent: Agent): AgentForm {
     autoDetectLanguage: agent.autoDetectLanguage ?? true,
     responseRules: agent.responseRules || "",
     knowledgeSources: agent.knowledgeSources || "",
+    knowledgeSourceIds: agent.knowledgeSourceIds || [],
     trainingExamples: agent.trainingExamples || "",
     aiProvider: normalizeProvider(agent.aiProvider),
     model: extractModelName(agent),
@@ -373,6 +440,9 @@ function extractModelName(agent: Agent) {
 
 function StepContent({
   form,
+  knowledgeError,
+  knowledgeLoading,
+  knowledgeSources,
   modelErrorCode,
   modelOptions,
   modelsError,
@@ -381,6 +451,9 @@ function StepContent({
   updateField,
 }: {
   form: AgentForm;
+  knowledgeError: string | null;
+  knowledgeLoading: boolean;
+  knowledgeSources: KnowledgeItem[];
   modelErrorCode: string | null;
   modelOptions: string[];
   modelsError: string | null;
@@ -458,7 +531,75 @@ function StepContent({
   }
 
   if (step === "Knowledge") {
-    return <TextAreaField label="Knowledge Sources" rows={8} value={form.knowledgeSources} onChange={(value) => updateField("knowledgeSources", value)} />;
+    const selectedIds = new Set(form.knowledgeSourceIds);
+
+    function toggleSource(sourceId: number, isSelected: boolean) {
+      updateField(
+        "knowledgeSourceIds",
+        isSelected
+          ? [...selectedIds, sourceId].sort((a, b) => a - b)
+          : form.knowledgeSourceIds.filter((id) => id !== sourceId)
+      );
+    }
+
+    return (
+      <div className="grid items-start gap-4">
+        <div className="rounded-xl bg-surface-secondary p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-foreground">Approved knowledge sources</p>
+              <p className="mt-1 text-sm leading-6 text-muted">
+                Select the documents and notes this agent can use while generating replies.
+              </p>
+            </div>
+            <StatusPill tone={form.knowledgeSourceIds.length > 0 ? "success" : "default"}>
+              {form.knowledgeSourceIds.length} selected
+            </StatusPill>
+          </div>
+
+          <div className="mt-4 grid max-h-[280px] gap-2 overflow-y-auto pr-1">
+            {knowledgeLoading ? (
+              <LoadingState minHeight={100} size="md" />
+            ) : knowledgeError ? (
+              <p className="rounded-xl bg-danger/10 p-3 text-sm font-medium text-danger">{knowledgeError}</p>
+            ) : knowledgeSources.length === 0 ? (
+              <div className="rounded-xl bg-surface p-4 text-sm leading-6 text-muted">
+                No published knowledge sources yet. Add source material from the Knowledge Base page, then return here to attach it to this agent.
+              </div>
+            ) : (
+              knowledgeSources.map((source) => (
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-surface px-3 py-3 transition hover:bg-background" key={source.id}>
+                  <Checkbox
+                    className="mt-0.5"
+                    isSelected={selectedIds.has(source.id)}
+                    variant="primary"
+                    onChange={(isSelected) => toggleSource(source.id, isSelected)}
+                  >
+                    <Checkbox.Content>
+                      <Checkbox.Control>
+                        <Checkbox.Indicator />
+                      </Checkbox.Control>
+                    </Checkbox.Content>
+                  </Checkbox>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-foreground">{source.title}</span>
+                    <span className="mt-0.5 block truncate text-xs text-muted">
+                      {source.category} · {source.sourceType} · {source.chunks} chunks
+                    </span>
+                  </span>
+                </label>
+              ))
+            )}
+          </div>
+        </div>
+        <TextAreaField
+          label="Additional Knowledge Notes"
+          rows={5}
+          value={form.knowledgeSources}
+          onChange={(value) => updateField("knowledgeSources", value)}
+        />
+      </div>
+    );
   }
 
   if (step === "Training") {
@@ -504,6 +645,9 @@ function StepContent({
   }
 
   if (step === "Automation") {
+    const modeExplainer = automationModeExplainers[form.automationMode] || automationModeExplainers["AI + Approval"];
+    const confidenceGateCopy = getConfidenceGateCopy(form);
+
     return (
       <div className="grid items-start gap-4 md:grid-cols-2">
         <SelectField label="Automation Mode" options={["Manual", "AI Draft", "AI + Approval", "AI Auto-Reply"]} value={form.automationMode} onChange={(value) => updateField("automationMode", value)} />
@@ -521,9 +665,14 @@ function StepContent({
             Send replies below the confidence gate to Human Review
           </Checkbox.Content>
         </Checkbox>
-        <p className="text-sm leading-6 text-muted md:col-span-2">
-          The gate is evaluated after the AI analyzes a prospect reply. In auto-reply mode, replies at or above this confidence can send automatically; replies below it follow the checkbox behavior.
-        </p>
+        <div className="rounded-xl bg-surface-secondary p-4 text-sm leading-6 text-muted md:col-span-2">
+          <p className="font-semibold text-foreground">{modeExplainer.title}</p>
+          <p className="mt-1">{modeExplainer.body}</p>
+          <p className="mt-3">
+            <span className="font-semibold text-foreground">Auto-send confidence gate: </span>
+            {confidenceGateCopy}
+          </p>
+        </div>
       </div>
     );
   }

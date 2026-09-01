@@ -8,7 +8,6 @@ import {
   FolderKanban,
   ChevronUp,
   ClipboardCheck,
-  HelpCircle,
   LayoutDashboard,
   ListTree,
   LogOut,
@@ -19,6 +18,7 @@ import {
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useRealtimeConnected } from "../../hooks/useRealtimeConnected";
 import { messageService, reviewService } from "../../services/api";
 
 const primaryNav = [
@@ -26,7 +26,7 @@ const primaryNav = [
   { label: "Human Review", href: "/review", icon: ClipboardCheck },
   { label: "Messages", href: "/messages", icon: MessageSquareText },
   { label: "Leads", href: "/leads", icon: UsersRound },
-  { label: "Lead Routing", href: "/lead-routing", icon: Route },
+  { label: "Forwarded Leads", href: "/forwarded-leads", icon: Route },
   { label: "AI Agents", href: "/agents", icon: Bot },
   { label: "Campaigns", href: "/campaigns", icon: FolderKanban },
   { label: "Knowledge Base", href: "/knowledge", icon: Boxes },
@@ -83,6 +83,7 @@ function NavItem({
 
 export function Sidebar() {
   const { logout, user } = useAuth();
+  const isLiveConnected = useRealtimeConnected();
   const [messageCount, setMessageCount] = useState<string | null>(null);
   const [reviewCount, setReviewCount] = useState<string | null>(null);
   const displayName = [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.email || "ReplyOS user";
@@ -124,7 +125,7 @@ export function Sidebar() {
 
   return (
     <aside className="fixed inset-y-0 left-0 hidden w-[212px] flex-col border-r border-border/70 bg-[#F4F5F6] px-3 py-4 lg:flex">
-      <div className="mb-4 flex items-center gap-2.5 px-1">
+      <div className="mb-4 flex min-w-0 items-center gap-2.5 px-1">
         <div className="size-8 rounded-full bg-[radial-gradient(circle_at_30%_25%,oklch(0.94_0.07_205),oklch(0.79_0.16_254)_48%,oklch(0.78_0.17_310))]" />
         <div className="min-w-0">
           <p className="truncate text-[12px] font-semibold leading-4 text-foreground">{displayName}</p>
@@ -148,35 +149,40 @@ export function Sidebar() {
         </nav>
       </ScrollShadow>
 
-      <div className="mt-auto space-y-1 pb-4">
-        <button className="flex h-[32px] w-full items-center gap-3 whitespace-nowrap rounded-[13px] px-3 text-left text-[12px] font-medium text-foreground/80 transition hover:bg-surface-tertiary/60 hover:text-foreground">
-          <HelpCircle className="size-4 shrink-0" />
-          Help & Support
-        </button>
+      <div className="mt-auto min-w-0">
+        <Dropdown>
+          <Dropdown.Trigger className="block w-full min-w-0">
+            <button className="flex h-[52px] w-full min-w-0 items-center gap-2.5 rounded-[14px] px-2.5 text-left transition hover:bg-surface">
+              <span className="relative inline-flex shrink-0">
+                <Avatar className="size-8 shrink-0">
+                  {user?.profile_image ? <Avatar.Image alt={displayName} src={user.profile_image} /> : null}
+                  <Avatar.Fallback>{initials}</Avatar.Fallback>
+                </Avatar>
+                {isLiveConnected ? (
+                  <span
+                    aria-label="Live updates connected"
+                    className="absolute -right-0.5 -bottom-0.5 size-[10px] rounded-full bg-success ring-2 ring-[#F4F5F6]"
+                    title="Live updates connected"
+                  />
+                ) : null}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[13px] font-semibold leading-4 text-foreground">{displayName}</span>
+                <span className="block truncate text-[12px] leading-4 text-muted">{user?.email}</span>
+              </span>
+              <ChevronUp className="size-4 shrink-0 text-muted" />
+            </button>
+          </Dropdown.Trigger>
+          <Dropdown.Popover className="w-[188px]" placement="top start">
+            <Dropdown.Menu aria-label="Account menu">
+              <Dropdown.Item id="logout" className="text-danger-soft-foreground" onAction={logout}>
+                <LogOut className="size-4" />
+                Log Out
+              </Dropdown.Item>
+            </Dropdown.Menu>
+          </Dropdown.Popover>
+        </Dropdown>
       </div>
-
-      <Dropdown>
-        <Dropdown.Trigger>
-          <button className="flex h-[52px] w-full items-center gap-2.5 rounded-[14px] px-2.5 text-left transition hover:bg-surface">
-            <Avatar className="size-8 shrink-0">
-              <Avatar.Fallback>{initials}</Avatar.Fallback>
-            </Avatar>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13px] font-semibold leading-4 text-foreground">PLWH Sales</span>
-              <span className="block truncate text-[12px] leading-4 text-muted">{user?.email}</span>
-            </span>
-            <ChevronUp className="size-4 shrink-0 text-muted" />
-          </button>
-        </Dropdown.Trigger>
-        <Dropdown.Popover className="w-[188px]" placement="top start">
-          <Dropdown.Menu aria-label="Workspace menu">
-            <Dropdown.Item id="logout" className="text-danger-soft-foreground" onAction={logout}>
-              <LogOut className="size-4" />
-              Log Out
-            </Dropdown.Item>
-          </Dropdown.Menu>
-        </Dropdown.Popover>
-      </Dropdown>
     </aside>
   );
 }

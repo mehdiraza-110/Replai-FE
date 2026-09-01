@@ -1,7 +1,9 @@
 import { Button, Card, Spinner } from "@heroui/react";
 import { CheckCircle2, Inbox, RefreshCw, Send, UserRoundX } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { LoadingState } from "../components/ui/LoadingState";
 import { StatusPill } from "../components/ui/StatusPill";
+import { useRealtimeEvent } from "../hooks/useRealtimeEvent";
 import { messageService, reviewService } from "../services/api";
 import type { AiResponseDraft, HumanReviewItem } from "../types";
 
@@ -59,6 +61,15 @@ export function HumanReview() {
   useEffect(() => {
     setDraftBody(active?.body || "");
   }, [active?.id, active?.body]);
+
+  // Live push: the moment any signed-in reviewer approves, rejects, or
+  // generates a draft, everyone else looking at this queue refreshes
+  // automatically — this is exactly what stops the double-approve/reject
+  // race, since a draft another tab just claimed disappears from the list
+  // before you can act on it.
+  useRealtimeEvent(["ai.draft."], () => {
+    loadReviews(page, { quiet: true });
+  });
 
   async function approveActiveDraft() {
     if (!active) return;
@@ -289,17 +300,7 @@ function EmptyQueue() {
 }
 
 function QueueSkeleton() {
-  return (
-    <div className="space-y-2">
-      {Array.from({ length: 4 }).map((_, index) => (
-        <div className="rounded-[14px] bg-surface-secondary p-4" key={index}>
-          <div className="h-3 w-2/3 rounded-full bg-surface-tertiary" />
-          <div className="mt-3 h-3 w-full rounded-full bg-surface-tertiary" />
-          <div className="mt-2 h-3 w-4/5 rounded-full bg-surface-tertiary" />
-        </div>
-      ))}
-    </div>
-  );
+  return <LoadingState />;
 }
 
 function ReviewMeta({ label, value }: { label: string; value: string }) {

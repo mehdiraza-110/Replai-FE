@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Button, Card, Modal, useOverlayState } from "@heroui/react";
 import { Pause, Pencil, Play, Plus, Trash2, X } from "lucide-react";
 import { Link } from "react-router-dom";
+import { LoadingState } from "../components/ui/LoadingState";
 import { StatusPill } from "../components/ui/StatusPill";
 import { aiAgentService } from "../services/api";
 import type { Agent } from "../types";
@@ -110,15 +111,11 @@ export function AIAgents() {
             </thead>
             <tbody>
               {isLoading ? (
-                Array.from({ length: 3 }).map((_, index) => (
-                  <tr className="border-b border-border/60 last:border-0" key={index}>
-                    {Array.from({ length: 8 }).map((__, cellIndex) => (
-                      <td className="px-4 py-4" key={cellIndex}>
-                        <div className="h-4 w-full max-w-[160px] animate-pulse rounded bg-surface-tertiary" />
-                      </td>
-                    ))}
-                  </tr>
-                ))
+                <tr>
+                  <td className="px-4 py-4" colSpan={8}>
+                    <LoadingState />
+                  </td>
+                </tr>
               ) : agents.length === 0 ? (
                 <tr>
                   <td className="px-4 py-10 text-center text-sm font-medium text-muted" colSpan={8}>

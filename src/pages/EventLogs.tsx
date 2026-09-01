@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button, Card, Spinner } from "@heroui/react";
 import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { LoadingState } from "../components/ui/LoadingState";
 import { StatusPill } from "../components/ui/StatusPill";
+import { useRealtimeEvent } from "../hooks/useRealtimeEvent";
 import { eventLogService } from "../services/api";
 import type { EventLogPage, EventLogRecord, StatusTone } from "../types";
 
@@ -13,8 +15,8 @@ export function EventLogs() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadEvents = useCallback(async (nextPage: number) => {
-    setIsLoading(true);
+  const loadEvents = useCallback(async (nextPage: number, options: { quiet?: boolean } = {}) => {
+    if (!options.quiet) setIsLoading(true);
     setError(null);
 
     try {
@@ -31,6 +33,12 @@ export function EventLogs() {
   useEffect(() => {
     loadEvents(1);
   }, []);
+
+  // Live push: every event this app records shows up here the instant it
+  // happens, on every open tab.
+  useRealtimeEvent([], () => {
+    loadEvents(page, { quiet: true });
+  });
 
   const events = data?.items ?? [];
   const totalPages = data?.totalPages ?? 1;
@@ -113,17 +121,11 @@ export function EventLogs() {
 
 function LoadingRows() {
   return (
-    <>
-      {Array.from({ length: PAGE_SIZE }).map((_, index) => (
-        <tr className="border-b border-border/60 last:border-0" key={index}>
-          {Array.from({ length: 9 }).map((__, cellIndex) => (
-            <td className="px-4 py-4" key={cellIndex}>
-              <div className="h-4 w-full max-w-[180px] animate-pulse rounded bg-muted/15" />
-            </td>
-          ))}
-        </tr>
-      ))}
-    </>
+    <tr>
+      <td className="px-4 py-4" colSpan={9}>
+        <LoadingState />
+      </td>
+    </tr>
   );
 }
 

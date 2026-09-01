@@ -3,9 +3,6 @@ import {
   aiDebugRun,
   conversations,
   inboxManagers,
-  knowledgeItems,
-  leadDestinations,
-  leadRoutingRules,
   leads,
   metrics,
   trainingExamples,
@@ -15,12 +12,18 @@ import type {
   AnalyticsOverview,
   AiResponseDraft,
   AuthUser,
+  ChangePasswordPayload,
   EventLogPage,
+  ForwardedLeadPage,
   HumanReviewPage,
+  KnowledgeItem,
+  KnowledgePage,
   LeadPage,
   MessageConversationDetail,
   MessageConversationPage,
+  NotificationPage,
   PlusVibeCampaign,
+  ProfileUpdatePayload,
 } from "../types";
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:3001").replace(/\/$/, "");
@@ -47,7 +50,7 @@ export class ApiRequestError extends Error {
 async function apiRequest<T>(path: string, options: RequestInit = {}) {
   const headers = new Headers(options.headers);
 
-  if (options.body && !headers.has("Content-Type")) {
+  if (options.body && !(options.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -173,6 +176,36 @@ export const authService = {
   },
 };
 
+export const userService = {
+  async updateProfile(payload: ProfileUpdatePayload) {
+    const response = await apiRequest<AuthUser>("/api/v1/users/profile", {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+
+    return response.data;
+  },
+
+  async updateAvatar(file: File) {
+    const formData = new FormData();
+    formData.set("avatar", file);
+
+    const response = await apiRequest<AuthUser>("/api/v1/users/avatar", {
+      method: "PATCH",
+      body: formData,
+    });
+
+    return response.data;
+  },
+
+  async changePassword(payload: ChangePasswordPayload) {
+    await apiRequest<null>("/api/v1/users/password", {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  },
+};
+
 export const analyticsService = {
   getDashboardMetrics: () => metrics,
   async getOverview({ preset = "last_30_days", startDate, endDate }: { preset?: string; startDate?: string | null; endDate?: string | null } = {}) {
@@ -263,6 +296,7 @@ export interface CreateAgentPayload {
   autoDetectLanguage: boolean;
   responseRules?: string;
   knowledgeSources?: string;
+  knowledgeSourceIds?: number[];
   trainingExamples?: string;
   aiProvider: string;
   model: string;
@@ -309,8 +343,83 @@ export const aiModelService = {
 };
 
 export const knowledgeService = {
-  list: () => knowledgeItems,
+  async list({
+    category,
+    page = 1,
+    limit = 25,
+    search,
+    status,
+  }: {
+    category?: string;
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+  } = {}) {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+
+    if (search) params.set("search", search);
+    if (status && status !== "All") params.set("status", status);
+    if (category && category !== "All") params.set("category", category);
+
+    const response = await apiRequest<KnowledgePage>(`/api/v1/knowledge?${params.toString()}`);
+
+    return {
+      ...response.data,
+      items: response.data.items.map(normalizeKnowledgeForUi),
+    };
+  },
+
+  async create(payload: {
+    agentIds?: number[];
+    category?: string;
+    contentText?: string;
+    file?: File | null;
+    owner?: string;
+    sourceType?: string;
+    sourceUrl?: string;
+    status?: string;
+    title: string;
+    usageGuidance?: string;
+  }) {
+    const formData = new FormData();
+
+    formData.set("title", payload.title);
+    if (payload.category) formData.set("category", payload.category);
+    if (payload.contentText) formData.set("contentText", payload.contentText);
+    if (payload.owner) formData.set("owner", payload.owner);
+    if (payload.sourceType) formData.set("sourceType", payload.sourceType);
+    if (payload.sourceUrl) formData.set("sourceUrl", payload.sourceUrl);
+    if (payload.status) formData.set("status", payload.status);
+    if (payload.usageGuidance) formData.set("usageGuidance", payload.usageGuidance);
+    if (payload.agentIds?.length) formData.set("agentIds", payload.agentIds.join(","));
+    if (payload.file) formData.set("file", payload.file);
+
+    const response = await apiRequest<KnowledgeItem>("/api/v1/knowledge", {
+      method: "POST",
+      body: formData,
+    });
+
+    return normalizeKnowledgeForUi(response.data);
+  },
+
+  async delete(id: number) {
+    await apiRequest<{ id: number }>(`/api/v1/knowledge/${id}`, {
+      method: "DELETE",
+    });
+  },
 };
+
+function normalizeKnowledgeForUi(source: KnowledgeItem): KnowledgeItem {
+  return {
+    ...source,
+    updated: formatAgentDate(source.updatedAt || source.updated),
+    agents: source.agents || [],
+  };
+}
 
 export const reviewService = {
   async list({ page = 1, limit = 10 }: { page?: number; limit?: number } = {}) {
@@ -361,9 +470,16 @@ export const leadService = {
   },
 };
 
-export const leadRoutingService = {
-  listDestinations: () => leadDestinations,
-  listRules: () => leadRoutingRules,
+export const forwardedLeadService = {
+  async list({ page = 1, limit = 10 }: { page?: number; limit?: number } = {}) {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+    const response = await apiRequest<ForwardedLeadPage>(`/api/v1/forwarded-leads?${params.toString()}`);
+
+    return response.data;
+  },
 };
 
 export const trainingService = {
@@ -377,6 +493,18 @@ export const eventLogService = {
       limit: String(limit),
     });
     const response = await apiRequest<EventLogPage>(`/api/v1/event-logs?${params.toString()}`);
+
+    return response.data;
+  },
+};
+
+export const notificationService = {
+  async list({ page = 1, limit = 20 }: { page?: number; limit?: number } = {}) {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+    const response = await apiRequest<NotificationPage>(`/api/v1/notifications?${params.toString()}`);
 
     return response.data;
   },
@@ -506,6 +634,62 @@ export const plusVibeService = {
   },
 };
 
+export interface GhlConnection {
+  id: number | null;
+  provider: "GHL";
+  locationId: string;
+  locationName: string;
+  apiKeyConfigured: boolean;
+  apiKeyPreview: string | null;
+  connectionStatus: "Connected" | "Configured" | "Disconnected" | "Error";
+  apiStatus: string;
+  syncedLeads: number;
+  lastApiRequest: string | null;
+  lastSync: string | null;
+  lastError: string | null;
+  updatedAt: string | null;
+}
+
+export interface GhlConnectionPayload {
+  apiKey?: string;
+  locationId: string;
+  locationName?: string;
+}
+
+export const ghlService = {
+  async getConnection() {
+    try {
+      const response = await apiRequest<GhlConnection>("/api/v1/ghl/connection");
+
+      return response.data;
+    } catch (error) {
+      if (!(error instanceof ApiRequestError) || error.status >= 500) {
+        return getDisconnectedGhlState();
+      }
+
+      throw error;
+    }
+  },
+
+  async saveConnection(payload: GhlConnectionPayload) {
+    const response = await apiRequest<GhlConnection>("/api/v1/ghl/connection", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+
+    return response.data;
+  },
+
+  async testConnection(payload?: Partial<GhlConnectionPayload>) {
+    const response = await apiRequest<GhlConnection>("/api/v1/ghl/test", {
+      method: "POST",
+      body: JSON.stringify(payload || {}),
+    });
+
+    return response.data;
+  },
+};
+
 export const messageService = {
   async listConversations({
     campaignId = "",
@@ -614,6 +798,24 @@ function getDisconnectedPlusVibeState(): PlusVibeConnection {
     syncedCampaigns: 0,
     lastApiRequest: null,
     lastWebhook: null,
+    lastSync: null,
+    lastError: null,
+    updatedAt: null,
+  };
+}
+
+function getDisconnectedGhlState(): GhlConnection {
+  return {
+    id: null,
+    provider: "GHL",
+    locationId: "",
+    locationName: "",
+    apiKeyConfigured: false,
+    apiKeyPreview: null,
+    connectionStatus: "Disconnected",
+    apiStatus: "Not configured",
+    syncedLeads: 0,
+    lastApiRequest: null,
     lastSync: null,
     lastError: null,
     updatedAt: null,

@@ -14,6 +14,7 @@ interface AuthContextValue {
   login: (payload: LoginPayload) => Promise<void>;
   register: (payload: RegisterPayload) => Promise<void>;
   logout: () => void;
+  updateUser: (user: AuthUser) => void;
 }
 
 const STORAGE_KEY = "replai.auth";
@@ -63,6 +64,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
   }, []);
 
+  const updateUser = useCallback(
+    (nextUser: AuthUser) => {
+      setSession((current) => {
+        if (!current) return current;
+
+        const nextSession = { ...current, user: nextUser };
+        storeSession(nextSession);
+        return nextSession;
+      });
+    },
+    [],
+  );
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user: session?.user ?? null,
@@ -71,8 +85,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       register,
       logout,
+      updateUser,
     }),
-    [login, logout, register, session],
+    [login, logout, register, session, updateUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

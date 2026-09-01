@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button, Card, Spinner } from "@heroui/react";
 import { RefreshCw } from "lucide-react";
+import { LoadingState } from "../components/ui/LoadingState";
 import { StatusPill } from "../components/ui/StatusPill";
 import { leadService } from "../services/api";
 import type { Lead, LeadPage, StatusTone } from "../types";
@@ -121,17 +122,11 @@ function LeadRow({ lead }: { lead: Lead }) {
 
 function LoadingRows() {
   return (
-    <>
-      {Array.from({ length: 6 }).map((_, index) => (
-        <tr className="border-b border-border/60 last:border-0" key={index}>
-          {Array.from({ length: 8 }).map((__, cellIndex) => (
-            <td className="px-4 py-4" key={cellIndex}>
-              <div className="h-4 w-full max-w-[180px] animate-pulse rounded bg-muted/15" />
-            </td>
-          ))}
-        </tr>
-      ))}
-    </>
+    <tr>
+      <td className="px-4 py-4" colSpan={8}>
+        <LoadingState />
+      </td>
+    </tr>
   );
 }
 

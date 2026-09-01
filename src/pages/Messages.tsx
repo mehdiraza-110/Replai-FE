@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ClipboardEvent, ReactNode } from "react";
 import { Avatar, Button, Card, ListBox, Select } from "@heroui/react";
 import { Bold, Bot, Check, Italic, List, ListOrdered, Loader2, RefreshCw, RemoveFormatting, Search, Send, Underline, X, UserRoundX } from "lucide-react";
+import { LoadingState } from "../components/ui/LoadingState";
 import { StatusPill } from "../components/ui/StatusPill";
 import { messageService, plusVibeService } from "../services/api";
 import type { AiResponseDraft, MessageConversationDetail, MessageConversationSummary, PlusVibeCampaign } from "../types";
@@ -749,27 +750,11 @@ function Metric({ label, value }: { label: string; value: string }) {
 }
 
 function ConversationSkeleton() {
-  return (
-    <div className="space-y-2">
-      {Array.from({ length: 8 }).map((_, index) => (
-        <div className="rounded-2xl p-3" key={index}>
-          <div className="h-4 w-2/3 animate-pulse rounded bg-surface-tertiary" />
-          <div className="mt-3 h-3 w-full animate-pulse rounded bg-surface-tertiary" />
-          <div className="mt-2 h-3 w-3/4 animate-pulse rounded bg-surface-tertiary" />
-        </div>
-      ))}
-    </div>
-  );
+  return <LoadingState />;
 }
 
 function ThreadSkeleton() {
-  return (
-    <div className="space-y-3">
-      {Array.from({ length: 4 }).map((_, index) => (
-        <div className="h-24 w-[80%] animate-pulse rounded-2xl bg-surface-secondary" key={index} />
-      ))}
-    </div>
-  );
+  return <LoadingState />;
 }
 
 function mergeConversations(current: MessageConversationSummary[], incoming: MessageConversationSummary[]) {

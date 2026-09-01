@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   UserCheck,
 } from "lucide-react";
+import { LoadingState } from "../components/ui/LoadingState";
 import { aiAgentService, analyticsService, eventLogService, reviewService } from "../services/api";
 import type { Agent, AnalyticsOverview, EventLogRecord, HumanReviewItem } from "../types";
 
@@ -545,30 +546,11 @@ function EmptyBlock({ children }: { children: React.ReactNode }) {
 }
 
 function ListSkeleton({ rows }: { rows: number }) {
-  return (
-    <div className="space-y-3">
-      {Array.from({ length: rows }).map((_, index) => (
-        <div className="rounded-[14px] bg-surface-secondary p-3" key={index}>
-          <div className="h-3 w-2/3 rounded-full bg-surface-tertiary" />
-          <div className="mt-3 h-3 w-full rounded-full bg-surface-tertiary" />
-        </div>
-      ))}
-    </div>
-  );
+  return <LoadingState minHeight={Math.max(120, rows * 30)} />;
 }
 
 function StepSkeleton() {
-  return (
-    <div className="grid gap-2 md:grid-cols-4">
-      {Array.from({ length: 4 }).map((_, index) => (
-        <div className="rounded-[14px] bg-surface-secondary p-3" key={index}>
-          <div className="h-8 w-8 rounded-full bg-surface-tertiary" />
-          <div className="mt-4 h-6 w-14 rounded-full bg-surface-tertiary" />
-          <div className="mt-3 h-3 w-24 rounded-full bg-surface-tertiary" />
-        </div>
-      ))}
-    </div>
-  );
+  return <LoadingState />;
 }
 
 function getDashboardTotals(analytics: AnalyticsOverview, pendingReview: number) {

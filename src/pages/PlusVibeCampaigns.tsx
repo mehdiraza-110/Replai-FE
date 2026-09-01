@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button, Card, Chip } from "@heroui/react";
 import { RefreshCw } from "lucide-react";
+import { LoadingState } from "../components/ui/LoadingState";
 import { aiAgentService, plusVibeService } from "../services/api";
 import type { Agent, PlusVibeCampaign } from "../types";
 
@@ -129,15 +130,11 @@ export function PlusVibeCampaigns() {
             </thead>
             <tbody>
               {isLoading ? (
-                Array.from({ length: 4 }).map((_, index) => (
-                  <tr className="border-b border-border/60 last:border-0" key={index}>
-                    {Array.from({ length: 6 }).map((__, cellIndex) => (
-                      <td className="px-4 py-4" key={cellIndex}>
-                        <div className="h-4 w-full max-w-[180px] animate-pulse rounded bg-surface-tertiary" />
-                      </td>
-                    ))}
-                  </tr>
-                ))
+                <tr>
+                  <td className="px-4 py-4" colSpan={6}>
+                    <LoadingState />
+                  </td>
+                </tr>
               ) : campaigns.length === 0 ? (
                 <tr>
                   <td className="px-4 py-10 text-center text-sm font-medium text-muted" colSpan={6}>
