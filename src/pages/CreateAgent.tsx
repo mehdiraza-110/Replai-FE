@@ -1,8 +1,10 @@
-import { useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { Button, Card, Checkbox, Input, ListBox, Select, TextArea as HeroTextArea } from "@heroui/react";
-import { ArrowLeft, ArrowRight, Check, CheckCircle2, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CheckCircle2, ShieldCheck, TriangleAlert } from "lucide-react";
 import { StatusPill } from "../components/ui/StatusPill";
+import { ApiRequestError, aiAgentService, aiModelService } from "../services/api";
+import type { Agent } from "../types";
 
 const steps = [
   "Basics",
@@ -18,7 +20,7 @@ const steps = [
   "Review",
 ];
 
-const aiProviders = ["OpenAI", "Anthropic", "Google Gemini", "Azure OpenAI"];
+const aiProviders = ["OpenAI", "Anthropic", "Google Gemini"];
 
 type AgentForm = {
   name: string;
@@ -34,12 +36,12 @@ type AgentForm = {
   objective: string;
   successCriteria: string;
   language: string;
+  autoDetectLanguage: boolean;
   responseRules: string;
   knowledgeSources: string;
   trainingExamples: string;
   aiProvider: string;
   model: string;
-  apiKey: string;
   automationMode: string;
   confidenceThreshold: string;
   humanReview: boolean;
@@ -59,23 +61,36 @@ const initialForm: AgentForm = {
   objective: "Schedule a Meeting",
   successCriteria: "Prospect agrees to a discovery call or shares strong buying intent.",
   language: "English",
+  autoDetectLanguage: true,
   responseRules: "Keep replies concise. Ask one question at a time. Never invent facts, pricing, or guarantees.",
   knowledgeSources: "Pricing FAQ, objection handling, PlusVibe integration overview",
   trainingExamples: "Use high-quality objection, pricing, and meeting-booked examples.",
   aiProvider: "OpenAI",
   model: "gpt-5",
-  apiKey: "",
   automationMode: "AI + Approval",
   confidenceThreshold: "95",
   humanReview: true,
 };
 
 export function CreateAgent() {
+  const { id } = useParams();
+  const agentId = Number(id);
+  const isEditMode = Number.isFinite(agentId) && agentId > 0;
   const [stepIndex, setStepIndex] = useState(0);
   const [form, setForm] = useState<AgentForm>(initialForm);
+  const [existingAgent, setExistingAgent] = useState<Agent | null>(null);
+  const [isLoadingAgent, setIsLoadingAgent] = useState(isEditMode);
+  const [modelsByProvider, setModelsByProvider] = useState<Record<string, string[]>>({});
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [modelsError, setModelsError] = useState<string | null>(null);
+  const [modelErrorCode, setModelErrorCode] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const currentStep = steps[stepIndex];
   const isLastStep = stepIndex === steps.length - 1;
+  const isProviderKeyMissing = modelErrorCode === "AI_PROVIDER_KEY_MISSING";
+  const isAiModelStepBlocked = currentStep === "AI Model" && (modelsLoading || isProviderKeyMissing || !form.model);
 
   const completedFields = useMemo(() => {
     const required = [
@@ -87,7 +102,6 @@ export function CreateAgent() {
       form.language,
       form.aiProvider,
       form.model,
-      form.apiKey,
       form.automationMode,
     ];
 
@@ -98,8 +112,91 @@ export function CreateAgent() {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
-  function nextStep() {
+  useEffect(() => {
+    if (!isEditMode) return;
+
+    let isActive = true;
+    setIsLoadingAgent(true);
+    setSubmitError(null);
+
+    aiAgentService
+      .get(agentId)
+      .then((agent) => {
+        if (!isActive) return;
+        setExistingAgent(agent);
+        setForm(agentToForm(agent));
+      })
+      .catch((error: Error) => {
+        if (!isActive) return;
+        setSubmitError(error.message || "Unable to load AI agent");
+      })
+      .finally(() => {
+        if (isActive) setIsLoadingAgent(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [agentId, isEditMode]);
+
+  useEffect(() => {
+    if (isLoadingAgent) return;
+
+    let isActive = true;
+
+    setModelsLoading(true);
+    setModelsError(null);
+    setModelErrorCode(null);
+
+    aiModelService
+      .list(form.aiProvider)
+      .then((models) => {
+        if (!isActive) return;
+
+        setModelsByProvider((current) => ({ ...current, [form.aiProvider]: models }));
+        setForm((current) => {
+          if (current.aiProvider !== form.aiProvider) return current;
+          if (models.includes(current.model)) return current;
+
+          return { ...current, model: models[0] || "" };
+        });
+      })
+      .catch((error: Error) => {
+        if (!isActive) return;
+
+        setModelsByProvider((current) => ({ ...current, [form.aiProvider]: [] }));
+        setModelsError(error.message || "Unable to load models");
+        setModelErrorCode(error instanceof ApiRequestError ? error.code || null : null);
+        setForm((current) => (current.aiProvider === form.aiProvider ? { ...current, model: "" } : current));
+      })
+      .finally(() => {
+        if (isActive) setModelsLoading(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [form.aiProvider, isLoadingAgent]);
+
+  async function nextStep() {
+    setSubmitError(null);
+
     if (isLastStep) {
+      try {
+        setIsSubmitting(true);
+        const payload = buildAgentPayload(form);
+
+        if (isEditMode) {
+          await aiAgentService.update(agentId, payload);
+        } else {
+          await aiAgentService.create({ ...payload, status: "Active" });
+        }
+      } catch (error) {
+        setSubmitError(error instanceof Error ? error.message : `Unable to ${isEditMode ? "update" : "create"} agent`);
+        setIsSubmitting(false);
+        return;
+      }
+
       navigate("/agents");
       return;
     }
@@ -138,24 +235,43 @@ export function CreateAgent() {
 
       <Card className="apple-shadow flex min-h-0 flex-col border border-border/70 bg-surface xl:h-full">
         <Card.Header className="grid min-h-[60px] grid-cols-[1fr_auto_1fr] items-center border-b border-border/70 px-5 py-0">
-          <Card.Title className="justify-self-start text-sm">Step {stepIndex + 1} of {steps.length}</Card.Title>
+          <Card.Title className="justify-self-start text-sm">{isEditMode ? "Edit Agent" : `Step ${stepIndex + 1} of ${steps.length}`}</Card.Title>
           <h2 className="justify-self-center text-base font-semibold tracking-normal text-foreground">
             {currentStep}
           </h2>
           <span aria-hidden="true" />
         </Card.Header>
         <Card.Content className="thin-scrollbar min-h-0 flex-1 overflow-y-auto p-5">
-          <StepContent form={form} step={currentStep} updateField={updateField} />
+          {isLoadingAgent ? (
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div className="h-10 animate-pulse rounded-xl bg-surface-secondary" key={index} />
+              ))}
+            </div>
+          ) : (
+            <StepContent
+              form={form}
+              modelErrorCode={modelErrorCode}
+              modelOptions={modelsByProvider[form.aiProvider] || []}
+              modelsError={modelsError}
+              modelsLoading={modelsLoading}
+              step={currentStep}
+              updateField={updateField}
+            />
+          )}
         </Card.Content>
         <Card.Footer className="flex justify-between gap-3">
           <Button isDisabled={stepIndex === 0} size="sm" variant="secondary" onClick={() => setStepIndex((current) => Math.max(current - 1, 0))}>
             <ArrowLeft className="size-4" />
             Previous
           </Button>
-          <Button size="sm" onClick={nextStep}>
-            {isLastStep ? "Create Agent" : "Continue"}
+          <div className="flex min-w-0 items-center gap-3">
+            {submitError ? <p className="max-w-[360px] truncate text-sm font-medium text-danger">{submitError}</p> : null}
+            <Button isDisabled={isAiModelStepBlocked || isSubmitting} size="sm" onClick={nextStep}>
+            {isLastStep ? (isSubmitting ? (isEditMode ? "Saving..." : "Creating...") : (isEditMode ? "Save Changes" : "Create Agent")) : "Continue"}
             {isLastStep ? <CheckCircle2 className="size-4" /> : <ArrowRight className="size-4" />}
-          </Button>
+            </Button>
+          </div>
         </Card.Footer>
       </Card>
 
@@ -169,13 +285,14 @@ export function CreateAgent() {
             ["Agent", form.name],
             ["Role", form.role],
             ["Objective", form.objective],
-            ["Language", form.language],
-            ["AI", `${form.aiProvider} · ${form.model}`],
-            ["Mode", form.automationMode],
-          ].map(([label, value]) => <SummaryField key={label} label={label} value={value} />)}
-          <SummaryField label="Setup fields" value={`${completedFields}/10`} />
+        ["Language", form.language],
+        ["AI", `${form.aiProvider} · ${form.model}`],
+        ["Mode", form.automationMode],
+        ...(isEditMode ? [["Status", existingAgent?.status || "Active"]] : []),
+      ].map(([label, value]) => <SummaryField key={label} label={label} value={value} />)}
+          <SummaryField label="Setup fields" value={`${completedFields}/9`} />
           <StatusPill tone={form.humanReview ? "warning" : "success"}>
-            {form.humanReview ? "Human review enabled" : "Auto-send allowed"}
+            {form.humanReview ? "Low confidence routes to review" : "Low confidence stays drafted"}
           </StatusPill>
         </Card.Content>
       </Card>
@@ -183,12 +300,91 @@ export function CreateAgent() {
   );
 }
 
+function buildAgentPayload(form: AgentForm) {
+  return {
+    name: form.name,
+    description: form.description,
+    role: form.role,
+    persona: form.persona,
+    tone: form.tone,
+    responseStyle: form.responseStyle,
+    companyName: form.companyName,
+    website: form.website,
+    industry: form.industry,
+    valueProposition: form.valueProposition,
+    objective: form.objective,
+    successCriteria: form.successCriteria,
+    language: form.language,
+    autoDetectLanguage: form.autoDetectLanguage,
+    responseRules: form.responseRules,
+    knowledgeSources: form.knowledgeSources,
+    trainingExamples: form.trainingExamples,
+    aiProvider: form.aiProvider,
+    model: form.model,
+    automationMode: form.automationMode,
+    confidenceThreshold: Number(form.confidenceThreshold),
+    humanReview: form.humanReview,
+    autoReplyEnabled: form.automationMode === "AI Auto-Reply",
+  };
+}
+
+function agentToForm(agent: Agent): AgentForm {
+  return {
+    name: agent.name || "",
+    description: agent.description || agent.purpose || "",
+    role: agent.role || "",
+    persona: agent.persona || "",
+    tone: agent.tone || "Consultative",
+    responseStyle: agent.responseStyle || "Concise",
+    companyName: agent.companyName || "",
+    website: agent.website || "",
+    industry: agent.industry || "",
+    valueProposition: agent.valueProposition || "",
+    objective: agent.objective || "",
+    successCriteria: agent.successCriteria || "",
+    language: agent.language || "English",
+    autoDetectLanguage: agent.autoDetectLanguage ?? true,
+    responseRules: agent.responseRules || "",
+    knowledgeSources: agent.knowledgeSources || "",
+    trainingExamples: agent.trainingExamples || "",
+    aiProvider: normalizeProvider(agent.aiProvider),
+    model: extractModelName(agent),
+    automationMode: agent.automationMode || (agent.autoReply ? "AI Auto-Reply" : "AI + Approval"),
+    confidenceThreshold: String(agent.confidenceThreshold ?? 95),
+    humanReview: agent.humanReview ?? true,
+  };
+}
+
+function normalizeProvider(value?: string | null) {
+  const provider = String(value || "OpenAI").toLowerCase();
+
+  if (provider.includes("anthropic")) return "Anthropic";
+  if (provider.includes("gemini") || provider.includes("google")) return "Google Gemini";
+  return "OpenAI";
+}
+
+function extractModelName(agent: Agent) {
+  const provider = normalizeProvider(agent.aiProvider);
+  const prefix = `${provider} · `;
+  const model = agent.model || "";
+
+  return model.startsWith(prefix) ? model.slice(prefix.length) : model;
+}
+
 function StepContent({
   form,
+  modelErrorCode,
+  modelOptions,
+  modelsError,
+  modelsLoading,
   step,
   updateField,
 }: {
   form: AgentForm;
+  modelErrorCode: string | null;
+  modelOptions: string[];
+  modelsError: string | null;
+  modelsLoading: boolean;
   step: string;
   updateField: <K extends keyof AgentForm>(key: K, value: AgentForm[K]) => void;
 }) {
@@ -240,7 +436,12 @@ function StepContent({
     return (
       <div className="grid items-start gap-4 md:grid-cols-2">
         <SelectField label="Default Language" options={["English", "Spanish", "French", "German", "Arabic", "Urdu"]} value={form.language} onChange={(value) => updateField("language", value)} />
-        <Checkbox defaultSelected className="self-end py-2 text-sm font-medium text-foreground" variant="primary">
+        <Checkbox
+          className="self-end py-2 text-sm font-medium text-foreground"
+          isSelected={form.autoDetectLanguage}
+          variant="primary"
+          onChange={updateField.bind(null, "autoDetectLanguage")}
+        >
           <Checkbox.Content>
             <Checkbox.Control>
               <Checkbox.Indicator />
@@ -265,14 +466,38 @@ function StepContent({
   }
 
   if (step === "AI Model") {
+    const isProviderKeyMissing = modelErrorCode === "AI_PROVIDER_KEY_MISSING";
+
     return (
       <div className="grid items-start gap-4 md:grid-cols-2">
-        <SelectField label="AI Provider" options={aiProviders} value={form.aiProvider} onChange={(value) => updateField("aiProvider", value)} />
-        <PasswordField label={`${form.aiProvider} API Key`} value={form.apiKey} onChange={(value) => updateField("apiKey", value)} />
-        <TextField label="Model" value={form.model} onChange={(value) => updateField("model", value)} />
+        <SelectField
+          label="AI Provider"
+          options={aiProviders}
+          value={form.aiProvider}
+          onChange={(value) => {
+            updateField("aiProvider", value);
+            updateField("model", "");
+          }}
+        />
+        <SelectField
+          isDisabled={modelsLoading || modelOptions.length === 0}
+          label="Model"
+          options={modelOptions}
+          placeholder={modelsLoading ? "Loading models..." : modelsError ? "Models unavailable" : "No models available"}
+          value={form.model}
+          onChange={(value) => updateField("model", value)}
+        />
+        {isProviderKeyMissing ? (
+          <div className="flex items-start gap-3 rounded-xl bg-warning/10 p-3 text-sm font-medium text-warning md:col-span-2">
+            <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+            <p>{modelsError}</p>
+          </div>
+        ) : modelsError ? (
+          <p className="text-sm font-medium text-danger md:col-span-2">{modelsError}</p>
+        ) : null}
         <div className="flex items-start gap-3 rounded-2xl bg-surface-secondary p-4 text-sm text-muted">
           <ShieldCheck className="mt-0.5 size-5 shrink-0 text-accent" />
-          <p>Credentials are submitted to backend secret storage and are never shown after this step.</p>
+          <p>Model access is resolved by backend environment credentials. Agent records store provider and model configuration only.</p>
         </div>
       </div>
     );
@@ -282,9 +507,9 @@ function StepContent({
     return (
       <div className="grid items-start gap-4 md:grid-cols-2">
         <SelectField label="Automation Mode" options={["Manual", "AI Draft", "AI + Approval", "AI Auto-Reply"]} value={form.automationMode} onChange={(value) => updateField("automationMode", value)} />
-        <TextField label="Human Review Threshold" suffix="%" value={form.confidenceThreshold} onChange={(value) => updateField("confidenceThreshold", value)} />
+        <TextField label="Auto-send Confidence Gate" suffix="%" value={form.confidenceThreshold} onChange={(value) => updateField("confidenceThreshold", value)} />
         <Checkbox
-          className="py-2 text-sm font-medium text-foreground"
+          className="py-2 text-sm font-medium text-foreground md:col-span-2"
           isSelected={form.humanReview}
           variant="primary"
           onChange={updateField.bind(null, "humanReview")}
@@ -293,9 +518,12 @@ function StepContent({
             <Checkbox.Control>
               <Checkbox.Indicator />
             </Checkbox.Control>
-            Require human review below threshold
+            Send replies below the confidence gate to Human Review
           </Checkbox.Content>
         </Checkbox>
+        <p className="text-sm leading-6 text-muted md:col-span-2">
+          The gate is evaluated after the AI analyzes a prospect reply. In auto-reply mode, replies at or above this confidence can send automatically; replies below it follow the checkbox behavior.
+        </p>
       </div>
     );
   }
@@ -311,6 +539,7 @@ function StepContent({
         ["Provider", form.aiProvider],
         ["Model", form.model],
         ["Automation", form.automationMode],
+        ["Confidence gate", `${form.confidenceThreshold}%`],
       ].map(([label, value]) => (
         <SummaryField key={label} label={label} value={value} />
       ))}
@@ -344,33 +573,19 @@ function TextField({
   );
 }
 
-function PasswordField({ label, onChange, value }: { label: string; onChange: (value: string) => void; value: string }) {
-  return (
-    <label className="grid gap-1.5 text-sm font-medium text-foreground">
-      {label}
-      <Input
-        autoComplete="off"
-        className="agent-field h-10 w-full text-sm text-foreground"
-        fullWidth
-        placeholder="Paste API key"
-        type="password"
-        value={value}
-        variant="primary"
-        onChange={(event) => onChange(event.target.value)}
-      />
-    </label>
-  );
-}
-
 function SelectField({
+  isDisabled = false,
   label,
   onChange,
   options,
+  placeholder = "Select an option",
   value,
 }: {
+  isDisabled?: boolean;
   label: string;
   onChange: (value: string) => void;
   options: string[];
+  placeholder?: string;
   value: string;
 }) {
   return (
@@ -380,14 +595,15 @@ function SelectField({
         aria-label={label}
         className="agent-select w-full"
         fullWidth
-        selectedKey={value}
+        isDisabled={isDisabled}
+        selectedKey={value || undefined}
         variant="primary"
         onSelectionChange={(key) => {
           if (key) onChange(String(key));
         }}
       >
         <Select.Trigger className="h-10 px-3 text-sm text-foreground">
-          <Select.Value>{value}</Select.Value>
+          <Select.Value>{value || placeholder}</Select.Value>
           <Select.Indicator />
         </Select.Trigger>
         <Select.Popover>

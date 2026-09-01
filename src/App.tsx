@@ -15,6 +15,7 @@ import { KnowledgeBase } from "./pages/KnowledgeBase";
 import { LeadRouting } from "./pages/LeadRouting";
 import { Leads } from "./pages/Leads";
 import { Messages } from "./pages/Messages";
+import { PlusVibeCampaigns } from "./pages/PlusVibeCampaigns";
 import { Settings } from "./pages/Settings";
 import { Training } from "./pages/Training";
 
@@ -42,6 +43,8 @@ export default function App() {
         <Route path="lead-routing" element={<LeadRouting />} />
         <Route path="agents" element={<AIAgents />} />
         <Route path="agents/new" element={<CreateAgent />} />
+        <Route path="agents/:id/edit" element={<CreateAgent />} />
+        <Route path="campaigns" element={<PlusVibeCampaigns />} />
         <Route path="knowledge" element={<KnowledgeBase />} />
         <Route path="training" element={<Training />} />
         <Route path="analytics" element={<Analytics />} />

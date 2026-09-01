@@ -468,3 +468,71 @@ input[type="radio"] {
   border: 2px solid transparent;
   background-clip: content-box;
 }
+
+.email-body {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.email-body p,
+.email-body div {
+  margin-block: 0 12px;
+}
+
+.email-body p:last-child,
+.email-body div:last-child {
+  margin-bottom: 0;
+}
+
+.email-body a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.email-body blockquote,
+.email-body .gmail_quote {
+  margin: 14px 0 0;
+  border-inline-start: 2px solid color-mix(in oklch, var(--foreground) 14%, transparent);
+  padding-inline-start: 12px;
+  color: var(--muted);
+}
+
+.email-body img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.rich-reply-editor {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.rich-reply-editor p,
+.rich-reply-editor div {
+  margin-block: 0 10px;
+}
+
+.rich-reply-editor p:last-child,
+.rich-reply-editor div:last-child {
+  margin-bottom: 0;
+}
+
+.rich-reply-editor ul,
+.rich-reply-editor ol {
+  margin: 0 0 10px 20px;
+  padding: 0;
+}
+
+.rich-reply-editor ul {
+  list-style: disc;
+}
+
+.rich-reply-editor ol {
+  list-style: decimal;
+}
+
+.rich-reply-editor li {
+  margin-block: 2px;
+}

@@ -7,7 +7,7 @@ export function AppShell() {
     <div className="min-h-screen bg-background text-foreground">
       <Sidebar />
       <TopBar />
-      <main className="px-4 py-5 sm:px-5 lg:ml-[212px]">
+      <main className="min-w-0 overflow-x-hidden px-4 py-5 sm:px-5 lg:ml-[212px]">
         <Outlet />
       </main>
     </div>

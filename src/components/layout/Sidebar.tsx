@@ -1,9 +1,11 @@
 import { Avatar, Chip, Dropdown, ScrollShadow } from "@heroui/react";
+import { useEffect, useState } from "react";
 import {
   BarChart3,
   Bot,
   Boxes,
   Cable,
+  FolderKanban,
   ChevronUp,
   ClipboardCheck,
   HelpCircle,
@@ -17,6 +19,7 @@ import {
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { messageService, reviewService } from "../../services/api";
 
 const primaryNav = [
   { label: "Overview", href: "/", icon: LayoutDashboard },
@@ -25,6 +28,7 @@ const primaryNav = [
   { label: "Leads", href: "/leads", icon: UsersRound },
   { label: "Lead Routing", href: "/lead-routing", icon: Route },
   { label: "AI Agents", href: "/agents", icon: Bot },
+  { label: "Campaigns", href: "/campaigns", icon: FolderKanban },
   { label: "Knowledge Base", href: "/knowledge", icon: Boxes },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
 ];
@@ -35,7 +39,15 @@ const secondaryNav = [
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
-function NavItem({ item }: { item: (typeof primaryNav)[number] }) {
+function NavItem({
+  item,
+  messageCount,
+  reviewCount,
+}: {
+  item: (typeof primaryNav)[number];
+  messageCount: string | null;
+  reviewCount: string | null;
+}) {
   const Icon = item.icon;
 
   return (
@@ -53,13 +65,17 @@ function NavItem({ item }: { item: (typeof primaryNav)[number] }) {
       <Icon className="size-4 shrink-0" />
       <span className="truncate">{item.label}</span>
       {item.label === "Human Review" ? (
-        <Chip className="ml-auto px-1.5 text-[10px]" color="warning" size="sm" variant="soft">
-          3
-        </Chip>
+        reviewCount ? (
+          <Chip className="ml-auto px-1.5 text-[10px]" color="warning" size="sm" variant="soft">
+            {reviewCount}
+          </Chip>
+        ) : null
       ) : item.label === "Messages" ? (
-        <Chip className="ml-auto px-1.5 text-[10px]" color="accent" size="sm" variant="soft">
-          17
-        </Chip>
+        messageCount ? (
+          <Chip className="ml-auto px-1.5 text-[10px]" color="accent" size="sm" variant="soft">
+            {messageCount}
+          </Chip>
+        ) : null
       ) : null}
     </NavLink>
   );
@@ -67,6 +83,8 @@ function NavItem({ item }: { item: (typeof primaryNav)[number] }) {
 
 export function Sidebar() {
   const { logout, user } = useAuth();
+  const [messageCount, setMessageCount] = useState<string | null>(null);
+  const [reviewCount, setReviewCount] = useState<string | null>(null);
   const displayName = [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.email || "ReplyOS user";
   const initials = displayName
     .split(/\s+/)
@@ -75,6 +93,34 @@ export function Sidebar() {
     .slice(0, 2)
     .toUpperCase();
   const roleName = user?.roles?.[0]?.name ?? "Admin";
+
+  useEffect(() => {
+    let isActive = true;
+
+    messageService
+      .countConversations({ cap: 100 })
+      .then(({ count, hasMore }) => {
+        if (!isActive) return;
+        setMessageCount(hasMore ? "100+" : String(count));
+      })
+      .catch(() => {
+        if (isActive) setMessageCount(null);
+      });
+
+    reviewService
+      .count({ cap: 100 })
+      .then(({ count, hasMore }) => {
+        if (!isActive) return;
+        setReviewCount(count > 0 ? (hasMore ? "100+" : String(count)) : null);
+      })
+      .catch(() => {
+        if (isActive) setReviewCount(null);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   return (
     <aside className="fixed inset-y-0 left-0 hidden w-[212px] flex-col border-r border-border/70 bg-[#F4F5F6] px-3 py-4 lg:flex">
@@ -89,7 +135,7 @@ export function Sidebar() {
       <ScrollShadow className="-mx-1 px-1">
         <nav className="space-y-1">
           {primaryNav.map((item) => (
-            <NavItem item={item} key={item.href} />
+            <NavItem item={item} key={item.href} messageCount={messageCount} reviewCount={reviewCount} />
           ))}
         </nav>
 
@@ -97,7 +143,7 @@ export function Sidebar() {
 
         <nav className="space-y-1">
           {secondaryNav.map((item) => (
-            <NavItem item={item} key={item.href} />
+            <NavItem item={item} key={item.href} messageCount={messageCount} reviewCount={reviewCount} />
           ))}
         </nav>
       </ScrollShadow>
