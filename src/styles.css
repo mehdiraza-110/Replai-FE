@@ -536,3 +536,9 @@ input[type="radio"] {
 .rich-reply-editor li {
   margin-block: 2px;
 }
+
+.rich-reply-editor a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

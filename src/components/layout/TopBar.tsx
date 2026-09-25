@@ -18,6 +18,17 @@ const POLL_INTERVAL_MS = 120_000;
 
 const titles: Record<string, { title: string; subtitle: string }> = {
   "/": { title: "Good morning, Kate", subtitle: "" },
+  "/mailer": { title: "AI Cold Mailer", subtitle: "Sending volume, warmup ramp, and mailbox reputation at a glance." },
+  "/mailer/domains": { title: "Domains", subtitle: "Manage sending domains, DNS verification, and SES identities." },
+  "/mailer/domains/new": { title: "Add Domain", subtitle: "Onboard a new sending domain, verify DNS, provision mailboxes, and assign a warmup strategy." },
+  "/mailer/mailboxes": { title: "Mailboxes", subtitle: "Sender identities across your verified domains, daily limits, and warmup stage." },
+  "/mailer/mailboxes/new": { title: "Add Mailboxes", subtitle: "Create one or more sender identities under a verified domain." },
+  "/mailer/inbox": { title: "Inbox", subtitle: "Every reply across every mailbox, in one place." },
+  "/mailer/warmup": { title: "Warmup", subtitle: "Ramp schedules, per-mailbox progress, and warmup strategies." },
+  "/mailer/health": { title: "Health", subtitle: "Reputation monitoring, flagged mailboxes, and AWS concentration risk mitigation." },
+  "/mailer/campaigns": { title: "Campaigns", subtitle: "Cold outbound campaigns and the sending pipeline." },
+  "/mailer/campaigns/new": { title: "New Campaign", subtitle: "Audience, message, sending mailboxes, schedule, and the pre-flight safety check." },
+  "/responder": { title: "AI Auto Responder", subtitle: "Reply automation loop, agent performance, and review queue." },
   "/review": { title: "Human Review", subtitle: "Approve, edit, or take over AI replies before they are sent." },
   "/inbox": { title: "Inbox Managers", subtitle: "Configure PlusVibe inboxes, response rules, and automation." },
   "/messages": { title: "Messages", subtitle: "Review sales conversations, AI drafts, and lead intelligence." },
@@ -117,13 +128,11 @@ export function TopBar() {
         </div>
         <div className="flex items-center gap-2">
           <Dropdown onOpenChange={handleOpenChange}>
-            <Dropdown.Trigger>
-              <Button className="relative size-[34px] min-w-[34px] rounded-full p-0 text-foreground" size="sm" variant="secondary" aria-label="Notifications">
-                <Bell className="size-[17px]" strokeWidth={2} />
-                {unreadCount > 0 ? (
-                  <span className="absolute right-[3px] top-[3px] size-[8px] rounded-full bg-danger ring-2 ring-background" />
-                ) : null}
-              </Button>
+            <Dropdown.Trigger aria-label="Notifications" className="relative grid size-[34px] min-w-[34px] place-items-center rounded-full bg-surface-secondary text-foreground transition hover:bg-surface-tertiary">
+              <Bell className="size-[17px]" strokeWidth={2} />
+              {unreadCount > 0 ? (
+                <span className="absolute right-[3px] top-[3px] size-[8px] rounded-full bg-danger ring-2 ring-background" />
+              ) : null}
             </Dropdown.Trigger>
             <Dropdown.Popover className="w-[340px] overflow-hidden rounded-[16px] border border-border/70 bg-surface p-0 shadow-[0_8px_30px_color-mix(in_oklch,var(--foreground)_18%,transparent)]" placement="bottom end">
               <div className="flex items-center justify-between gap-2 border-b border-border/70 px-4 py-3">

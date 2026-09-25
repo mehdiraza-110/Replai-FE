@@ -6,10 +6,79 @@ import type {
   InboxManager,
   KnowledgeItem,
   Lead,
+  MailerCampaign,
+  MailerDomain,
   Metric,
   ReviewItem,
   TrainingExample,
 } from "../types";
+
+export const mailerDomains: MailerDomain[] = [
+  {
+    id: 1,
+    domain: "askkinvestowl.com",
+    registrar: "Cloudflare",
+    spfStatus: "Verified",
+    dkimStatus: "Verified",
+    dmarcStatus: "Verified",
+    mxStatus: "Verified",
+    status: "Active",
+    configurationSetStatus: "Configured",
+    mailboxes: [
+      {
+        id: 1, email: "sarah.connor@askkinvestowl.com", status: "Active", warmupStage: "Ramping", warmupEnabled: true,
+        dailyLimit: 20, sentToday: 2, warmupDailyLimit: 20, warmupSentToday: 20, totalEmailsSent: 214,
+        warmupDeliverability7d: 90.2, replyRate7d: 0, bounceRate3d: 0,
+        campaignName: "Q3 Investor Outreach", reputationStatus: "Healthy", lastSentAt: "2026-09-04T09:12:00Z",
+      },
+      {
+        id: 2, email: "s.connor@askkinvestowl.com", status: "Active", warmupStage: "Ramping", warmupEnabled: true,
+        dailyLimit: 20, sentToday: 2, warmupDailyLimit: 20, warmupSentToday: 20, totalEmailsSent: 187,
+        warmupDeliverability7d: 83.2, replyRate7d: 0, bounceRate3d: null,
+        campaignName: "Q3 Investor Outreach", reputationStatus: "Healthy", lastSentAt: "2026-09-04T08:40:00Z",
+      },
+      {
+        id: 3, email: "sarah.c@askkinvestowl.com", status: "Active", warmupStage: "Ramping", warmupEnabled: true,
+        dailyLimit: 20, sentToday: 2, warmupDailyLimit: 20, warmupSentToday: 20, totalEmailsSent: 176,
+        warmupDeliverability7d: 85.5, replyRate7d: 0, bounceRate3d: null,
+        campaignName: "Q3 Investor Outreach", reputationStatus: "Healthy", lastSentAt: "2026-09-04T07:55:00Z",
+      },
+      {
+        id: 4, email: "sarah.connor2@askkinvestowl.com", status: "Active", warmupStage: "Ramping", warmupEnabled: true,
+        dailyLimit: 20, sentToday: 2, warmupDailyLimit: 20, warmupSentToday: 20, totalEmailsSent: 162,
+        warmupDeliverability7d: 80.6, replyRate7d: 7.1, bounceRate3d: null,
+        campaignName: "Q3 Investor Outreach", reputationStatus: "Watch", lastSentAt: "2026-09-04T07:10:00Z",
+      },
+      {
+        id: 5, email: "sarah@askkinvestowl.com", status: "Active", warmupStage: "New", warmupEnabled: true,
+        dailyLimit: 20, sentToday: 4, warmupDailyLimit: 20, warmupSentToday: 20, totalEmailsSent: 9,
+        warmupDeliverability7d: 83.8, replyRate7d: 0, bounceRate3d: null,
+        campaignName: null, reputationStatus: "Healthy", lastSentAt: "2026-09-04T06:20:00Z",
+      },
+    ],
+  },
+];
+
+export const mailerCampaigns: MailerCampaign[] = [
+  {
+    id: 1,
+    name: "Q3 Investor Outreach",
+    status: "Active",
+    mailboxCount: 4,
+    sentToday: 8,
+    sentTotal: 739,
+    replyRate: 2.1,
+    bounceRate: 1.4,
+    startedAt: "2026-08-18T00:00:00Z",
+    leadsCount: 480,
+    contactedCount: 214,
+    contactedPercent: 44.6,
+    replyCount: 16,
+    positiveReplyRate: null,
+    openTrackingSupported: false,
+    totalSequenceEmails: 960,
+  },
+];
 
 export const metrics: Metric[] = [
   { label: "Active AI Agents", value: "8", change: "+2", tone: "success" },

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ClipboardEvent, ReactNode } from "react";
 import { Avatar, Button, Card, ListBox, Select } from "@heroui/react";
-import { Bold, Bot, Check, Italic, List, ListOrdered, Loader2, RefreshCw, RemoveFormatting, Search, Send, Underline, X, UserRoundX } from "lucide-react";
+import { Bot, Check, Loader2, RefreshCw, Search, Send, X, UserRoundX } from "lucide-react";
 import { LoadingState } from "../components/ui/LoadingState";
+import { RichTextEditor } from "../components/ui/RichTextEditor";
 import { StatusPill } from "../components/ui/StatusPill";
 import { messageService, plusVibeService } from "../services/api";
+import { isComposerEmpty } from "../utils/composerHtml";
 import type { AiResponseDraft, MessageConversationDetail, MessageConversationSummary, PlusVibeCampaign } from "../types";
 
 const PAGE_SIZE = 20;
@@ -528,30 +529,11 @@ function ManualReplyComposer({ conversation, disabled, onSend }: { conversation:
   const latestSent = [...conversation.messages].reverse().find((message) => message.from === "human" && message.fromEmail);
   const toEmail = conversation.leadEmail || latest?.fromEmail || "";
   const fromEmail = latest?.toEmail || conversation.aiDraft?.from || latestSent?.fromEmail || "";
-  const editorRef = useRef<HTMLDivElement | null>(null);
   const [bodyHtml, setBodyHtml] = useState("");
 
   useEffect(() => {
     setBodyHtml("");
-    if (editorRef.current) editorRef.current.innerHTML = "";
   }, [conversation.threadId]);
-
-  function syncBody() {
-    setBodyHtml(sanitizeComposerHtml(editorRef.current?.innerHTML || ""));
-  }
-
-  function runCommand(command: string) {
-    editorRef.current?.focus();
-    document.execCommand(command, false);
-    syncBody();
-  }
-
-  function handlePaste(event: ClipboardEvent<HTMLDivElement>) {
-    event.preventDefault();
-    const text = event.clipboardData.getData("text/plain");
-    document.execCommand("insertText", false, text);
-    syncBody();
-  }
 
   const isBodyEmpty = isComposerEmpty(bodyHtml);
 
@@ -563,32 +545,16 @@ function ManualReplyComposer({ conversation, disabled, onSend }: { conversation:
           <Field label="From" value={fromEmail || "Connected inbox unavailable"} />
           <Field className="2xl:col-span-2" label="Subject" value={ensureReplySubject(latest?.subject)} />
         </div>
-        <div className="mt-3 overflow-hidden rounded-xl border border-border/70 bg-surface transition focus-within:border-accent">
-          <div className="flex items-center gap-1 border-b border-border/70 bg-background/60 px-2 py-1.5">
-            <ToolbarButton label="Bold" onClick={() => runCommand("bold")}><Bold className="size-4" /></ToolbarButton>
-            <ToolbarButton label="Italic" onClick={() => runCommand("italic")}><Italic className="size-4" /></ToolbarButton>
-            <ToolbarButton label="Underline" onClick={() => runCommand("underline")}><Underline className="size-4" /></ToolbarButton>
-            <span className="mx-1 h-5 w-px bg-border/80" />
-            <ToolbarButton label="Bulleted list" onClick={() => runCommand("insertUnorderedList")}><List className="size-4" /></ToolbarButton>
-            <ToolbarButton label="Numbered list" onClick={() => runCommand("insertOrderedList")}><ListOrdered className="size-4" /></ToolbarButton>
-            <span className="mx-1 h-5 w-px bg-border/80" />
-            <ToolbarButton label="Clear formatting" onClick={() => runCommand("removeFormat")}><RemoveFormatting className="size-4" /></ToolbarButton>
-          </div>
-          <div className="relative">
-            {isBodyEmpty ? (
-              <p className="pointer-events-none absolute left-3 top-3 text-sm leading-6 text-muted">Write a manual reply...</p>
-            ) : null}
-            <div
-              aria-label="Manual reply body"
-              className="rich-reply-editor thin-scrollbar min-h-[108px] max-h-[260px] overflow-auto px-3 py-3 text-sm leading-6 text-foreground outline-none"
-              contentEditable={!disabled}
-              onInput={syncBody}
-              onPaste={handlePaste}
-              ref={editorRef}
-              role="textbox"
-              suppressContentEditableWarning
-            />
-          </div>
+        <div className="mt-3">
+          <RichTextEditor
+            ariaLabel="Manual reply body"
+            disabled={disabled}
+            minHeightClassName="min-h-[108px]"
+            onChange={setBodyHtml}
+            placeholder="Write a manual reply..."
+            resetKey={conversation.threadId}
+            value={bodyHtml}
+          />
         </div>
         <div className="mt-3 flex justify-end">
           <Button
@@ -609,23 +575,6 @@ function ManualReplyComposer({ conversation, disabled, onSend }: { conversation:
         </div>
       </section>
     </Card.Footer>
-  );
-}
-
-function ToolbarButton({ children, label, onClick }: { children: ReactNode; label: string; onClick: () => void }) {
-  return (
-    <button
-      aria-label={label}
-      className="grid size-7 place-items-center rounded-lg text-muted transition hover:bg-surface-tertiary hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
-      onMouseDown={(event) => {
-        event.preventDefault();
-        onClick();
-      }}
-      title={label}
-      type="button"
-    >
-      {children}
-    </button>
   );
 }
 
@@ -871,37 +820,6 @@ function isQuotedEmailIntro(value: string) {
   );
 }
 
-function sanitizeComposerHtml(value: string) {
-  if (!value || typeof window === "undefined") return "";
-
-  const documentNode = new DOMParser().parseFromString(value, "text/html");
-  documentNode.querySelectorAll("script, style, link, meta, iframe, object, embed, img, table").forEach((node) => node.remove());
-  documentNode.body.querySelectorAll("*").forEach((node) => {
-    const tagName = node.tagName.toLowerCase();
-    const allowedTags = new Set(["b", "strong", "i", "em", "u", "p", "div", "br", "ul", "ol", "li"]);
-
-    if (!allowedTags.has(tagName)) {
-      node.replaceWith(documentNode.createTextNode(node.textContent || ""));
-      return;
-    }
-
-    [...node.attributes].forEach((attribute) => node.removeAttribute(attribute.name));
-  });
-
-  return documentNode.body.innerHTML.trim();
-}
-
-function isComposerEmpty(value: string) {
-  if (!value) return true;
-
-  const text = value
-    .replace(/<br\s*\/?>/gi, "")
-    .replace(/<\/?(div|p|ul|ol|li|strong|b|em|i|u)>/gi, "")
-    .replace(/&nbsp;/g, " ")
-    .trim();
-
-  return text.length === 0;
-}
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
