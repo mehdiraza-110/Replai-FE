@@ -4,26 +4,55 @@ import {
   conversations,
   inboxManagers,
   leads,
+  mailerCampaigns,
+  mailerDomains,
   metrics,
   trainingExamples,
 } from "./mockData";
 import type {
   Agent,
+  AiRampSchedule,
   AnalyticsOverview,
   AiResponseDraft,
   AuthUser,
+  CalendarConnection,
+  CampaignCreatePayload,
+  CampaignLeadsPage,
+  CampaignPage,
   ChangePasswordPayload,
+  Domain,
+  DomainOnboardResult,
+  DomainPage,
   EventLogPage,
   ForwardedLeadPage,
+  HostedZone,
   HumanReviewPage,
   KnowledgeItem,
   KnowledgePage,
   LeadPage,
+  InboxThreadDetail,
+  InboxThreadPage,
+  Mailbox,
+  MailboxCreateResult,
+  MailboxInboxMessage,
+  MailboxInboxPage,
+  MailboxPage,
+  LeadFileParseResult,
+  MailerCampaign,
   MessageConversationDetail,
   MessageConversationPage,
   NotificationPage,
   PlusVibeCampaign,
   ProfileUpdatePayload,
+  ReputationTrendPoint,
+  SesAccountRequest,
+  SesAccountStatus,
+  WarmupSafetyTier,
+  WarmupPoolAddResult,
+  WarmupPoolStats,
+  WarmupStrategy,
+  WarmupSummary,
+  WarmupTarget,
 } from "../types";
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:3001").replace(/\/$/, "");
@@ -73,6 +102,7 @@ async function apiRequest<T>(path: string, options: RequestInit = {}) {
       path,
       status: response.status,
       message: payload?.message,
+      code: payload?.code,
     }), response.status, payload?.code);
   }
 
@@ -83,17 +113,68 @@ async function apiRequest<T>(path: string, options: RequestInit = {}) {
   return payload;
 }
 
+function uploadWithProgress<T>(path: string, file: File, fieldName: string, onProgress?: (percent: number) => void) {
+  return new Promise<T>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    const formData = new FormData();
+    formData.append(fieldName, file);
+
+    xhr.open("POST", `${API_BASE_URL}${path}`);
+    xhr.withCredentials = true;
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable && onProgress) {
+        onProgress(Math.round((event.loaded / event.total) * 100));
+      }
+    };
+
+    xhr.onload = () => {
+      let payload: ApiResponse<T> | null = null;
+      try {
+        payload = JSON.parse(xhr.responseText);
+      } catch {
+        payload = null;
+      }
+
+      if (xhr.status >= 200 && xhr.status < 300 && payload) {
+        resolve(payload.data);
+      } else {
+        reject(new ApiRequestError(getFriendlyErrorMessage({
+          path,
+          status: xhr.status,
+          message: payload?.message,
+          code: payload?.code,
+        }), xhr.status, payload?.code));
+      }
+    };
+
+    xhr.onerror = () => {
+      reject(new ApiRequestError("We could not reach the server. Please check that ReplyOS is running and try again.", 0));
+    };
+
+    xhr.send(formData);
+  });
+}
+
+const SURFACED_ERROR_CODES = new Set(["CALENDAR_CONFIG_MISSING", "CALENDAR_ENCRYPTION_KEY_MISSING", "CALENDAR_STATE_INVALID", "CALENDAR_CONNECTION_REVOKED"]);
+
 function getFriendlyErrorMessage({
   message,
   path,
   status,
+  code,
 }: {
   message?: string;
   path: string;
   status: number;
+  code?: string;
 }) {
   const lowerMessage = String(message || "").toLowerCase();
   const isPlusVibeRoute = path.includes("/plusvibe") || path.includes("/messages") || path.includes("/leads") || lowerMessage.includes("plusvibe");
+
+  // These are admin-facing setup/config problems, not internal errors to hide —
+  // surfacing them is what lets someone actually fix the missing env var.
+  if (code && SURFACED_ERROR_CODES.has(code) && message) return message;
 
   if (status === 0) return "We could not reach the server. Please check that ReplyOS is running and try again.";
   if (status === 401 || status === 403) return "Your session does not have access to this action. Please sign in again.";
@@ -233,6 +314,249 @@ export const inboxManagerService = {
   list: () => inboxManagers,
 };
 
+export const mailerService = {
+  listDomains: () => mailerDomains,
+  listCampaigns: () => mailerCampaigns,
+  createCampaign: (campaign: MailerCampaign) => {
+    mailerCampaigns.unshift(campaign);
+    return campaign;
+  },
+};
+
+export const campaignService = {
+  async list({ page = 1, limit = 10, search = "" }: { page?: number; limit?: number; search?: string } = {}) {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (search) params.set("search", search);
+    const response = await apiRequest<CampaignPage>(`/api/v1/campaigns?${params.toString()}`);
+    return response.data;
+  },
+
+  async create(payload: CampaignCreatePayload) {
+    const response = await apiRequest<MailerCampaign>("/api/v1/campaigns", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    return response.data;
+  },
+
+  parseLeadsFile(file: File, onProgress?: (percent: number) => void) {
+    return uploadWithProgress<LeadFileParseResult>("/api/v1/campaigns/parse-leads", file, "file", onProgress);
+  },
+
+  async listLeads(campaignId: number, { page = 1, limit = 20, search = "" }: { page?: number; limit?: number; search?: string } = {}) {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (search) params.set("search", search);
+    const response = await apiRequest<CampaignLeadsPage>(`/api/v1/campaigns/${campaignId}/leads?${params.toString()}`);
+    return response.data;
+  },
+};
+
+export const warmupPoolService = {
+  async getStats() {
+    const response = await apiRequest<WarmupPoolStats>("/api/v1/warmup-pool/stats");
+    return response.data;
+  },
+
+  addLeadsFromFile(file: File, onProgress?: (percent: number) => void) {
+    return uploadWithProgress<WarmupPoolAddResult>("/api/v1/warmup-pool/leads/upload", file, "file", onProgress);
+  },
+};
+
+export const warmupService = {
+  async listStrategies() {
+    const response = await apiRequest<WarmupStrategy[]>("/api/v1/warmup/strategies");
+    return response.data;
+  },
+
+  async getSummary() {
+    const response = await apiRequest<WarmupSummary>("/api/v1/warmup/summary");
+    return response.data;
+  },
+
+  async createStrategy(payload: {
+    name: string;
+    description?: string;
+    startDailyLimit: number;
+    steadyStateDailyLimit: number;
+    incrementPerStage: number;
+    stageDurationDays: number;
+    safetyTiers?: WarmupSafetyTier[];
+    isAiGenerated?: boolean;
+    aiRationale?: string | null;
+    applyTo?: WarmupTarget;
+  }) {
+    const response = await apiRequest<{ strategy: WarmupStrategy; assignedCount: number }>("/api/v1/warmup/strategies", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    return response.data;
+  },
+
+  async assignStrategy(strategyId: number, target: WarmupTarget) {
+    const response = await apiRequest<{ strategy: WarmupStrategy; assignedCount: number }>(`/api/v1/warmup/strategies/${strategyId}/assign`, {
+      method: "POST",
+      body: JSON.stringify(target),
+    });
+    return response.data;
+  },
+
+  async generateAiSchedule(payload: { domain?: string; mailboxIds?: number[] }) {
+    const response = await apiRequest<AiRampSchedule>("/api/v1/warmup/generate-ai", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    return response.data;
+  },
+};
+
+export const domainService = {
+  async list({ page = 1, limit = 10, search = "" }: { page?: number; limit?: number; search?: string } = {}) {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (search) params.set("search", search);
+    const response = await apiRequest<DomainPage>(`/api/v1/domains?${params.toString()}`);
+    return response.data;
+  },
+
+  async listHostedZones() {
+    const response = await apiRequest<HostedZone[]>("/api/v1/domains/hosted-zones");
+    return response.data;
+  },
+
+  async onboard(domains: string[]) {
+    const response = await apiRequest<DomainOnboardResult[]>("/api/v1/domains/onboard", {
+      method: "POST",
+      body: JSON.stringify({ domains }),
+    });
+    return response.data;
+  },
+
+  async onboardExternal(domain: string) {
+    const response = await apiRequest<DomainOnboardResult>("/api/v1/domains/onboard-external", {
+      method: "POST",
+      body: JSON.stringify({ domain }),
+    });
+    return response.data;
+  },
+
+  async refreshAll() {
+    const response = await apiRequest<Domain[]>("/api/v1/domains/refresh", { method: "POST" });
+    return response.data;
+  },
+
+  async refreshOne(domain: string) {
+    const response = await apiRequest<Domain>(`/api/v1/domains/${encodeURIComponent(domain)}/refresh`, {
+      method: "POST",
+    });
+    return response.data;
+  },
+
+  async getAccountStatus() {
+    const response = await apiRequest<SesAccountStatus>("/api/v1/domains/account-status");
+    return response.data;
+  },
+
+  async requestProductionAccess(payload: {
+    mailType: "MARKETING" | "TRANSACTIONAL";
+    websiteUrl: string;
+    useCaseDescription?: string;
+    additionalContactEmailAddresses?: string[];
+  }) {
+    const response = await apiRequest<SesAccountRequest>("/api/v1/domains/account-status/request", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    return response.data;
+  },
+
+  async getReputationTrend({ days = 7 }: { days?: number } = {}) {
+    const response = await apiRequest<ReputationTrendPoint[]>(`/api/v1/domains/reputation-trend?days=${days}`);
+    return response.data;
+  },
+
+  async remove(id: number) {
+    const response = await apiRequest<{ id: number; domain: string; mailboxesDeleted: number }>(`/api/v1/domains/${id}`, {
+      method: "DELETE",
+    });
+    return response.data;
+  },
+};
+
+export const mailboxService = {
+  async list({ page = 1, limit = 10, search = "" }: { page?: number; limit?: number; search?: string } = {}) {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (search) params.set("search", search);
+    const response = await apiRequest<MailboxPage>(`/api/v1/mailboxes?${params.toString()}`);
+    return response.data;
+  },
+
+  async create(payload: { domain: string; localParts: string[]; displayName?: string; dailyLimit?: number }) {
+    const response = await apiRequest<MailboxCreateResult[]>("/api/v1/mailboxes", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    return response.data;
+  },
+
+  async refreshAll() {
+    const response = await apiRequest<Mailbox[]>("/api/v1/mailboxes/refresh", { method: "POST" });
+    return response.data;
+  },
+
+  async refreshOne(id: number) {
+    const response = await apiRequest<Mailbox>(`/api/v1/mailboxes/${id}/refresh`, { method: "POST" });
+    return response.data;
+  },
+
+  async remove(id: number) {
+    const response = await apiRequest<{ id: number; email: string }>(`/api/v1/mailboxes/${id}`, {
+      method: "DELETE",
+    });
+    return response.data;
+  },
+
+  async messages(id: number, { page = 1, limit = 30 }: { page?: number; limit?: number } = {}) {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    const response = await apiRequest<MailboxInboxPage>(`/api/v1/mailboxes/${id}/messages?${params.toString()}`);
+    return response.data;
+  },
+};
+
+export const inboxService = {
+  async listThreads({
+    page = 1,
+    limit = 25,
+    search = "",
+    mailboxId,
+    unreadOnly = false,
+  }: { page?: number; limit?: number; search?: string; mailboxId?: number; unreadOnly?: boolean } = {}) {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (search) params.set("search", search);
+    if (mailboxId) params.set("mailboxId", String(mailboxId));
+    if (unreadOnly) params.set("unreadOnly", "true");
+    const response = await apiRequest<InboxThreadPage>(`/api/v1/mailer-inbox/threads?${params.toString()}`);
+    return response.data;
+  },
+
+  async getThread(mailboxId: number, threadId: string) {
+    const response = await apiRequest<InboxThreadDetail>(
+      `/api/v1/mailer-inbox/threads/${mailboxId}/${encodeURIComponent(threadId)}`
+    );
+    return response.data;
+  },
+
+  async markThreadRead(mailboxId: number, threadId: string) {
+    await apiRequest(`/api/v1/mailer-inbox/threads/${mailboxId}/${encodeURIComponent(threadId)}/read`, { method: "POST" });
+  },
+
+  async sendReply(mailboxId: number, threadId: string, body: string) {
+    const response = await apiRequest<MailboxInboxMessage>(`/api/v1/mailer-inbox/threads/${mailboxId}/${encodeURIComponent(threadId)}/reply`, {
+      method: "POST",
+      body: JSON.stringify({ body }),
+    });
+    return response.data;
+  },
+};
+
 export const aiAgentService = {
   async list() {
     try {
@@ -295,6 +619,11 @@ export interface CreateAgentPayload {
   language: string;
   autoDetectLanguage: boolean;
   responseRules?: string;
+  fallbackMeetingUrl?: string | null;
+  meetingDurationMinutes?: number;
+  workingHoursStart?: string;
+  workingHoursEnd?: string;
+  timezone?: string;
   knowledgeSources?: string;
   knowledgeSourceIds?: number[];
   trainingExamples?: string;
@@ -687,6 +1016,26 @@ export const ghlService = {
     });
 
     return response.data;
+  },
+};
+
+export const calendarService = {
+  async getConnections(agentId: number) {
+    const response = await apiRequest<CalendarConnection[]>(`/api/v1/calendar/connections?agentId=${agentId}`);
+
+    return response.data;
+  },
+
+  async startGoogleAuth(agentId: number) {
+    const response = await apiRequest<{ url: string }>(`/api/v1/calendar/google/auth?agentId=${agentId}`);
+
+    return response.data;
+  },
+
+  async disconnect(connectionId: number) {
+    await apiRequest<{ id: number }>(`/api/v1/calendar/connections/${connectionId}`, {
+      method: "DELETE",
+    });
   },
 };
 

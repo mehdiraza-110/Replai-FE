@@ -1,5 +1,427 @@
 export type StatusTone = "default" | "accent" | "success" | "warning" | "danger";
 
+export type WarmupStage = "New" | "Ramping" | "Steady State" | "Paused";
+
+export interface MailerMailbox {
+  id: number;
+  email: string;
+  status: "Active" | "Paused" | "Error";
+  warmupStage: WarmupStage;
+  warmupEnabled: boolean;
+  dailyLimit: number;
+  sentToday: number;
+  warmupDailyLimit: number;
+  warmupSentToday: number;
+  totalEmailsSent: number;
+  warmupDeliverability7d: number;
+  replyRate7d: number;
+  bounceRate3d: number | null;
+  campaignName: string | null;
+  reputationStatus: "Healthy" | "Watch" | "At Risk";
+  lastSentAt: string | null;
+}
+
+export interface MailerDomain {
+  id: number;
+  domain: string;
+  registrar: string;
+  spfStatus: "Verified" | "Pending" | "Failed";
+  dkimStatus: "Verified" | "Pending" | "Failed";
+  dmarcStatus: "Verified" | "Pending" | "Failed";
+  mxStatus: "Verified" | "Pending" | "Failed";
+  status: "Active" | "Provisioning" | "Suspended";
+  configurationSetStatus: "Configured" | "Pending";
+  mailboxes: MailerMailbox[];
+}
+
+export type DnsCheckStatus = "Not started" | "Pending" | "Success" | "Failed";
+
+export interface Domain {
+  id: number;
+  domain: string;
+  registrar: string;
+  dnsProvider: string;
+  hostedZoneId: string | null;
+  awsRegion: string;
+  mailFromSubdomain: string | null;
+  spfStatus: DnsCheckStatus;
+  dkimStatus: DnsCheckStatus;
+  dmarcStatus: DnsCheckStatus;
+  mxStatus: DnsCheckStatus;
+  mailFromStatus: DnsCheckStatus;
+  provider: string;
+  status: "Provisioning" | "Pending Verification" | "Verified" | "Failed";
+  reputation: string;
+  lastCheckedAt: string | null;
+  lastError: string | null;
+  dkimTokens: string[];
+  mailboxCount: number | null;
+  configurationSetName: string | null;
+  emailsSent14d: number | null;
+  emailsDelivered14d: number | null;
+  emailsBounced14d: number | null;
+  emailsComplained14d: number | null;
+  bounceRate: number | null;
+  complaintRate: number | null;
+  deliveryRate: number | null;
+  reputationCheckedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DomainStatusCounts {
+  total: number;
+  verified: number;
+  pending: number;
+  failed: number;
+}
+
+export interface DomainPage {
+  items: Domain[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  statusCounts: DomainStatusCounts;
+}
+
+export interface HostedZone {
+  domain: string;
+  hostedZoneId: string;
+}
+
+export interface DnsRecordInstruction {
+  purpose: string;
+  type: string;
+  host: string;
+  value: string;
+}
+
+export interface DomainOnboardResult {
+  domain: string;
+  status: string;
+  record?: Domain;
+  error?: string;
+  dnsRecords?: DnsRecordInstruction[];
+}
+
+export interface SesAccountRequest {
+  id: number;
+  awsRegion: string;
+  mailType: "MARKETING" | "TRANSACTIONAL";
+  websiteUrl: string;
+  useCaseDescription: string | null;
+  additionalContactEmails: string[];
+  status: string;
+  errorMessage: string | null;
+  requestedAt: string;
+}
+
+export interface SesAccountStatus {
+  awsRegion: string;
+  sendingEnabled: boolean | null;
+  productionAccessEnabled: boolean;
+  enforcementStatus: string | null;
+  max24HourSend: number | null;
+  maxSendRate: number | null;
+  sentLast24Hours: number | null;
+  latestRequest: SesAccountRequest | null;
+}
+
+export type MailboxStatus = "Active" | "Paused" | "Error";
+export type MailboxWarmupStage = "New" | "Ramping" | "Steady State" | "Paused";
+export type MailboxReputationStatus = "Healthy" | "Watch" | "At Risk";
+
+export interface Mailbox {
+  id: number;
+  domainId: number;
+  domain: string;
+  domainStatus: Domain["status"];
+  domainBounceRate: number | null;
+  domainComplaintRate: number | null;
+  email: string;
+  localPart: string;
+  displayName: string | null;
+  status: MailboxStatus;
+  dailyLimit: number;
+  sentToday: number;
+  warmupStage: MailboxWarmupStage;
+  reputationStatus: MailboxReputationStatus;
+  lastSentAt: string | null;
+  lastCheckedAt: string | null;
+  warmupStrategyId: number | null;
+  warmupStrategyName: string | null;
+  warmupStartedAt: string | null;
+  warmupLastTickAt: string | null;
+  warmupLastAction: string | null;
+  createdAt: string;
+  updatedAt: string;
+  campaignSentToday: number;
+  warmupDeliverability7d: number | null;
+  replyRate7d: number | null;
+  bounceRate3d: number | null;
+  activeCampaigns: string[];
+  totalEmailSent: number;
+  totalContactedLeads: number;
+  newLeadsContacted: number;
+  totalCompletedLeads: number;
+  replyRateExclOoo7d: number | null;
+  positiveReplyRate7d: number | null;
+}
+
+export interface MailboxStatusCounts {
+  total: number;
+  active: number;
+  paused: number;
+  error: number;
+}
+
+export interface MailboxPage {
+  items: Mailbox[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  statusCounts: MailboxStatusCounts;
+}
+
+export interface MailboxCreateResult {
+  email: string;
+  status: string;
+  record?: Mailbox;
+  error?: string;
+}
+
+// The app-native per-mailbox inbox (SES receiving, not a real IMAP/SMTP mailbox) —
+// see PlusVibe-Plan.md 1B and the `messages` table.
+export interface MailboxInboxMessage {
+  id: number;
+  mailboxId: number;
+  direction: "outbound" | "inbound";
+  campaignId: number | null;
+  campaignLeadId: number | null;
+  threadId: string;
+  messageId: string | null;
+  inReplyTo: string | null;
+  fromAddress: string;
+  toAddress: string;
+  subject: string | null;
+  bodyText: string | null;
+  bodyHtml: string | null;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface MailboxInboxPage {
+  items: MailboxInboxMessage[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+// The unified inbox — one screen across every mailbox, see PlusVibe-Plan.md section 7 / 1D.
+export interface InboxThread {
+  mailboxId: number;
+  mailboxEmail: string;
+  mailboxDisplayName: string | null;
+  threadId: string;
+  campaignId: number | null;
+  campaignName: string | null;
+  lastDirection: "outbound" | "inbound";
+  fromAddress: string;
+  toAddress: string;
+  subject: string | null;
+  preview: string;
+  unreadCount: number;
+  lastMessageAt: string;
+}
+
+export interface InboxThreadPage {
+  items: InboxThread[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  totalUnreadThreads: number;
+}
+
+export interface InboxThreadDetail {
+  mailbox: { id: number; email: string; displayName: string | null };
+  leadEmail: string;
+  leadName: string | null;
+  messages: MailboxInboxMessage[];
+}
+
+export interface WarmupSafetyTier {
+  key: "wrong" | "very-wrong" | "extremely-wrong";
+  label: string;
+  description: string;
+  action: "decrement" | "stop";
+  amount: number;
+}
+
+export interface WarmupStrategy {
+  id: number;
+  name: string;
+  description: string | null;
+  startDailyLimit: number;
+  steadyStateDailyLimit: number;
+  incrementPerStage: number;
+  stageDurationDays: number;
+  safetyTiers: WarmupSafetyTier[];
+  isAiGenerated: boolean;
+  aiRationale: string | null;
+  assignedMailboxCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WarmupSummary {
+  inWarmup: number;
+  atSteadyState: number;
+  avgProgress: number;
+  activeStrategies: number;
+}
+
+// The always-on warmup lane's shared, single-use lead pool. See PlusVibe-Plan.md 1E.
+export interface WarmupPoolStats {
+  campaignId: number;
+  available: number;
+  used: number;
+  suppressed: number;
+  failed: number;
+  total: number;
+}
+
+export interface WarmupPoolAddResult {
+  added: number;
+  skippedSuppressed: number;
+  skippedAlreadyInPool: number;
+  totalRows?: number;
+  invalidCount?: number;
+}
+
+export interface WarmupTarget {
+  all?: boolean;
+  domain?: string;
+  mailboxIds?: number[];
+}
+
+export interface AiRampWeeklyStage {
+  label: string;
+  range: string;
+}
+
+export interface AiRampSchedule {
+  startDailyLimit: number;
+  steadyStateDailyLimit: number;
+  incrementPerStage: number;
+  stageDurationDays: number;
+  weeklySchedule: AiRampWeeklyStage[];
+  rationale: string | null;
+}
+
+export interface MailerCampaign {
+  id: number;
+  name: string;
+  status: "Active" | "Paused" | "Draft" | "Completed";
+  mailboxCount: number;
+  sentToday: number;
+  sentTotal: number;
+  replyRate: number;
+  bounceRate: number;
+  startedAt: string;
+  leadsCount: number;
+  contactedCount: number;
+  contactedPercent: number;
+  replyCount: number;
+  positiveReplyRate: number | null;
+  openTrackingSupported: boolean;
+  totalSequenceEmails: number;
+}
+
+export interface ReputationTrendPoint {
+  date: string;
+  sentVolume: number;
+  bounceRate: number;
+  complaintRate: number;
+}
+
+export interface CampaignPage {
+  items: MailerCampaign[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface CampaignFollowUpPayload {
+  delayDays: number;
+  body: string;
+}
+
+export interface ParsedLead {
+  email: string;
+  fullName: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  company: string | null;
+  role: string | null;
+  phone: string | null;
+  raw: Record<string, unknown>;
+}
+
+export interface LeadFileParseResult {
+  headers: string[];
+  fieldMap: Partial<Record<"email" | "fullName" | "firstName" | "lastName" | "company" | "role" | "phone", string>>;
+  totalRows: number;
+  validCount: number;
+  invalidCount: number;
+  duplicateCount: number;
+  leads: ParsedLead[];
+}
+
+export interface CampaignLead {
+  id: number;
+  email: string;
+  fullName: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  company: string | null;
+  role: string | null;
+  phone: string | null;
+  status: "Pending" | "Sent" | "Replied" | "Bounced";
+  raw: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface CampaignLeadsPage {
+  items: CampaignLead[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface CampaignCreatePayload {
+  name: string;
+  objective?: string;
+  subject: string;
+  body: string;
+  leads: ParsedLead[];
+  followUps: CampaignFollowUpPayload[];
+  mailboxMode: "all" | "specific";
+  mailboxIds?: number[];
+  dailyLimitOverride?: number | null;
+  sendingDays: string[];
+  windowStart: string;
+  windowEnd: string;
+  timezone: string;
+  aiAgentId?: number | null;
+  humanReviewRequired: boolean;
+}
+
 export interface AuthUser {
   id: number;
   first_name: string | null;
@@ -256,6 +678,11 @@ export interface Agent {
   language?: string;
   autoDetectLanguage?: boolean;
   responseRules?: string | null;
+  fallbackMeetingUrl?: string | null;
+  meetingDurationMinutes?: number;
+  workingHoursStart?: string;
+  workingHoursEnd?: string;
+  timezone?: string;
   salesRules?: string | null;
   safetyRules?: string | null;
   knowledgeSources?: string | null;
@@ -273,6 +700,14 @@ export interface Agent {
   updated?: string;
   updatedAt?: string;
   createdAt?: string;
+}
+
+export interface CalendarConnection {
+  id: number;
+  provider: "google";
+  googleEmail: string;
+  status: "connected" | "revoked" | "error";
+  createdAt: string;
 }
 
 export interface PlusVibeCampaign {

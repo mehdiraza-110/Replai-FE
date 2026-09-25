@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Button, Card, Checkbox, Input, ListBox, Select, TextArea as HeroTextArea } from "@heroui/react";
 import { ArrowLeft, ArrowRight, Check, CheckCircle2, ShieldCheck, TriangleAlert } from "lucide-react";
 import { LoadingState } from "../components/ui/LoadingState";
 import { StatusPill } from "../components/ui/StatusPill";
-import { ApiRequestError, aiAgentService, aiModelService, knowledgeService } from "../services/api";
-import type { Agent, KnowledgeItem } from "../types";
+import { ApiRequestError, aiAgentService, aiModelService, calendarService, knowledgeService } from "../services/api";
+import type { Agent, CalendarConnection, KnowledgeItem } from "../types";
 
 const steps = [
   "Basics",
@@ -23,6 +23,33 @@ const steps = [
 
 const aiProviders = ["OpenAI", "Anthropic", "Google Gemini"];
 
+const meetingDurations = [15, 30, 45, 60];
+
+const commonTimezones = [
+  "UTC",
+  "America/Los_Angeles",
+  "America/Denver",
+  "America/Chicago",
+  "America/New_York",
+  "Europe/London",
+  "Europe/Berlin",
+  "Europe/Madrid",
+  "Asia/Dubai",
+  "Asia/Karachi",
+  "Asia/Kolkata",
+  "Asia/Singapore",
+  "Asia/Tokyo",
+  "Australia/Sydney",
+];
+
+function getLocalTimezone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch {
+    return "UTC";
+  }
+}
+
 type AgentForm = {
   name: string;
   description: string;
@@ -39,6 +66,11 @@ type AgentForm = {
   language: string;
   autoDetectLanguage: boolean;
   responseRules: string;
+  fallbackMeetingUrl: string;
+  meetingDurationMinutes: number;
+  workingHoursStart: string;
+  workingHoursEnd: string;
+  timezone: string;
   knowledgeSources: string;
   knowledgeSourceIds: number[];
   trainingExamples: string;
@@ -65,6 +97,11 @@ const initialForm: AgentForm = {
   language: "English",
   autoDetectLanguage: true,
   responseRules: "Keep replies concise. Ask one question at a time. Never invent facts, pricing, or guarantees.",
+  fallbackMeetingUrl: "",
+  meetingDurationMinutes: 30,
+  workingHoursStart: "09:00",
+  workingHoursEnd: "17:00",
+  timezone: getLocalTimezone(),
   knowledgeSources: "Pricing FAQ, objection handling, PlusVibe integration overview",
   knowledgeSourceIds: [],
   trainingExamples: "Use high-quality objection, pricing, and meeting-booked examples.",
@@ -125,6 +162,11 @@ export function CreateAgent() {
   const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeItem[]>([]);
   const [knowledgeLoading, setKnowledgeLoading] = useState(false);
   const [knowledgeError, setKnowledgeError] = useState<string | null>(null);
+  const [calendarConnections, setCalendarConnections] = useState<CalendarConnection[]>([]);
+  const [calendarLoading, setCalendarLoading] = useState(false);
+  const [calendarConnecting, setCalendarConnecting] = useState(false);
+  const [calendarError, setCalendarError] = useState<string | null>(null);
+  const [calendarNotice, setCalendarNotice] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
@@ -244,6 +286,80 @@ export function CreateAgent() {
     };
   }, []);
 
+  const refreshCalendarConnections = useCallback(async () => {
+    if (!isEditMode) return;
+
+    setCalendarLoading(true);
+    setCalendarError(null);
+
+    try {
+      const connections = await calendarService.getConnections(agentId);
+      setCalendarConnections(connections);
+    } catch (error) {
+      setCalendarError(error instanceof Error ? error.message : "Unable to load calendar connections");
+    } finally {
+      setCalendarLoading(false);
+    }
+  }, [agentId, isEditMode]);
+
+  useEffect(() => {
+    if (!isEditMode) return;
+    if (currentStep !== "Response Rules") return;
+
+    void refreshCalendarConnections();
+  }, [currentStep, isEditMode, refreshCalendarConnections]);
+
+  useEffect(() => {
+    function handleOAuthMessage(event: MessageEvent) {
+      if (event.data?.type !== "google-calendar-connected") return;
+
+      setCalendarNotice(null);
+      setCalendarConnecting(false);
+      void refreshCalendarConnections();
+    }
+
+    window.addEventListener("message", handleOAuthMessage);
+
+    return () => {
+      window.removeEventListener("message", handleOAuthMessage);
+    };
+  }, [refreshCalendarConnections]);
+
+  async function handleConnectGoogleCalendar() {
+    setCalendarError(null);
+    setCalendarNotice(null);
+
+    if (!isEditMode) {
+      setCalendarNotice("Save this agent first. A calendar connection needs a saved agent to attach to.");
+      return;
+    }
+
+    try {
+      setCalendarConnecting(true);
+      const { url } = await calendarService.startGoogleAuth(agentId);
+      window.open(url, "google-calendar-oauth", "width=520,height=650");
+    } catch (error) {
+      setCalendarError(error instanceof Error ? error.message : "Unable to start Google Calendar connection");
+      setCalendarConnecting(false);
+    }
+  }
+
+  async function handleDisconnectCalendar(connectionId: number) {
+    setCalendarError(null);
+    setCalendarNotice(null);
+
+    try {
+      setCalendarLoading(true);
+      await calendarService.disconnect(connectionId);
+    } catch (error) {
+      setCalendarError(error instanceof Error ? error.message : "Unable to disconnect calendar");
+      setCalendarLoading(false);
+      return;
+    }
+
+    await refreshCalendarConnections();
+  }
+
   async function nextStep() {
     setSubmitError(null);
 
@@ -312,6 +428,11 @@ export function CreateAgent() {
             <LoadingState />
           ) : (
             <StepContent
+              calendarConnecting={calendarConnecting}
+              calendarConnections={calendarConnections}
+              calendarError={calendarError}
+              calendarLoading={calendarLoading}
+              calendarNotice={calendarNotice}
               form={form}
               knowledgeError={knowledgeError}
               knowledgeLoading={knowledgeLoading}
@@ -322,6 +443,8 @@ export function CreateAgent() {
               modelsLoading={modelsLoading}
               step={currentStep}
               updateField={updateField}
+              onConnectGoogleCalendar={handleConnectGoogleCalendar}
+              onDisconnectCalendar={handleDisconnectCalendar}
             />
           )}
         </Card.Content>
@@ -382,6 +505,11 @@ function buildAgentPayload(form: AgentForm) {
     language: form.language,
     autoDetectLanguage: form.autoDetectLanguage,
     responseRules: form.responseRules,
+    fallbackMeetingUrl: form.fallbackMeetingUrl || null,
+    meetingDurationMinutes: Number(form.meetingDurationMinutes),
+    workingHoursStart: form.workingHoursStart,
+    workingHoursEnd: form.workingHoursEnd,
+    timezone: form.timezone,
     knowledgeSources: form.knowledgeSources,
     knowledgeSourceIds: form.knowledgeSourceIds,
     trainingExamples: form.trainingExamples,
@@ -411,6 +539,11 @@ function agentToForm(agent: Agent): AgentForm {
     language: agent.language || "English",
     autoDetectLanguage: agent.autoDetectLanguage ?? true,
     responseRules: agent.responseRules || "",
+    fallbackMeetingUrl: agent.fallbackMeetingUrl || "",
+    meetingDurationMinutes: agent.meetingDurationMinutes ?? 30,
+    workingHoursStart: agent.workingHoursStart || "09:00",
+    workingHoursEnd: agent.workingHoursEnd || "17:00",
+    timezone: agent.timezone || getLocalTimezone(),
     knowledgeSources: agent.knowledgeSources || "",
     knowledgeSourceIds: agent.knowledgeSourceIds || [],
     trainingExamples: agent.trainingExamples || "",
@@ -439,6 +572,11 @@ function extractModelName(agent: Agent) {
 }
 
 function StepContent({
+  calendarConnecting,
+  calendarConnections,
+  calendarError,
+  calendarLoading,
+  calendarNotice,
   form,
   knowledgeError,
   knowledgeLoading,
@@ -447,9 +585,18 @@ function StepContent({
   modelOptions,
   modelsError,
   modelsLoading,
+  onConnectGoogleCalendar,
+  onDisconnectCalendar,
   step,
   updateField,
 }: {
+  calendarConnecting: boolean;
+  calendarConnections: CalendarConnection[];
+  calendarError: string | null;
+  calendarLoading: boolean;
+  calendarNotice: string | null;
+  onConnectGoogleCalendar: () => void;
+  onDisconnectCalendar: (connectionId: number) => void;
   form: AgentForm;
   knowledgeError: string | null;
   knowledgeLoading: boolean;
@@ -527,7 +674,131 @@ function StepContent({
   }
 
   if (step === "Response Rules") {
-    return <TextAreaField label="Response Rules" rows={8} value={form.responseRules} onChange={(value) => updateField("responseRules", value)} />;
+    const isMeetingObjective = form.objective === "Schedule a Meeting";
+    const googleConnection = calendarConnections.find((connection) => connection.provider === "google");
+    const isCalendarConnected = googleConnection?.status === "connected";
+    const needsReconnect = googleConnection?.status === "revoked" || googleConnection?.status === "error";
+    const timezoneOptions = commonTimezones.includes(form.timezone) || !form.timezone
+      ? commonTimezones
+      : [form.timezone, ...commonTimezones];
+
+    return (
+      <div className="grid items-start gap-5">
+        {/*
+          Meeting booking / calendar connect UI temporarily disabled until the Google Cloud
+          app (OAuth client) is set up. State, handlers, and backend logic are left intact
+          below so this can be re-enabled by uncommenting this block once ready.
+
+        {isMeetingObjective ? (
+          <div className="rounded-xl bg-surface-secondary p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Meeting booking</p>
+                <p className="mt-1 text-sm leading-6 text-muted">
+                  Availability and calendar settings used when this agent books a meeting with a prospect.
+                </p>
+              </div>
+              <StatusPill tone={isCalendarConnected ? "success" : needsReconnect ? "warning" : "default"}>
+                {isCalendarConnected ? "Calendar connected" : needsReconnect ? "Needs attention" : "No calendar"}
+              </StatusPill>
+            </div>
+
+            <div className="mt-4 grid items-start gap-4 md:grid-cols-2">
+              <TextField
+                label="Fallback Meeting URL"
+                placeholder="https://zoom.us/j/... or your Calendly / Meet link"
+                value={form.fallbackMeetingUrl}
+                onChange={(value) => updateField("fallbackMeetingUrl", value)}
+              />
+              <SelectField
+                label="Meeting Duration"
+                options={meetingDurations.map((minutes) => `${minutes} minutes`)}
+                value={`${form.meetingDurationMinutes} minutes`}
+                onChange={(value) => updateField("meetingDurationMinutes", Number.parseInt(value, 10) || 30)}
+              />
+              <p className="-mt-2 text-xs leading-5 font-normal text-muted md:col-span-2">
+                Any meeting link works here — Zoom, Google Meet, Calendly, etc. It's shared when no calendar slot is available or no calendar is connected.
+              </p>
+              <TextField
+                label="Working Hours Start"
+                type="time"
+                value={form.workingHoursStart}
+                onChange={(value) => updateField("workingHoursStart", value)}
+              />
+              <TextField
+                label="Working Hours End"
+                type="time"
+                value={form.workingHoursEnd}
+                onChange={(value) => updateField("workingHoursEnd", value)}
+              />
+              <SelectField
+                label="Timezone"
+                options={timezoneOptions}
+                value={form.timezone}
+                onChange={(value) => updateField("timezone", value)}
+              />
+            </div>
+
+            <div className="mt-4 grid gap-3 rounded-xl bg-surface p-4">
+              {calendarLoading ? (
+                <LoadingState minHeight={72} size="md" />
+              ) : isCalendarConnected && googleConnection ? (
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="flex items-center gap-2 text-sm font-medium text-foreground">
+                    <CheckCircle2 className="size-4 text-accent" />
+                    Connected as {googleConnection.googleEmail}
+                  </p>
+                  <Button size="sm" variant="secondary" onClick={() => onDisconnectCalendar(googleConnection.id)}>
+                    Disconnect
+                  </Button>
+                </div>
+              ) : needsReconnect && googleConnection ? (
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="flex items-center gap-2 text-sm font-medium text-warning">
+                    <TriangleAlert className="size-4 shrink-0" />
+                    Connection needs to be renewed{googleConnection.googleEmail ? ` (${googleConnection.googleEmail})` : ""}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button isDisabled={calendarConnecting} size="sm" onClick={onConnectGoogleCalendar}>
+                      Reconnect Google Calendar
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={() => onDisconnectCalendar(googleConnection.id)}>
+                      Disconnect
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button isDisabled={calendarConnecting} size="sm" onClick={onConnectGoogleCalendar}>
+                    {calendarConnecting ? "Connecting..." : "Connect Google Calendar"}
+                  </Button>
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center gap-3">
+                <Button isDisabled size="sm" variant="secondary">
+                  Connect Calendly
+                </Button>
+                <StatusPill tone="default">Coming soon</StatusPill>
+              </div>
+
+              {calendarNotice ? (
+                <div className="flex items-start gap-3 rounded-xl bg-warning/10 p-3 text-sm font-medium text-warning">
+                  <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+                  <p>{calendarNotice}</p>
+                </div>
+              ) : null}
+              {calendarError ? (
+                <p className="rounded-xl bg-danger/10 p-3 text-sm font-medium text-danger">{calendarError}</p>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+        */}
+
+        <TextAreaField label="Response Rules" rows={8} value={form.responseRules} onChange={(value) => updateField("responseRules", value)} />
+      </div>
+    );
   }
 
   if (step === "Knowledge") {
@@ -699,12 +970,16 @@ function StepContent({
 function TextField({
   label,
   onChange,
+  placeholder,
   suffix,
+  type = "text",
   value,
 }: {
   label: string;
   onChange: (value: string) => void;
+  placeholder?: string;
   suffix?: string;
+  type?: string;
   value: string;
 }) {
   return (
@@ -713,6 +988,8 @@ function TextField({
       <Input
         className="agent-field h-10 w-full text-sm text-foreground"
         fullWidth
+        placeholder={placeholder}
+        type={type}
         value={value}
         variant="primary"
         onChange={(event) => onChange(event.target.value)}

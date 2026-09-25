@@ -1,50 +1,21 @@
-import { Avatar, Chip, Dropdown, ScrollShadow } from "@heroui/react";
-import { useEffect, useState } from "react";
-import {
-  BarChart3,
-  Bot,
-  Boxes,
-  Cable,
-  FolderKanban,
-  ChevronUp,
-  ClipboardCheck,
-  LayoutDashboard,
-  ListTree,
-  LogOut,
-  MessageSquareText,
-  Route,
-  Settings,
-  UsersRound,
-} from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { Avatar, Chip, Dropdown, ScrollShadow, Spinner } from "@heroui/react";
+import { useEffect, useRef, useState } from "react";
+import { Check, ChevronsUpDown, ChevronUp, LogOut } from "lucide-react";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { getNavForSystem, getSystem, SYSTEMS, type SystemDefinition, type NavEntry } from "../../constants/systems";
+import { useActiveSystem } from "../../hooks/useActiveSystem";
 import { useRealtimeConnected } from "../../hooks/useRealtimeConnected";
 import { messageService, reviewService } from "../../services/api";
 
-const primaryNav = [
-  { label: "Overview", href: "/", icon: LayoutDashboard },
-  { label: "Human Review", href: "/review", icon: ClipboardCheck },
-  { label: "Messages", href: "/messages", icon: MessageSquareText },
-  { label: "Leads", href: "/leads", icon: UsersRound },
-  { label: "Forwarded Leads", href: "/forwarded-leads", icon: Route },
-  { label: "AI Agents", href: "/agents", icon: Bot },
-  { label: "Campaigns", href: "/campaigns", icon: FolderKanban },
-  { label: "Knowledge Base", href: "/knowledge", icon: Boxes },
-  { label: "Analytics", href: "/analytics", icon: BarChart3 },
-];
-
-const secondaryNav = [
-  { label: "Integrations", href: "/integrations", icon: Cable },
-  { label: "Event Logs", href: "/events", icon: ListTree },
-  { label: "Settings", href: "/settings", icon: Settings },
-];
+const WORKSPACE_SWITCH_DELAY_MS = 700;
 
 function NavItem({
   item,
   messageCount,
   reviewCount,
 }: {
-  item: (typeof primaryNav)[number];
+  item: NavEntry;
   messageCount: string | null;
   reviewCount: string | null;
 }) {
@@ -61,6 +32,7 @@ function NavItem({
         ].join(" ")
       }
       to={item.href}
+      end={item.href === "/responder" || item.href === "/mailer"}
     >
       <Icon className="size-4 shrink-0" />
       <span className="truncate">{item.label}</span>
@@ -83,9 +55,14 @@ function NavItem({
 
 export function Sidebar() {
   const { logout, user } = useAuth();
+  const navigate = useNavigate();
   const isLiveConnected = useRealtimeConnected();
+  const activeSystem = useActiveSystem();
+  const { primary, secondary } = getNavForSystem(activeSystem);
   const [messageCount, setMessageCount] = useState<string | null>(null);
   const [reviewCount, setReviewCount] = useState<string | null>(null);
+  const [switchingTo, setSwitchingTo] = useState<SystemDefinition | null>(null);
+  const switchTimeoutRef = useRef<number | null>(null);
   const displayName = [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.email || "ReplyOS user";
   const initials = displayName
     .split(/\s+/)
@@ -123,19 +100,77 @@ export function Sidebar() {
     };
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (switchTimeoutRef.current) window.clearTimeout(switchTimeoutRef.current);
+    };
+  }, []);
+
+  function handleSelectSystem(system: SystemDefinition) {
+    if (system.id === activeSystem) return;
+
+    setSwitchingTo(system);
+    switchTimeoutRef.current = window.setTimeout(() => {
+      navigate(system.homePath);
+      setSwitchingTo(null);
+    }, WORKSPACE_SWITCH_DELAY_MS);
+  }
+
+  const currentSystem = getSystem(activeSystem);
+  const CurrentSystemIcon = currentSystem.icon;
+
   return (
-    <aside className="fixed inset-y-0 left-0 hidden w-[212px] flex-col border-r border-border/70 bg-[#F4F5F6] px-3 py-4 lg:flex">
-      <div className="mb-4 flex min-w-0 items-center gap-2.5 px-1">
+    <>
+      <aside className="fixed inset-y-0 left-0 hidden w-[212px] flex-col border-r border-border/70 bg-[#F4F5F6] px-3 py-4 lg:flex">
+      <Link className="mb-4 flex min-w-0 items-center gap-2.5 px-1" title="All systems" to="/">
         <div className="size-8 rounded-full bg-[radial-gradient(circle_at_30%_25%,oklch(0.94_0.07_205),oklch(0.79_0.16_254)_48%,oklch(0.78_0.17_310))]" />
         <div className="min-w-0">
           <p className="truncate text-[12px] font-semibold leading-4 text-foreground">{displayName}</p>
           <p className="capitalize text-[11px] leading-3 text-muted">{roleName}</p>
         </div>
+      </Link>
+
+      <div className="mb-3">
+        <Dropdown>
+          <Dropdown.Trigger className="block w-full">
+            <div className="flex w-full items-center gap-2.5 rounded-[13px] border border-border/70 bg-surface px-2.5 py-2 text-left transition hover:bg-surface-secondary/70">
+              <span className="grid size-7 shrink-0 place-items-center rounded-full bg-default-100 text-foreground">
+                <CurrentSystemIcon className="size-4" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[12px] font-semibold leading-4 text-foreground">{currentSystem.shortLabel}</span>
+                <span className="block truncate text-[10px] leading-3 text-muted">Current workspace</span>
+              </span>
+              <ChevronsUpDown className="size-3.5 shrink-0 text-muted" />
+            </div>
+          </Dropdown.Trigger>
+          <Dropdown.Popover className="w-[236px]" placement="bottom start">
+            <Dropdown.Menu aria-label="Switch workspace">
+              {SYSTEMS.map((system) => {
+                const Icon = system.icon;
+                const isActive = system.id === activeSystem;
+
+                return (
+                  <Dropdown.Item id={system.id} key={system.id} onAction={() => handleSelectSystem(system)}>
+                    <span className="grid size-8 shrink-0 place-items-center rounded-full bg-default-100 text-foreground">
+                      <Icon className="size-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[13px] font-semibold leading-4 text-foreground">{system.label}</span>
+                      <span className="block truncate text-[11px] leading-4 text-muted">{system.description}</span>
+                    </span>
+                    {isActive ? <Check className="size-4 shrink-0 text-accent" /> : null}
+                  </Dropdown.Item>
+                );
+              })}
+            </Dropdown.Menu>
+          </Dropdown.Popover>
+        </Dropdown>
       </div>
 
       <ScrollShadow className="-mx-1 px-1">
         <nav className="space-y-1">
-          {primaryNav.map((item) => (
+          {primary.map((item) => (
             <NavItem item={item} key={item.href} messageCount={messageCount} reviewCount={reviewCount} />
           ))}
         </nav>
@@ -143,7 +178,7 @@ export function Sidebar() {
         <div className="my-4 h-px bg-border/70" />
 
         <nav className="space-y-1">
-          {secondaryNav.map((item) => (
+          {secondary.map((item) => (
             <NavItem item={item} key={item.href} messageCount={messageCount} reviewCount={reviewCount} />
           ))}
         </nav>
@@ -152,7 +187,7 @@ export function Sidebar() {
       <div className="mt-auto min-w-0">
         <Dropdown>
           <Dropdown.Trigger className="block w-full min-w-0">
-            <button className="flex h-[52px] w-full min-w-0 items-center gap-2.5 rounded-[14px] px-2.5 text-left transition hover:bg-surface">
+            <div className="flex h-[52px] w-full min-w-0 items-center gap-2.5 rounded-[14px] px-2.5 text-left transition hover:bg-surface">
               <span className="relative inline-flex shrink-0">
                 <Avatar className="size-8 shrink-0">
                   {user?.profile_image ? <Avatar.Image alt={displayName} src={user.profile_image} /> : null}
@@ -171,7 +206,7 @@ export function Sidebar() {
                 <span className="block truncate text-[12px] leading-4 text-muted">{user?.email}</span>
               </span>
               <ChevronUp className="size-4 shrink-0 text-muted" />
-            </button>
+            </div>
           </Dropdown.Trigger>
           <Dropdown.Popover className="w-[188px]" placement="top start">
             <Dropdown.Menu aria-label="Account menu">
@@ -184,5 +219,13 @@ export function Sidebar() {
         </Dropdown>
       </div>
     </aside>
+
+    {switchingTo ? (
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-background/80 backdrop-blur-sm">
+        <Spinner color="accent" size="lg" />
+        <p className="text-sm font-semibold text-foreground">Switching to {switchingTo.label}…</p>
+      </div>
+    ) : null}
+    </>
   );
 }
