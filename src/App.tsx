@@ -29,7 +29,9 @@ import { Messages } from "./pages/Messages";
 import { Notifications } from "./pages/Notifications";
 import { Overview } from "./pages/Overview";
 import { PlusVibeCampaigns } from "./pages/PlusVibeCampaigns";
+import { PrivacyPolicy } from "./pages/PrivacyPolicy";
 import { Settings } from "./pages/Settings";
+import { TermsOfService } from "./pages/TermsOfService";
 import { Training } from "./pages/Training";
 
 function ProtectedShell() {
@@ -47,6 +49,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="login" element={<Auth />} />
+      <Route path="privacy" element={<PrivacyPolicy />} />
+      <Route path="terms" element={<TermsOfService />} />
       <Route element={<ProtectedShell />}>
         <Route index element={<Overview />} />
         <Route path="responder" element={<Dashboard />} />
