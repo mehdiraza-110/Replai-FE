@@ -684,11 +684,6 @@ function StepContent({
 
     return (
       <div className="grid items-start gap-5">
-        {/*
-          Meeting booking / calendar connect UI temporarily disabled until the Google Cloud
-          app (OAuth client) is set up. State, handlers, and backend logic are left intact
-          below so this can be re-enabled by uncommenting this block once ready.
-
         {isMeetingObjective ? (
           <div className="rounded-xl bg-surface-secondary p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -794,7 +789,6 @@ function StepContent({
             </div>
           </div>
         ) : null}
-        */}
 
         <TextAreaField label="Response Rules" rows={8} value={form.responseRules} onChange={(value) => updateField("responseRules", value)} />
       </div>
