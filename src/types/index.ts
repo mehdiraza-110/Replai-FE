@@ -185,6 +185,24 @@ export interface MailboxPage {
   statusCounts: MailboxStatusCounts;
 }
 
+/** What an action will cost, shown to the user BEFORE they confirm anything that spends money. */
+export interface MailboxCostQuote {
+  provider: string;
+  mailboxCount: number;
+  slotsPaid: number;
+  slotsUsed: number;
+  freeSlots: number;
+  coveredByPlan: boolean;
+  unitCents: number;
+  currentMonthlyCents: number;
+  newMonthlyCents: number;
+  monthlyIncreaseCents: number;
+  dueTodayCents: number;
+  renewalDate: string | null;
+  currency: string;
+  summary: string;
+}
+
 export interface MailboxCreateResult {
   email: string;
   status: string;
@@ -246,7 +264,16 @@ export interface InboxThreadPage {
   totalUnreadThreads: number;
 }
 
+export interface InboxAiDraft {
+  id: number;
+  body: string;
+  subject: string | null;
+  confidence: number;
+  generatedBy: string;
+}
+
 export interface InboxThreadDetail {
+  aiDraft: InboxAiDraft | null;
   mailbox: { id: number; email: string; displayName: string | null };
   leadEmail: string;
   leadName: string | null;

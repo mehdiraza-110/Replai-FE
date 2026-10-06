@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button, Spinner } from "@heroui/react";
-import { ArrowDownLeft, ArrowUpRight, Inbox as InboxIcon, RefreshCw, Search, Send } from "lucide-react";
-import { inboxService } from "../services/api";
+import { ArrowDownLeft, ArrowUpRight, Inbox as InboxIcon, RefreshCw, Search, Send, Sparkles } from "lucide-react";
+import { inboxService, messageService } from "../services/api";
 import type { InboxThread, InboxThreadDetail } from "../types";
 
 /**
@@ -25,6 +25,10 @@ export function MailerInbox() {
   const [replyBody, setReplyBody] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+
+  const [draftBody, setDraftBody] = useState("");
+  const [isDraftBusy, setIsDraftBusy] = useState(false);
+  const [draftError, setDraftError] = useState<string | null>(null);
 
   useEffect(() => {
     loadThreads();
@@ -65,9 +69,11 @@ export function MailerInbox() {
     setDetailError(null);
     setReplyBody("");
     setSendError(null);
+    setDraftError(null);
     try {
       const data = await inboxService.getThread(mailboxId, threadId);
       setDetail(data);
+      setDraftBody(data.aiDraft?.body ?? "");
       if (data.messages.some((message) => message.direction === "inbound" && !message.isRead)) {
         await inboxService.markThreadRead(mailboxId, threadId);
         setThreads((current) =>
@@ -97,6 +103,35 @@ export function MailerInbox() {
       setSendError(err instanceof Error ? err.message : "Unable to send reply");
     } finally {
       setIsSending(false);
+    }
+  }
+
+  async function handleApproveDraft() {
+    if (!selected || !detail?.aiDraft || !draftBody.trim()) return;
+    setIsDraftBusy(true);
+    setDraftError(null);
+    try {
+      await messageService.approveDraft(detail.aiDraft.id, { body: draftBody.trim() });
+      await loadThread(selected.mailboxId, selected.threadId);
+      void loadThreads();
+    } catch (err) {
+      setDraftError(err instanceof Error ? err.message : "Unable to send the AI reply");
+    } finally {
+      setIsDraftBusy(false);
+    }
+  }
+
+  async function handleDiscardDraft() {
+    if (!selected || !detail?.aiDraft) return;
+    setIsDraftBusy(true);
+    setDraftError(null);
+    try {
+      await messageService.rejectDraft(detail.aiDraft.id);
+      setDetail((current) => (current ? { ...current, aiDraft: null } : current));
+    } catch (err) {
+      setDraftError(err instanceof Error ? err.message : "Unable to discard the AI reply");
+    } finally {
+      setIsDraftBusy(false);
     }
   }
 
@@ -229,6 +264,31 @@ export function MailerInbox() {
                 </div>
               ))}
             </div>
+
+            {detail.aiDraft ? (
+              <div className="border-t border-accent/30 bg-accent/5 p-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="flex items-center gap-1.5 text-[12px] font-semibold text-foreground">
+                    <Sparkles className="size-3.5 text-accent" />
+                    AI suggested reply · {Math.round(detail.aiDraft.confidence)}% confidence
+                  </p>
+                  <p className="text-[11px] text-muted">Nothing is sent until you approve it.</p>
+                </div>
+                {draftError ? <p className="mb-2 text-[12px] text-danger">{draftError}</p> : null}
+                <textarea
+                  className="h-28 w-full resize-none rounded-xl border border-border bg-surface p-3 text-[13px] outline-none transition focus:border-accent"
+                  onChange={(event) => setDraftBody(event.target.value)}
+                  value={draftBody}
+                />
+                <div className="mt-2 flex justify-end gap-2">
+                  <Button isDisabled={isDraftBusy} onPress={handleDiscardDraft} size="sm" variant="secondary">Discard</Button>
+                  <Button isDisabled={isDraftBusy || !draftBody.trim()} onPress={handleApproveDraft} size="sm">
+                    {isDraftBusy ? <Spinner color="current" size="sm" /> : <Send className="size-4" />}
+                    Approve &amp; send
+                  </Button>
+                </div>
+              </div>
+            ) : null}
 
             <div className="border-t border-border/70 p-4">
               {sendError ? <p className="mb-2 text-[12px] text-danger">{sendError}</p> : null}

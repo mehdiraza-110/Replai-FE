@@ -33,6 +33,7 @@ import type {
   InboxThreadDetail,
   InboxThreadPage,
   Mailbox,
+  MailboxCostQuote,
   MailboxCreateResult,
   MailboxInboxMessage,
   MailboxInboxPage,
@@ -489,7 +490,15 @@ export const mailboxService = {
     return response.data;
   },
 
-  async create(payload: { domain: string; localParts: string[]; displayName?: string; dailyLimit?: number }) {
+  async quote(count: number) {
+    const response = await apiRequest<MailboxCostQuote>("/api/v1/mailboxes/quote", {
+      method: "POST",
+      body: JSON.stringify({ count }),
+    });
+    return response.data;
+  },
+
+  async create(payload: { domain: string; localParts: string[]; displayName?: string; dailyLimit?: number; acceptedMonthlyIncreaseCents?: number }) {
     const response = await apiRequest<MailboxCreateResult[]>("/api/v1/mailboxes", {
       method: "POST",
       body: JSON.stringify(payload),
