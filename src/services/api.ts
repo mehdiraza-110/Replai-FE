@@ -33,6 +33,7 @@ import type {
   InboxThreadPage,
   Mailbox,
   MailboxCostQuote,
+  MaildosoSyncSummary,
   MailboxCreateResult,
   MailboxInboxMessage,
   MailboxInboxPage,
@@ -577,6 +578,11 @@ export const mailboxService = {
       method: "POST",
       body: JSON.stringify({ count }),
     });
+    return response.data;
+  },
+
+  async syncMaildoso() {
+    const response = await apiRequest<MaildosoSyncSummary>("/api/v1/mailboxes/sync-maildoso", { method: "POST" });
     return response.data;
   },
 

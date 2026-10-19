@@ -5,6 +5,8 @@ import { CheckCircle2, Sparkles, TrendingUp, Upload, Users } from "lucide-react"
 import { RampScheduleDrawer } from "../components/mailer/RampScheduleDrawer";
 import { LoadingState } from "../components/ui/LoadingState";
 import { StatusPill } from "../components/ui/StatusPill";
+import { useAuth } from "../context/AuthContext";
+import { PLATFORM_WORKSPACE_SLUG } from "../services/adminApi";
 import { domainService, mailboxService, warmupPoolService, warmupService } from "../services/api";
 import type { Domain, Mailbox, StatusTone, WarmupPoolStats, WarmupStrategy, WarmupSummary } from "../types";
 
@@ -23,6 +25,8 @@ function getProgress(mailbox: Mailbox, strategySteadyLimit: number | undefined) 
 const emptySummary: WarmupSummary = { inWarmup: 0, atSteadyState: 0, avgProgress: 0, activeStrategies: 0 };
 
 export function MailerWarmup() {
+  const { activeWorkspace, isSuperAdmin } = useAuth();
+  const [totalDomains, setTotalDomains] = useState(0);
   const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
   const [strategies, setStrategies] = useState<WarmupStrategy[]>([]);
   const [summary, setSummary] = useState<WarmupSummary>(emptySummary);
@@ -97,6 +101,7 @@ export function MailerWarmup() {
       setMailboxes(mailboxPage.items);
       setTotalMailboxes(mailboxPage.total);
       setDomains(domainPage.items);
+      setTotalDomains(domainPage.total ?? domainPage.items.length);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to load warmup data");
     } finally {
@@ -141,6 +146,14 @@ export function MailerWarmup() {
           Ramp Schedule
         </Button>
       </div>
+
+      <p className="rounded-xl border border-border/70 bg-surface px-4 py-2.5 text-[13px] text-foreground" data-testid="warmup-scope">
+        {isSuperAdmin && activeWorkspace?.slug === PLATFORM_WORKSPACE_SLUG
+          ? "Platform pool: warm-up for all unassigned domains and mailboxes"
+          : isSuperAdmin
+            ? `Viewing ${activeWorkspace?.name ?? "this workspace"}: warm-up for its mailboxes`
+            : `Warm-up for your own mailboxes (${totalDomains} domain${totalDomains === 1 ? "" : "s"}, ${totalMailboxes} mailbox${totalMailboxes === 1 ? "" : "es"})`}
+      </p>
 
       {notice ? (
         <div className="flex items-center gap-2 rounded-xl border border-success/20 bg-success/10 px-4 py-3 text-sm font-medium text-success">

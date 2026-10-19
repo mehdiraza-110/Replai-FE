@@ -13,6 +13,7 @@ import { PageHeader, Pagination, SearchBox, StatTile, inputClass, useDebounced }
 import { AssignDomainsModal } from "../../components/admin/AssignDomainsModal";
 import { DomainDetailModal } from "../../components/admin/DomainDetailModal";
 import { AssignedTo, DomainStatusPill, WarmupCell, isPoolDomain } from "../../components/admin/DomainBits";
+import { SyncMaildosoButton } from "../../components/mailer/SyncMaildosoButton";
 import { StatusPill } from "../../components/ui/StatusPill";
 import { SkeletonRow } from "../../components/ui/Skeleton";
 
@@ -139,6 +140,13 @@ export function AdminDomains() {
     <div className="mx-auto flex max-w-[1480px] flex-col gap-5">
       <PageHeader
         actions={
+          <div className="flex flex-wrap items-center gap-2">
+          <SyncMaildosoButton
+            onDone={() => {
+              void load();
+              void loadSummary();
+            }}
+          />
           <Button
             isDisabled={selectedList.length === 0}
             size="sm"
@@ -148,6 +156,7 @@ export function AdminDomains() {
             <UserRoundPlus className="size-4" />
             {selectedList.length > 0 ? `Assign selected (${selectedList.length})` : "Assign selected"}
           </Button>
+          </div>
         }
         description="Every domain on the platform and who it is assigned to. Assign, reassign, or return domains to the Koval Group pool."
         title="Domains"

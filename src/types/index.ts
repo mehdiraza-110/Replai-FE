@@ -1001,3 +1001,11 @@ export interface AiDebugRun {
     value: string;
   }>;
 }
+
+export interface MaildosoSyncSummary {
+  domains: number;
+  mailboxesCreated: number;
+  mailboxesUpdated: number;
+  skipped: Array<{ email: string; reason: string }>;
+  warmupAssigned?: number;
+}

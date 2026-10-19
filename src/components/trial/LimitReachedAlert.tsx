@@ -1,5 +1,5 @@
 import { Button } from "@heroui/react";
-import { OctagonAlert } from "lucide-react";
+import { OctagonAlert, TriangleAlert } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { isSystemEnabled } from "../../constants/systems";
@@ -43,7 +43,11 @@ export function usePlanFreshness(enabled: boolean) {
   }, [enabled, refreshPlan]);
 }
 
-/** Red alert listing every limit that has been reached. Renders nothing when none is. */
+/**
+ * Alert listing every limit that has been reached; renders nothing when none is. It is RED only when the daily email
+ * limit has been reached (sending is actually paused); any other reached limit (domains, mailboxes, workflows...)
+ * is a yellow warning.
+ */
 export function LimitReachedAlert({ variant }: { variant: "banner" | "card" }) {
   const { activeWorkspace, plan } = useAuth();
   const navigate = useNavigate();
@@ -53,17 +57,22 @@ export function LimitReachedAlert({ variant }: { variant: "banner" | "card" }) {
   const canRequest = activeWorkspace.role !== "member" && isSystemEnabled("mailer", activeWorkspace);
   const title = plan?.type === "trial" ? "Trial limit reached" : "Limit reached";
   const card = variant === "card";
+  const critical = reached.some((item) => item.key === "emails");
+  const tone = critical
+    ? { box: "border-danger/40 bg-danger/10", title: "text-danger", iconColor: "text-danger", icon: OctagonAlert }
+    : { box: "border-warning/50 bg-warning/10", title: "text-foreground", iconColor: "text-warning", icon: TriangleAlert };
+  const ToneIcon = tone.icon;
 
   return (
     <div
-      className={`${card ? "rounded-2xl p-4" : "px-4 py-2.5 sm:px-5 lg:ml-[212px]"} flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border border-danger/40 bg-danger/10 text-foreground ${card ? "" : "border-x-0 border-t-0"}`}
+      className={`${card ? "rounded-2xl p-4" : "px-4 py-2.5 sm:px-5 lg:ml-[212px]"} flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border ${tone.box} text-foreground ${card ? "" : "border-x-0 border-t-0"}`}
       data-testid={`limit-alert-${variant}`}
       role="alert"
     >
       <div className="flex min-w-0 flex-1 basis-72 items-start gap-2.5">
-        <OctagonAlert aria-hidden className={`mt-0.5 shrink-0 text-danger ${card ? "size-5" : "size-4"}`} />
+        <ToneIcon aria-hidden className={`mt-0.5 shrink-0 ${tone.iconColor} ${card ? "size-5" : "size-4"}`} />
         <div className="min-w-0">
-          <p className={`${card ? "text-[15px]" : "text-[13px]"} font-semibold text-danger`}>{title}</p>
+          <p className={`${card ? "text-[15px]" : "text-[13px]"} font-semibold ${tone.title}`}>{title}</p>
           <ul className={`mt-0.5 space-y-0.5 ${card ? "text-[13px]" : "text-[12px]"}`}>
             {reached.map((item) => (
               <li key={item.key}>{limitLine(item)}</li>
@@ -73,7 +82,7 @@ export function LimitReachedAlert({ variant }: { variant: "banner" | "card" }) {
         </div>
       </div>
       {canRequest ? (
-        <Button size="sm" variant="danger" onClick={() => navigate(`/mailer/orders?request=limits&key=${reached[0].key}`)}>
+        <Button size="sm" variant={critical ? "danger" : "secondary"} onClick={() => navigate(`/mailer/orders?request=limits&key=${reached[0].key}`)}>
           Request more
         </Button>
       ) : null}
