@@ -16,7 +16,7 @@ const reputationTone: Record<Mailbox["reputationStatus"], StatusTone> = {
 export function MailerHealth() {
   const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
   const [domainCount, setDomainCount] = useState(0);
-  const [configuredDomainCount, setConfiguredDomainCount] = useState(0);
+  const [verifiedDomainCount, setVerifiedDomainCount] = useState(0);
   const [trend, setTrend] = useState<ReputationTrendPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +36,7 @@ export function MailerHealth() {
       ]);
       setMailboxes(mailboxPage.items);
       setDomainCount(domainPage.total);
-      setConfiguredDomainCount(domainPage.items.filter((domain) => domain.configurationSetName != null).length);
+      setVerifiedDomainCount(domainPage.items.filter((domain) => domain.status === "Verified").length);
       setTrend(reputationTrend);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to load health data");
@@ -79,14 +79,14 @@ export function MailerHealth() {
           tone={counts.Watch + counts["At Risk"] > 0 ? "warning" : undefined}
           value={counts.Watch + counts["At Risk"]}
         />
-        <HealthMetric detail={`of ${domainCount} domains`} icon={Layers} isLoading={isLoading} label="Domains w/ Config Sets" value={configuredDomainCount} />
-        <HealthMetric detail="single account — Tier 1 only" icon={ShieldOff} isLoading={false} label="AWS Accounts" value={1} />
+        <HealthMetric detail={`of ${domainCount} domains`} icon={Layers} isLoading={isLoading} label="Verified domains" value={verifiedDomainCount} />
+        <HealthMetric detail="not currently sending" icon={ShieldOff} isLoading={isLoading} label="Paused mailboxes" tone={mailboxes.filter((mailbox) => mailbox.status !== "Active").length > 0 ? "warning" : undefined} value={mailboxes.filter((mailbox) => mailbox.status !== "Active").length} />
       </section>
 
       <Card className="apple-shadow border border-border/70 bg-surface p-4">
         <Card.Header className="p-0">
           <Card.Title className="text-[15px] font-semibold">Bounce &amp; complaint rate (7 days)</Card.Title>
-          <Card.Description>Aggregated across all sending domains, from Amazon SES / CloudWatch reputation metrics.</Card.Description>
+          <Card.Description>Aggregated across all of your sending domains.</Card.Description>
         </Card.Header>
         <Card.Content className="p-0 pt-4">
           {isLoading ? (

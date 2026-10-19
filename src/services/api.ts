@@ -423,6 +423,11 @@ export const campaignService = {
     return response.data;
   },
 
+  async remove(campaignId: number) {
+    const response = await apiRequest<{ id: number; name: string }>(`/api/v1/campaigns/${campaignId}`, { method: "DELETE" });
+    return response.data;
+  },
+
   parseLeadsFile(file: File, onProgress?: (percent: number) => void) {
     return uploadWithProgress<LeadFileParseResult>("/api/v1/campaigns/parse-leads", file, "file", onProgress);
   },
@@ -477,7 +482,7 @@ export const warmupService = {
   },
 
   async assignStrategy(strategyId: number, target: WarmupTarget) {
-    const response = await apiRequest<{ strategy: WarmupStrategy; assignedCount: number }>(`/api/v1/warmup/strategies/${strategyId}/assign`, {
+    const response = await apiRequest<{ strategy: WarmupStrategy; assignedCount: number; alreadyAssignedCount?: number; skippedMailboxIds?: number[] }>(`/api/v1/warmup/strategies/${strategyId}/assign`, {
       method: "POST",
       body: JSON.stringify(target),
     });

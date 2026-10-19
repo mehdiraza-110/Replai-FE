@@ -249,7 +249,7 @@ export function Mailer() {
                     <td className="px-2 py-4 align-top">
                       <div className="flex items-center gap-3 text-[12px] text-foreground">
                         <MetricIcon icon={Users} label={`${domain.mailboxCount ?? 0} mailbox${(domain.mailboxCount ?? 0) === 1 ? "" : "es"} on this domain`} value={`${domain.mailboxCount ?? 0} mailbox${(domain.mailboxCount ?? 0) === 1 ? "" : "es"}`} />
-                        <MetricIcon icon={Hash} label={`${domain.dkimTokens.length} DKIM CNAME records managed by SES`} value={`${domain.dkimTokens.length} DKIM`} />
+                        <MetricIcon icon={Hash} label={`${domain.dkimTokens.length} DKIM CNAME records`} value={`${domain.dkimTokens.length} DKIM`} />
                       </div>
                     </td>
                     <td className="px-2 py-4 align-top">

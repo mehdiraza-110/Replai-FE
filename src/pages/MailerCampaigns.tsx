@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   Smile,
   Timer,
+  Trash2,
   Undo2,
   UserCheck,
   Users,
@@ -23,7 +24,9 @@ import {
   Zap,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { ConfirmDialog } from "../components/admin/AdminModal";
 import { SkeletonRow } from "../components/ui/Skeleton";
+import { useAuth } from "../context/AuthContext";
 import { campaignService } from "../services/api";
 import type { CampaignLead, MailerCampaign, StatusTone } from "../types";
 
@@ -48,6 +51,13 @@ const statusTone: Record<MailerCampaign["status"], StatusTone> = {
 
 export function MailerCampaigns() {
   const navigate = useNavigate();
+  const { activeWorkspace, isSuperAdmin } = useAuth();
+  const role = activeWorkspace?.role as string | undefined;
+  const canDelete = isSuperAdmin || role === "owner" || role === "admin";
+  const [deleteTarget, setDeleteTarget] = useState<MailerCampaign | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [campaigns, setCampaigns] = useState<MailerCampaign[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -79,6 +89,24 @@ export function MailerCampaigns() {
     }
   }
 
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      const removed = await campaignService.remove(deleteTarget.id);
+      setDeleteTarget(null);
+      setNotice(`Campaign "${removed.name}" deleted. Sending has stopped.`);
+      window.setTimeout(() => setNotice(null), 6000);
+      // Step back a page if that was the last row on this one.
+      await load(campaigns.length === 1 && page > 1 ? page - 1 : page);
+    } catch (requestError) {
+      setDeleteError(requestError instanceof Error ? requestError.message : "Unable to delete campaign");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   const totals = useMemo(() => {
     const active = campaigns.filter((campaign) => campaign.status === "Active").length;
     const sentToday = campaigns.reduce((sum, campaign) => sum + campaign.sentToday, 0);
@@ -107,6 +135,10 @@ export function MailerCampaigns() {
           New Campaign
         </Button>
       </div>
+
+      {notice ? (
+        <div className="rounded-2xl border border-success/20 bg-success/10 px-4 py-3 text-sm font-medium text-success" role="status">{notice}</div>
+      ) : null}
 
       {error ? (
         <div className="flex items-center justify-between gap-3 rounded-2xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -182,7 +214,7 @@ export function MailerCampaigns() {
           </p>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1220px] text-left text-sm">
+          <table className="w-full min-w-[1260px] text-left text-sm">
             <thead className="border-b border-border/70 text-[11px] uppercase tracking-wide text-muted">
               <tr>
                 <th className="px-5 py-3 font-medium">Campaign</th>
@@ -194,15 +226,16 @@ export function MailerCampaigns() {
                 <th className="px-2 py-3 font-medium"><Smile className="size-3.5" /></th>
                 <th className="px-2 py-3 font-medium"><Mail className="size-3.5" /></th>
                 <th className="px-2 py-3 font-medium">Progress</th>
+                {canDelete ? <th className="px-3 py-3 font-medium"><span className="sr-only">Actions</span></th> : null}
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                Array.from({ length: 5 }).map((_, index) => <SkeletonRow columns={9} key={index} />)
+                Array.from({ length: 5 }).map((_, index) => <SkeletonRow columns={canDelete ? 10 : 9} key={index} />)
               ) : campaigns.length === 0 ? (
                 <tr>
-                  <td className="px-5 py-10 text-center text-sm font-medium text-muted" colSpan={9}>
-                    No campaigns yet. Click "New Campaign" to launch your first cold outbound sequence.
+                  <td className="px-5 py-10 text-center text-sm font-medium text-muted" colSpan={canDelete ? 10 : 9}>
+                    You have no campaigns yet. Click "New Campaign" to launch your first cold outbound sequence.
                   </td>
                 </tr>
               ) : campaigns.map((campaign) => {
@@ -268,6 +301,22 @@ export function MailerCampaigns() {
                         </Tooltip.Content>
                       </Tooltip>
                     </td>
+                    {canDelete ? (
+                      <td className="px-3 py-4">
+                        <Button
+                          aria-label={`Delete campaign ${campaign.name}`}
+                          isIconOnly
+                          onPress={() => {
+                            setDeleteError(null);
+                            setDeleteTarget(campaign);
+                          }}
+                          size="sm"
+                          variant="ghost"
+                        >
+                          <Trash2 className="size-4 text-danger" />
+                        </Button>
+                      </td>
+                    ) : null}
                   </tr>
                 );
               })}
@@ -289,6 +338,20 @@ export function MailerCampaigns() {
           </div>
         </div>
       </div>
+
+      {deleteTarget ? (
+        <ConfirmDialog
+          confirmLabel="Delete campaign"
+          description={`Delete "${deleteTarget.name}"? Sending stops immediately. Leads and conversation history are kept.`}
+          error={deleteError}
+          isBusy={isDeleting}
+          isOpen
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={confirmDelete}
+          title="Delete campaign?"
+          tone="danger"
+        />
+      ) : null}
 
       <CampaignLeadsModal campaign={leadsCampaign} state={leadsModal} />
     </div>

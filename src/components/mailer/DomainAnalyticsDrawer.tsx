@@ -68,15 +68,14 @@ export function DomainAnalyticsDrawer({
                         </>
                       ) : (
                         <p className="text-[12px] text-muted">
-                          No emails sent from this domain in the last 14 days. Reputation tracking is live (configuration set{" "}
-                          <span className="font-mono text-foreground">{domain.configurationSetName}</span> is wired to CloudWatch) — real bounce, complaint, and delivery metrics will appear here as soon as this domain sends.
+                          No emails sent from this domain in the last 14 days. Reputation tracking is live: real bounce, complaint, and delivery metrics will appear here as soon as this domain sends.
                         </p>
                       )}
 
                       <p className="mt-3 text-[11px] text-muted">
                         {domain.reputationCheckedAt
                           ? `Metrics last pulled ${new Date(domain.reputationCheckedAt).toLocaleString()}`
-                          : "Not checked yet — click Recheck status to pull metrics from CloudWatch."}
+                          : "Not checked yet — click Recheck status to pull the latest metrics."}
                       </p>
                     </div>
 
@@ -107,7 +106,7 @@ export function DomainAnalyticsDrawer({
                     ) : null}
 
                     <div className="rounded-2xl border border-border/70 p-4">
-                      <p className="mb-3 text-[13px] font-semibold text-foreground">DKIM CNAME records (Easy DKIM, managed by SES)</p>
+                      <p className="mb-3 text-[13px] font-semibold text-foreground">DKIM CNAME records</p>
                       <div className="space-y-2">
                         {domain.dkimTokens.map((token) => {
                           const host = `${token}._domainkey.${domain.domain}`;
@@ -139,32 +138,8 @@ export function DomainAnalyticsDrawer({
 
                     <div className="grid grid-cols-2 gap-3">
                       <InfoRow label="Provider" value={domain.provider} />
-                      <InfoRow label="AWS region" value={domain.awsRegion} />
-                      <InfoRow label="Hosted zone" value={domain.hostedZoneId ?? "—"} />
                       <InfoRow label="Registrar / DNS" value={`${domain.registrar} / ${domain.dnsProvider}`} />
                       <InfoRow label="Onboarded" value={new Date(domain.createdAt).toLocaleDateString()} />
-                    </div>
-
-                    <div className="rounded-2xl border border-border/70 p-4">
-                      <p className="mb-2 text-[13px] font-semibold text-foreground">AWS SES account sending status</p>
-                      {accountStatus ? (
-                        <div className="space-y-1.5 text-[12px] text-muted">
-                          <p>
-                            Mode:{" "}
-                            <span className={`font-medium ${accountStatus.productionAccessEnabled ? "text-success" : "text-warning"}`}>
-                              {accountStatus.productionAccessEnabled ? "Production" : "Sandbox"}
-                            </span>
-                          </p>
-                          <p>Max 24h send: <span className="font-medium text-foreground">{accountStatus.max24HourSend ?? "—"}</span> · Max rate: <span className="font-medium text-foreground">{accountStatus.maxSendRate ?? "—"}/sec</span></p>
-                          {!accountStatus.productionAccessEnabled ? (
-                            <p className="text-warning">
-                              Sandbox mode can only send to verified recipients. {accountStatus.latestRequest ? `Production access requested ${new Date(accountStatus.latestRequest.requestedAt).toLocaleDateString()}.` : "No production access request submitted yet."}
-                            </p>
-                          ) : null}
-                        </div>
-                      ) : (
-                        <p className="text-[12px] text-muted">Unable to load AWS account status.</p>
-                      )}
                     </div>
                   </div>
                 </Drawer.Body>

@@ -68,7 +68,7 @@ export function MailerDashboard() {
   const utilization = totals.dailyLimit > 0 ? Math.round((totals.sentToday / totals.dailyLimit) * 100) : 0;
 
   const metrics = [
-    { icon: Globe, label: "Domains", value: String(domains.length), detail: "onboarded to SES" },
+    { icon: Globe, label: "Domains", value: String(domains.length), detail: "in your workspace" },
     { icon: Mail, label: "Mailboxes", value: String(mailboxes.length), detail: "across all domains" },
     { icon: Zap, label: "Sent Today", value: String(totals.sentToday), detail: `${utilization}% of daily limits` },
     { icon: ShieldCheck, label: "Healthy Mailboxes", value: String(totals.reputation.Healthy), detail: `${mailboxes.length - totals.reputation.Healthy} need attention` },
@@ -82,7 +82,7 @@ export function MailerDashboard() {
   const reputationTotal = Math.max(1, mailboxes.length);
 
   const flaggedMailboxes = mailboxes.filter((mailbox) => mailbox.reputationStatus !== "Healthy").length;
-  const configuredDomains = domains.filter((domain) => domain.configurationSetName != null).length;
+  const configuredDomains = domains.filter((domain) => domain.status === "Verified").length;
 
   const campaignTotals = useMemo(() => {
     const active = campaigns.filter((campaign) => campaign.status === "Active").length;
@@ -274,8 +274,8 @@ export function MailerDashboard() {
             </div>
             <div className="flex items-center justify-between rounded-[14px] border border-border/70 p-3">
               <div>
-                <p className="text-[13px] font-semibold leading-5 text-foreground">Tier 1 config sets</p>
-                <p className="text-[11px] leading-4 text-muted">Per-domain reputation isolation</p>
+                <p className="text-[13px] font-semibold leading-5 text-foreground">Verified domains</p>
+                <p className="text-[11px] leading-4 text-muted">Domains ready to send</p>
               </div>
               <Chip color="accent" size="sm" variant="soft">
                 {configuredDomains}/{domains.length} domains
@@ -312,7 +312,7 @@ export function MailerDashboard() {
             </div>
             <div className="mt-3 flex items-center gap-2 rounded-[14px] border border-border/70 p-3 text-[11px] text-muted">
               <Send className="size-4 shrink-0 text-accent" />
-              Every send routes through the queue → health check → daily-limit check → rate limiter → SES.
+              Every send routes through the queue → health check → daily-limit check → rate limiter → your mailbox.
             </div>
           </Card.Content>
         </Card>
