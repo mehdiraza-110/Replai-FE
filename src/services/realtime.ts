@@ -1,4 +1,5 @@
 import { io, type Socket } from "socket.io-client";
+import { getViewAs, VIEW_AS_CHANGED_EVENT } from "../utils/viewAs";
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:3001").replace(/\/$/, "");
 
@@ -36,8 +37,26 @@ export function getRealtimeSocket() {
     socket = io(API_BASE_URL, {
       withCredentials: true,
       transports: ["websocket", "polling"],
+      // Evaluated on every (re)connect, so a super admin's "view as" target is always current.
+      auth: (callback) => {
+        const viewAs = getViewAs();
+        callback(viewAs ? { viewAs: viewAs.id } : {});
+      },
     });
+
+    window.addEventListener(VIEW_AS_CHANGED_EVENT, reconnectRealtime);
   }
 
   return socket;
+}
+
+/**
+ * Drops and re-opens the shared socket on the same instance (so existing listeners survive). The backend puts a
+ * socket in its workspace's room at connect time, so this must run whenever the active workspace or view-as changes.
+ */
+export function reconnectRealtime() {
+  if (!socket) return;
+
+  socket.disconnect();
+  socket.connect();
 }

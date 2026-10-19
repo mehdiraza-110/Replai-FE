@@ -1,6 +1,9 @@
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { useEffect, useRef } from "react";
+import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { AppShell } from "./components/layout/AppShell";
+import { LoadingState } from "./components/ui/LoadingState";
 import { useAuth } from "./context/AuthContext";
+import { WORKSPACE_REQUIRED_EVENT } from "./services/api";
 import { AIDebugging } from "./pages/AIDebugging";
 import { AIAgents } from "./pages/AIAgents";
 import { Analytics } from "./pages/Analytics";
@@ -31,23 +34,92 @@ import { Overview } from "./pages/Overview";
 import { PlusVibeCampaigns } from "./pages/PlusVibeCampaigns";
 import { Settings } from "./pages/Settings";
 import { Training } from "./pages/Training";
+import { AdminDashboard } from "./pages/admin/AdminDashboard";
+import { AdminUsers } from "./pages/admin/AdminUsers";
+import { AdminWorkspaceDetail } from "./pages/admin/AdminWorkspaceDetail";
+import { AdminWorkspaces } from "./pages/admin/AdminWorkspaces";
+import { AIKeys } from "./pages/AIKeys";
+import { CreateWorkspace } from "./pages/CreateWorkspace";
+import { Team } from "./pages/Team";
+import { WorkflowEditor } from "./pages/workflows/WorkflowEditor";
+import { Workflows } from "./pages/workflows/Workflows";
 
 function ProtectedShell() {
-  const { isAuthenticated } = useAuth();
+  const { activeWorkspace, isAuthenticated, isReady, isSuperAdmin } = useAuth();
   const location = useLocation();
 
   if (!isAuthenticated) {
     return <Navigate replace to="/login" state={{ from: location.pathname }} />;
   }
 
+  if (!isReady) {
+    return (
+      <div className="min-h-screen bg-background">
+        <LoadingState label="Loading your workspace..." minHeight={320} />
+      </div>
+    );
+  }
+
+  if (!activeWorkspace) {
+    if (!isSuperAdmin) {
+      return <Navigate replace to="/create-workspace" />;
+    }
+
+    // A super admin without a workspace can still run the platform; tenant pages have nothing to show.
+    const isPlatformPath = location.pathname === "/admin" || location.pathname.startsWith("/admin/") || location.pathname === "/settings";
+    if (!isPlatformPath) {
+      return <Navigate replace to="/admin" />;
+    }
+  }
+
   return <AppShell />;
 }
 
+/** Routes people to the right place when the API says a workspace is needed, without a page reload. */
+function useWorkspaceRequiredRedirect() {
+  const { isSuperAdmin, refreshUser } = useAuth();
+  const navigate = useNavigate();
+  const isHandlingRef = useRef(false);
+  const isSuperAdminRef = useRef(isSuperAdmin);
+  isSuperAdminRef.current = isSuperAdmin;
+
+  useEffect(() => {
+    async function handle() {
+      if (isHandlingRef.current) return;
+      isHandlingRef.current = true;
+
+      try {
+        const fresh = await refreshUser();
+        const hasWorkspace = Boolean(fresh?.workspaces?.some((workspace) => workspace.id === fresh.active_workspace_id));
+
+        if (!fresh || hasWorkspace) return;
+        navigate(fresh.is_super_admin ?? isSuperAdminRef.current ? "/admin" : "/create-workspace", { replace: true });
+      } finally {
+        isHandlingRef.current = false;
+      }
+    }
+
+    window.addEventListener(WORKSPACE_REQUIRED_EVENT, handle);
+    return () => window.removeEventListener(WORKSPACE_REQUIRED_EVENT, handle);
+  }, [navigate, refreshUser]);
+}
+
 export default function App() {
+  useWorkspaceRequiredRedirect();
+
   return (
     <Routes>
       <Route path="login" element={<Auth />} />
+      <Route path="create-workspace" element={<CreateWorkspace />} />
       <Route element={<ProtectedShell />}>
+        <Route path="workflows" element={<Workflows />} />
+        <Route path="workflows/:id" element={<WorkflowEditor />} />
+        <Route path="team" element={<Team />} />
+        <Route path="ai-keys" element={<AIKeys />} />
+        <Route path="admin" element={<AdminDashboard />} />
+        <Route path="admin/workspaces" element={<AdminWorkspaces />} />
+        <Route path="admin/workspaces/:id" element={<AdminWorkspaceDetail />} />
+        <Route path="admin/users" element={<AdminUsers />} />
         <Route index element={<Overview />} />
         <Route path="responder" element={<Dashboard />} />
         <Route path="review" element={<HumanReview />} />

@@ -7,7 +7,7 @@ import { useAuth } from "../context/AuthContext";
 type AuthMode = "login" | "signup";
 
 export function Auth() {
-  const { isAuthenticated, login, register } = useAuth();
+  const { activeWorkspace, isAuthenticated, isSuperAdmin, login, register } = useAuth();
   const location = useLocation();
   const [mode, setMode] = useState<AuthMode>("login");
   const [fullName, setFullName] = useState("");
@@ -39,6 +39,10 @@ export function Auth() {
   );
 
   if (isAuthenticated) {
+    if (!activeWorkspace && !isSuperAdmin) {
+      return <Navigate replace to="/create-workspace" />;
+    }
+
     const destination = typeof location.state?.from === "string" ? location.state.from : "/";
     return <Navigate replace to={destination} />;
   }

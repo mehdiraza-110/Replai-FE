@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button, Dropdown } from "@heroui/react";
 import { Bell, Menu, Sidebar as SidebarIcon } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { WorkspaceMenu } from "./WorkspaceMenu";
 import { LoadingState } from "../ui/LoadingState";
 import { StatusPill } from "../ui/StatusPill";
 import { NOTIFICATION_EVENT_TYPES } from "../../constants/notificationEventTypes";
@@ -44,6 +45,12 @@ const titles: Record<string, { title: string; subtitle: string }> = {
   "/events": { title: "Event Logs", subtitle: "Trace webhooks, AI processing, review decisions, and PlusVibe delivery." },
   "/debugging": { title: "AI Debugging", subtitle: "Understand structured inputs, decisions, and safety results for AI runs." },
   "/settings": { title: "Settings", subtitle: "Manage your profile, avatar, and password." },
+  "/workflows": { title: "Workflows", subtitle: "Automate what happens when a reply or an email arrives, step by step." },
+  "/team": { title: "Team", subtitle: "Invite people to this workspace and choose what each of them can use." },
+  "/ai-keys": { title: "AI Keys", subtitle: "Connect your own OpenAI, Anthropic, or Gemini key for this workspace." },
+  "/admin": { title: "Admin", subtitle: "Platform-wide activity across every workspace." },
+  "/admin/workspaces": { title: "Workspaces", subtitle: "Every workspace on the platform, their products, and their owners." },
+  "/admin/users": { title: "Users", subtitle: "Everyone with an account, and the workspaces they belong to." },
   "/notifications": { title: "Notifications", subtitle: "Everything that needs your attention across ReplyOS." },
 };
 
@@ -63,10 +70,20 @@ function writeLastSeenAt(value: string) {
   }
 }
 
+function findTitle(pathname: string) {
+  if (titles[pathname]) return titles[pathname];
+
+  const prefix = Object.keys(titles)
+    .filter((path) => path !== "/" && pathname.startsWith(`${path}/`))
+    .sort((a, b) => b.length - a.length)[0];
+
+  return prefix ? titles[prefix] : titles["/"];
+}
+
 export function TopBar() {
   const { user } = useAuth();
   const location = useLocation();
-  const current = titles[location.pathname] ?? titles["/"];
+  const current = findTitle(location.pathname);
   const firstName = user?.first_name || user?.email?.split("@")[0] || "there";
   const title = location.pathname === "/" ? `Good morning, ${firstName}` : current.title;
 
@@ -127,6 +144,9 @@ export function TopBar() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <div className="min-w-0 lg:hidden">
+            <WorkspaceMenu compact />
+          </div>
           <Dropdown onOpenChange={handleOpenChange}>
             <Dropdown.Trigger aria-label="Notifications" className="relative grid size-[34px] min-w-[34px] place-items-center rounded-full bg-surface-secondary text-foreground transition hover:bg-surface-tertiary">
               <Bell className="size-[17px]" strokeWidth={2} />

@@ -54,7 +54,11 @@ import type {
   WarmupStrategy,
   WarmupSummary,
   WarmupTarget,
+  WorkspaceDetail,
+  WorkspaceSummary,
+  WorkspaceType,
 } from "../types";
+import { getViewAs } from "../utils/viewAs";
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:3001").replace(/\/$/, "");
 
@@ -77,8 +81,28 @@ export class ApiRequestError extends Error {
   }
 }
 
-async function apiRequest<T>(path: string, options: RequestInit = {}) {
+/** Window events the app shell listens to, so the request layer can steer navigation without hard reloads. */
+export const WORKSPACE_REQUIRED_EVENT = "replai:workspace-required";
+export const SESSION_EXPIRED_EVENT = "replai:session-expired";
+
+const SESSION_PROBLEM_PATTERN = /no token|invalid or expired token|no access to this route|sign in to continue|session has expired/i;
+
+function applyViewAsHeader(setHeader: (name: string, value: string) => void) {
+  const viewAs = getViewAs();
+  if (viewAs) setHeader("X-View-As-Workspace", String(viewAs.id));
+}
+
+function notifyForSpecialCodes({ code, status, message }: { code?: string; status: number; message?: string }) {
+  if (code === "WORKSPACE_REQUIRED") {
+    window.dispatchEvent(new Event(WORKSPACE_REQUIRED_EVENT));
+  } else if (status === 401 && message && SESSION_PROBLEM_PATTERN.test(message)) {
+    window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+  }
+}
+
+export async function apiRequest<T>(path: string, options: RequestInit = {}) {
   const headers = new Headers(options.headers);
+  applyViewAsHeader((name, value) => headers.set(name, value));
 
   if (options.body && !(options.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
@@ -99,6 +123,7 @@ async function apiRequest<T>(path: string, options: RequestInit = {}) {
   const payload = (await response.json().catch(() => null)) as ApiResponse<T> | null;
 
   if (!response.ok) {
+    notifyForSpecialCodes({ code: payload?.code, status: response.status, message: payload?.message });
     throw new ApiRequestError(getFriendlyErrorMessage({
       path,
       status: response.status,
@@ -122,6 +147,7 @@ function uploadWithProgress<T>(path: string, file: File, fieldName: string, onPr
 
     xhr.open("POST", `${API_BASE_URL}${path}`);
     xhr.withCredentials = true;
+    applyViewAsHeader((name, value) => xhr.setRequestHeader(name, value));
 
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable && onProgress) {
@@ -140,6 +166,7 @@ function uploadWithProgress<T>(path: string, file: File, fieldName: string, onPr
       if (xhr.status >= 200 && xhr.status < 300 && payload) {
         resolve(payload.data);
       } else {
+        notifyForSpecialCodes({ code: payload?.code, status: xhr.status, message: payload?.message });
         reject(new ApiRequestError(getFriendlyErrorMessage({
           path,
           status: xhr.status,
@@ -157,7 +184,7 @@ function uploadWithProgress<T>(path: string, file: File, fieldName: string, onPr
   });
 }
 
-const SURFACED_ERROR_CODES = new Set(["CALENDAR_CONFIG_MISSING", "CALENDAR_ENCRYPTION_KEY_MISSING", "CALENDAR_STATE_INVALID", "CALENDAR_CONNECTION_REVOKED"]);
+const SURFACED_ERROR_CODES = new Set(["WORKSPACE_REQUIRED", "AI_PROVIDER_KEY_MISSING", "CALENDAR_CONFIG_MISSING", "CALENDAR_ENCRYPTION_KEY_MISSING", "CALENDAR_STATE_INVALID", "CALENDAR_CONNECTION_REVOKED"]);
 
 function getFriendlyErrorMessage({
   message,
@@ -181,12 +208,18 @@ function getFriendlyErrorMessage({
   if (status === 401 || status === 403) {
     // Login failures (wrong password, disabled account...) carry a specific, user-safe reason from the server.
     // Only the auth middleware's own token/route messages mean the session itself is the problem.
-    const isSessionProblem = /no token|invalid or expired token|no access to this route/i.test(lowerMessage);
+    const isSessionProblem = SESSION_PROBLEM_PATTERN.test(lowerMessage);
     if (message && !isSessionProblem && !isTechnicalErrorMessage(message)) return message;
     return "Your session does not have access to this action. Please sign in again.";
   }
-  if (status === 404) return "We could not find that record. It may have been changed or removed.";
-  if (status === 409) return "This item has already been updated. Please refresh and try again.";
+  if (status === 404) {
+    if (message && !isTechnicalErrorMessage(message) && !/^(route )?not found\.?$/i.test(message.trim())) return message;
+    return "We could not find that record. It may have been changed or removed.";
+  }
+  if (status === 409) {
+    if (message && !isTechnicalErrorMessage(message)) return message;
+    return "This item has already been updated. Please refresh and try again.";
+  }
   if (status === 429) {
     return isPlusVibeRoute
       ? "PlusVibe is receiving too many requests right now. Please wait a minute, then try again."
@@ -261,6 +294,42 @@ export const authService = {
     });
 
     return this.login({ email: payload.email, password: payload.password });
+  },
+
+  async logout() {
+    await apiRequest<null>("/api/v1/users/logout", { method: "POST" });
+  },
+
+  async me() {
+    const response = await apiRequest<AuthUser>("/api/v1/users/me");
+
+    return response.data;
+  },
+};
+
+export const workspaceService = {
+  async current() {
+    const response = await apiRequest<WorkspaceDetail>("/api/v1/workspaces/current");
+
+    return response.data;
+  },
+
+  async create(payload: { name: string; type: WorkspaceType }) {
+    const response = await apiRequest<{ workspace: WorkspaceSummary; token?: string }>("/api/v1/workspaces", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+
+    return response.data;
+  },
+
+  async switchTo(workspaceId: number) {
+    const response = await apiRequest<{ workspace: WorkspaceSummary; token?: string }>("/api/v1/workspaces/switch", {
+      method: "POST",
+      body: JSON.stringify({ workspaceId }),
+    });
+
+    return response.data;
   },
 };
 
@@ -868,6 +937,7 @@ export interface PlusVibeConnection {
   apiKeyConfigured: boolean;
   apiKeyPreview: string | null;
   webhookUrl: string;
+  webhookSecretEnforced?: boolean;
   connectionStatus: "Connected" | "Configured" | "Disconnected" | "Error";
   apiStatus: string;
   webhookStatus: string;
@@ -968,6 +1038,23 @@ export const plusVibeService = {
     const response = await apiRequest<PlusVibeCampaign>(`/api/v1/plusvibe/campaigns/${campaignId}/agent`, {
       method: "PATCH",
       body: JSON.stringify({ aiAgentId }),
+    });
+
+    return response.data;
+  },
+
+  async rotateWebhookSecret() {
+    const response = await apiRequest<{ webhookUrl: string }>("/api/v1/plusvibe/webhook-secret/rotate", {
+      method: "POST",
+    });
+
+    return response.data;
+  },
+
+  async setWebhookEnforced(enforced: boolean) {
+    const response = await apiRequest<{ webhookSecretEnforced?: boolean; enforced?: boolean } | null>("/api/v1/plusvibe/webhook-secret/enforce", {
+      method: "POST",
+      body: JSON.stringify({ enforced }),
     });
 
     return response.data;

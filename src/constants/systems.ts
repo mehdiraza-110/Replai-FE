@@ -2,6 +2,11 @@ import {
   BarChart3,
   Bot,
   Boxes,
+  KeyRound,
+  Building2,
+  Users,
+  ShieldCheck,
+  Workflow,
   Cable,
   ClipboardCheck,
   Flame,
@@ -19,6 +24,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import type { ComponentType } from "react";
+import type { WorkspaceSummary } from "../types";
 
 export type SystemId = "mailer" | "responder";
 
@@ -88,6 +94,20 @@ export const responderSecondaryNav: NavEntry[] = [
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
+/** Shared across both systems: things that belong to the workspace (tenant) rather than to one product area. */
+export const workspaceNav: NavEntry[] = [
+  { label: "Workflows", href: "/workflows", icon: Workflow },
+  { label: "Team", href: "/team", icon: Users },
+  { label: "AI Keys", href: "/ai-keys", icon: KeyRound },
+];
+
+/** Platform-level pages, shown to super admins only. */
+export const adminNav: NavEntry[] = [
+  { label: "Dashboard", href: "/admin", icon: ShieldCheck },
+  { label: "Workspaces", href: "/admin/workspaces", icon: Building2 },
+  { label: "Users", href: "/admin/users", icon: UsersRound },
+];
+
 const PATH_SYSTEM_MAP: Record<string, SystemId> = {};
 
 for (const entry of [...mailerPrimaryNav, ...mailerSecondaryNav]) {
@@ -122,4 +142,19 @@ export function getNavForSystem(id: SystemId): { primary: NavEntry[]; secondary:
   return id === "mailer"
     ? { primary: mailerPrimaryNav, secondary: mailerSecondaryNav }
     : { primary: responderPrimaryNav, secondary: responderSecondaryNav };
+}
+
+/**
+ * Whether a system (product area) is usable in the given workspace: the workspace must have the product enabled and,
+ * for plain members, their own permission flag must allow it. Owners/admins are limited only by the workspace flags.
+ * With no workspace (e.g. a super admin outside any workspace) nothing is hidden.
+ */
+export function isSystemEnabled(id: SystemId, workspace: WorkspaceSummary | null): boolean {
+  if (!workspace) return true;
+
+  const workspaceFlag = id === "mailer" ? workspace.cold_mailer_enabled : workspace.auto_responder_enabled;
+  if (!workspaceFlag) return false;
+  if (workspace.role !== "member") return true;
+
+  return Boolean(id === "mailer" ? workspace.permissions?.cold_mailer : workspace.permissions?.auto_responder);
 }
