@@ -1,4 +1,5 @@
 import { ApiRequestError, apiRequest } from "./api";
+import { getViewAs } from "../utils/viewAs";
 
 export type TriggerType = "trigger.inbox_mail" | "trigger.plusvibe_reply" | "trigger.mail_sent";
 export type NodeType =
@@ -119,11 +120,14 @@ const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:3001").r
 
 async function writeRequest<T>(path: string, method: string, body: unknown): Promise<T> {
   let response: Response;
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const viewAs = getViewAs();
+  if (viewAs) headers["X-View-As-Workspace"] = String(viewAs.id);
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       method,
       credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify(body),
     });
   } catch {
@@ -147,31 +151,31 @@ async function writeRequest<T>(path: string, method: string, body: unknown): Pro
 
 export const workflowApi = {
   async list() {
-    return (await apiRequest<WorkflowSummary[]>("/workflows")).data;
+    return (await apiRequest<WorkflowSummary[]>("/api/v1/workflows")).data;
   },
   async meta() {
-    return (await apiRequest<WorkflowMeta>("/workflows/meta")).data;
+    return (await apiRequest<WorkflowMeta>("/api/v1/workflows/meta")).data;
   },
   async get(id: number | string) {
-    return (await apiRequest<Workflow>(`/workflows/${id}`)).data;
+    return (await apiRequest<Workflow>(`/api/v1/workflows/${id}`)).data;
   },
   create(body: { name: string; description?: string; template?: "default_reply" }) {
-    return writeRequest<Workflow>("/workflows", "POST", body);
+    return writeRequest<Workflow>("/api/v1/workflows", "POST", body);
   },
   update(id: number | string, body: { name?: string; description?: string; graph?: Graph; is_active?: boolean }) {
-    return writeRequest<Workflow>(`/workflows/${id}`, "PUT", body);
+    return writeRequest<Workflow>(`/api/v1/workflows/${id}`, "PUT", body);
   },
   async remove(id: number | string) {
-    await apiRequest<unknown>(`/workflows/${id}`, { method: "DELETE" });
+    await apiRequest<unknown>(`/api/v1/workflows/${id}`, { method: "DELETE" });
   },
   async test(id: number | string, sample?: SampleEmail) {
-    return (await apiRequest<Run>(`/workflows/${id}/test`, {
+    return (await apiRequest<Run>(`/api/v1/workflows/${id}/test`, {
       method: "POST",
       body: JSON.stringify(sample ? { sample } : {}),
     })).data;
   },
   async runs(id: number | string, limit = 20) {
-    return (await apiRequest<Run[]>(`/workflows/${id}/runs?limit=${limit}`)).data;
+    return (await apiRequest<Run[]>(`/api/v1/workflows/${id}/runs?limit=${limit}`)).data;
   },
 };
 

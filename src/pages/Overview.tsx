@@ -1,34 +1,63 @@
 import { Card } from "@heroui/react";
 import { ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { SYSTEMS } from "../constants/systems";
-import { mailerService } from "../services/api";
+import { useAuth } from "../context/AuthContext";
+import { SYSTEMS, isSystemEnabled } from "../constants/systems";
+import { useEffect, useState } from "react";
+import { aiAgentService, domainService, mailboxService, reviewService } from "../services/api";
 
 export function Overview() {
   const navigate = useNavigate();
-  const domains = mailerService.listDomains();
-  const mailerMailboxes = domains.reduce((sum, domain) => sum + domain.mailboxes.length, 0);
+  const { activeWorkspace } = useAuth();
+  const enabled = SYSTEMS.filter((system) => isSystemEnabled(system.id, activeWorkspace));
+  const disabled = SYSTEMS.filter((system) => !isSystemEnabled(system.id, activeWorkspace));
+  const [counts, setCounts] = useState<Record<string, string>>({});
+  const mailerOn = isSystemEnabled("mailer", activeWorkspace);
+  const responderOn = isSystemEnabled("responder", activeWorkspace);
+
+  useEffect(() => {
+    let active = true;
+    const put = (key: string, value: string) => active && setCounts((current) => ({ ...current, [key]: value }));
+    setCounts({});
+    if (mailerOn) {
+      domainService.list({ limit: 1 }).then((page) => put("domains", String(page.total))).catch(() => undefined);
+      mailboxService.list({ limit: 1 }).then((page) => put("mailboxes", String(page.total))).catch(() => undefined);
+    }
+    if (responderOn) {
+      aiAgentService.list().then((items) => put("agents", String(items.filter((agent) => agent.status === "Active").length))).catch(() => undefined);
+      reviewService.count({ cap: 100 }).then(({ count, hasMore }) => put("review", hasMore ? "100+" : String(count))).catch(() => undefined);
+    }
+    return () => {
+      active = false;
+    };
+  }, [mailerOn, responderOn, activeWorkspace?.id]);
 
   const systemStats: Record<string, { label: string; value: string }[]> = {
     mailer: [
-      { label: "Domains", value: String(domains.length) },
-      { label: "Mailboxes", value: String(mailerMailboxes) },
+      { label: "Domains", value: counts.domains ?? "—" },
+      { label: "Mailboxes", value: counts.mailboxes ?? "—" },
     ],
     responder: [
-      { label: "Active agents", value: "—" },
-      { label: "Needs review", value: "—" },
+      { label: "Active agents", value: counts.agents ?? "—" },
+      { label: "Needs review", value: counts.review ?? "—" },
     ],
   };
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-foreground">Choose a system</h2>
-        <p className="mt-1 text-sm text-muted">ReplyOS is split into two systems — jump into either one, or switch anytime from the sidebar.</p>
+        <h2 className="text-lg font-semibold text-foreground">{enabled.length === 1 ? `Welcome to ${enabled[0].label}` : "Choose a system"}</h2>
+        <p className="mt-1 text-sm text-muted">
+          {enabled.length === 0
+            ? "No products are enabled for you in this workspace yet."
+            : enabled.length === 1
+              ? "Jump in below. Other products appear here when they are enabled for your workspace."
+              : "ReplyOS is split into two systems. Jump into either one, or switch anytime from the sidebar."}
+        </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {SYSTEMS.map((system) => {
+      <div className={`grid gap-4 ${enabled.length > 1 ? "md:grid-cols-2" : "max-w-[640px]"}`}>
+        {enabled.map((system) => {
           const Icon = system.icon;
 
           return (
@@ -37,7 +66,7 @@ export function Overview() {
               key={system.id}
               onClick={() => navigate(system.homePath)}
             >
-              <Card.Header className="items-start justify-between p-0">
+              <Card.Header className="flex-row items-start justify-between p-0">
                 <span className="grid size-11 place-items-center rounded-full bg-default-100 text-foreground">
                   <Icon className="size-5" />
                 </span>
@@ -59,6 +88,17 @@ export function Overview() {
           );
         })}
       </div>
+
+      {disabled.length > 0 ? (
+        <ul className="space-y-2">
+          {disabled.map((system) => (
+            <li className="rounded-xl border border-border/70 bg-default-100 px-4 py-3 text-[13px] text-muted" key={system.id}>
+              <span className="font-medium text-foreground">{system.label}</span> is not enabled
+              {activeWorkspace?.role === "member" ? " for you" : " for this workspace"}. Contact support to turn it on.
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }

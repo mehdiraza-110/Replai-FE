@@ -68,13 +68,13 @@ export function MembersTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[760px] text-left text-sm">
+      <table className="w-full md:min-w-[760px] text-left text-sm">
         <thead className="border-b border-border/70 text-[11px] uppercase tracking-wide text-muted">
           <tr>
             <th className="px-4 py-3 font-medium">Member</th>
             <th className="px-2 py-3 font-medium">Role</th>
-            <th className="px-2 py-3 font-medium">Product access</th>
-            <th className="px-2 py-3 font-medium">Joined</th>
+            <th className="hidden px-2 py-3 font-medium md:table-cell">Product access</th>
+            <th className="hidden px-2 py-3 font-medium md:table-cell">Joined</th>
             {showActions ? <th className="px-4 py-3 text-right font-medium">Actions</th> : null}
           </tr>
         </thead>
@@ -102,10 +102,10 @@ export function MembersTable({
                     <td className="px-2 py-3">
                       <StatusPill tone={roleTones[member.role]}>{roleLabels[member.role]}</StatusPill>
                     </td>
-                    <td className="px-2 py-3">
+                    <td className="hidden px-2 py-3 md:table-cell">
                       <AccessChips member={member} workspace={workspace} />
                     </td>
-                    <td className="px-2 py-3 text-muted">{formatDate(member.created_at)}</td>
+                    <td className="hidden px-2 py-3 text-muted md:table-cell">{formatDate(member.created_at)}</td>
                     {showActions ? (
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-1.5">

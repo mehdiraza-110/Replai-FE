@@ -519,6 +519,7 @@ function AddMemberModal({
   async function submit() {
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
       setEmailError("Enter a valid email address.");
+      setServerError(null);
       return;
     }
     setEmailError(null);

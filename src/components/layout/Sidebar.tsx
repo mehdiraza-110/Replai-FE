@@ -1,24 +1,29 @@
 import { Avatar, Chip, Dropdown, ScrollShadow, Spinner } from "@heroui/react";
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronsUpDown, ChevronUp, LogOut } from "lucide-react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { adminNav, getNavForSystem, getSystem, isSystemEnabled, SYSTEMS, workspaceNav, type SystemDefinition, type NavEntry } from "../../constants/systems";
 import { WorkspaceMenu } from "./WorkspaceMenu";
 import { useActiveSystem } from "../../hooks/useActiveSystem";
 import { useRealtimeConnected } from "../../hooks/useRealtimeConnected";
 import { messageService, reviewService } from "../../services/api";
+import { adminOrderService } from "../../services/orderApi";
 
 const WORKSPACE_SWITCH_DELAY_MS = 700;
+/** Fired by the top bar's menu button; below the lg breakpoint the sidebar is a slide-over opened by it. */
+export const OPEN_NAV_EVENT = "replai:open-nav";
 
 function NavItem({
   item,
   messageCount,
   reviewCount,
+  orderCount = null,
 }: {
   item: NavEntry;
   messageCount: string | null;
   reviewCount: string | null;
+  orderCount?: string | null;
 }) {
   const Icon = item.icon;
 
@@ -49,6 +54,12 @@ function NavItem({
             {messageCount}
           </Chip>
         ) : null
+      ) : item.href === "/admin/orders" ? (
+        orderCount ? (
+          <Chip aria-label={`${orderCount} requests awaiting review`} className="ml-auto px-1.5 text-[10px]" color="warning" size="sm" variant="soft">
+            {orderCount}
+          </Chip>
+        ) : null
       ) : null}
     </NavLink>
   );
@@ -59,11 +70,13 @@ function NavSection({
   label,
   messageCount,
   reviewCount,
+  orderCount = null,
 }: {
   items: NavEntry[];
   label: string;
   messageCount: string | null;
   reviewCount: string | null;
+  orderCount?: string | null;
 }) {
   return (
     <>
@@ -71,7 +84,7 @@ function NavSection({
       <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wide text-muted">{label}</p>
       <nav aria-label={label} className="space-y-1">
         {items.map((item) => (
-          <NavItem item={item} key={item.href} messageCount={messageCount} reviewCount={reviewCount} />
+          <NavItem item={item} key={item.href} messageCount={messageCount} orderCount={orderCount} reviewCount={reviewCount} />
         ))}
       </nav>
     </>
@@ -86,6 +99,7 @@ export function Sidebar() {
   const { primary, secondary } = getNavForSystem(activeSystem);
   const [messageCount, setMessageCount] = useState<string | null>(null);
   const [reviewCount, setReviewCount] = useState<string | null>(null);
+  const [orderCount, setOrderCount] = useState<string | null>(null);
   const [switchingTo, setSwitchingTo] = useState<SystemDefinition | null>(null);
   const switchTimeoutRef = useRef<number | null>(null);
   const displayName = [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.email || "ReplyOS user";
@@ -97,8 +111,32 @@ export function Sidebar() {
     .toUpperCase();
   const enabledSystems = SYSTEMS.filter((system) => isSystemEnabled(system.id, activeWorkspace));
 
+  const workspaceId = activeWorkspace?.id ?? null;
+  const location = useLocation();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    const open = () => setMobileOpen(true);
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileOpen(false);
+    };
+    window.addEventListener(OPEN_NAV_EVENT, open);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener(OPEN_NAV_EVENT, open);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, []);
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
+
   useEffect(() => {
     let isActive = true;
+    // Counters belong to one workspace: clear them when it changes so another tenant's numbers never linger.
+    setMessageCount(null);
+    setReviewCount(null);
 
     messageService
       .countConversations({ cap: 100 })
@@ -123,7 +161,21 @@ export function Sidebar() {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [workspaceId]);
+
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    let isActive = true;
+    adminOrderService
+      .count()
+      .then(({ requested }) => {
+        if (isActive) setOrderCount(requested > 0 ? String(requested) : null);
+      })
+      .catch(() => undefined);
+    return () => {
+      isActive = false;
+    };
+  }, [isSuperAdmin]);
 
   useEffect(() => {
     return () => {
@@ -146,7 +198,11 @@ export function Sidebar() {
 
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 hidden w-[212px] flex-col border-r border-border/70 bg-[#F4F5F6] px-3 py-4 lg:flex">
+      {mobileOpen ? <div aria-hidden className="fixed inset-0 z-40 bg-foreground/30 lg:hidden" onClick={() => setMobileOpen(false)} /> : null}
+      <aside
+        aria-label="Navigation"
+        className={`fixed inset-y-0 left-0 w-[212px] flex-col border-r border-border/70 bg-[#F4F5F6] px-3 py-4 lg:z-auto lg:flex ${mobileOpen ? "z-50 flex shadow-2xl" : "hidden"}`}
+      >
       <Link className="mb-3 flex min-w-0 items-center gap-2.5 px-1" title="Home" to="/">
         <div className="size-8 shrink-0 rounded-full bg-[radial-gradient(circle_at_30%_25%,oklch(0.94_0.07_205),oklch(0.79_0.16_254)_48%,oklch(0.78_0.17_310))]" />
         <p className="truncate text-[14px] font-semibold leading-4 text-foreground">ReplyOS</p>
@@ -194,7 +250,7 @@ export function Sidebar() {
         </Dropdown>
       </div>
 
-      <ScrollShadow className="-mx-1 px-1">
+      <ScrollShadow className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1">
         <nav className="space-y-1">
           {primary.map((item) => (
             <NavItem item={item} key={item.href} messageCount={messageCount} reviewCount={reviewCount} />
@@ -212,7 +268,7 @@ export function Sidebar() {
         <NavSection label="Workspace" items={workspaceNav} messageCount={messageCount} reviewCount={reviewCount} />
 
         {isSuperAdmin ? (
-          <NavSection label="Admin" items={adminNav} messageCount={messageCount} reviewCount={reviewCount} />
+          <NavSection label="Admin" items={adminNav} messageCount={messageCount} orderCount={orderCount} reviewCount={reviewCount} />
         ) : null}
       </ScrollShadow>
 

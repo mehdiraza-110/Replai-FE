@@ -17,6 +17,7 @@ import {
   LayoutDashboard,
   ListTree,
   Mails,
+  PackageCheck,
   MessageSquareText,
   Route,
   Send,
@@ -66,6 +67,7 @@ export const mailerPrimaryNav: NavEntry[] = [
   { label: "Dashboard", href: "/mailer", icon: LayoutDashboard },
   { label: "Domains", href: "/mailer/domains", icon: Globe },
   { label: "Mailboxes", href: "/mailer/mailboxes", icon: Inbox },
+  { label: "Orders", href: "/mailer/orders", icon: PackageCheck },
   { label: "Inbox", href: "/mailer/inbox", icon: MessageSquareText },
   { label: "Warmup", href: "/mailer/warmup", icon: Flame },
   { label: "Health", href: "/mailer/health", icon: HeartPulse },
@@ -106,6 +108,7 @@ export const adminNav: NavEntry[] = [
   { label: "Dashboard", href: "/admin", icon: ShieldCheck },
   { label: "Workspaces", href: "/admin/workspaces", icon: Building2 },
   { label: "Users", href: "/admin/users", icon: UsersRound },
+  { label: "Orders", href: "/admin/orders", icon: PackageCheck },
 ];
 
 const PATH_SYSTEM_MAP: Record<string, SystemId> = {};

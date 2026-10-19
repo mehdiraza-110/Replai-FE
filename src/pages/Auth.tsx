@@ -2,7 +2,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { Button } from "@heroui/react";
 import { Eye, EyeOff, LockKeyhole, Mail, UserRound, X } from "lucide-react";
 import { Navigate, useLocation } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { SESSION_EXPIRED_NOTICE_KEY, useAuth } from "../context/AuthContext";
 
 type AuthMode = "login" | "signup";
 
@@ -15,6 +15,15 @@ export function Auth() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [notice] = useState(() => {
+    try {
+      const expired = window.sessionStorage.getItem(SESSION_EXPIRED_NOTICE_KEY) === "1";
+      window.sessionStorage.removeItem(SESSION_EXPIRED_NOTICE_KEY);
+      return expired ? "Your session has expired. Please sign in again." : "";
+    } catch {
+      return "";
+    }
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const hasError = Boolean(error);
 
@@ -143,6 +152,12 @@ export function Auth() {
               {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
             </button>
           </label>
+
+          {notice && !error ? (
+            <p className="rounded-xl bg-[#FFF6E5] px-3 py-2 text-[13px] leading-5 text-[#8A5A00]" role="status">
+              {notice}
+            </p>
+          ) : null}
 
           {error ? (
             <p className="auth-error" role="alert">

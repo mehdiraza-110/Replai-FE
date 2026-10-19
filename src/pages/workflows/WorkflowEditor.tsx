@@ -140,6 +140,13 @@ function EditorInner() {
   }, [nodes, paintRun, problems]);
 
   const selectedNode = displayNodes.find((n) => n.id === selectedId) ?? null;
+  // The settings panel shrinks the canvas; re-fit when it opens or closes so no node ends up hidden behind it.
+  const inspectorOpen = Boolean(selectedNode);
+  useEffect(() => {
+    const timer = window.setTimeout(() => flow.fitView({ duration: 200, padding: 0.25, maxZoom: 1 }), 60);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inspectorOpen]);
   const generalProblems = problems.filter((p) => !p.nodeId || !nodes.some((n) => n.id === p.nodeId));
 
   function addNode(type: NodeType, position?: { x: number; y: number }) {
@@ -291,11 +298,11 @@ function EditorInner() {
             <Button isDisabled={!canWrite} onPress={() => { history.push(); setNodes(layoutGraph(nodes, edges)); window.setTimeout(() => flow.fitView({ duration: 300, padding: 0.2 }), 50); }} size="sm" variant="ghost"><LayoutGrid className="size-4" />Auto layout</Button>
             <Button onPress={() => setRunsOpen(true)} size="sm" variant="secondary"><History className="size-4" />Runs</Button>
             <Button onPress={() => { setTestError(null); setTestOpen(true); }} size="sm" variant="secondary"><FlaskConical className="size-4" />Test run</Button>
-            <Switch isDisabled={!canWrite || saving} isSelected={isActive} onChange={(v) => void toggleActive(v)}>
-              <Switch.Content>
+            <Switch aria-label="Workflow active" className="flex-row items-center gap-2" isDisabled={!canWrite || saving} isSelected={isActive} onChange={(v) => void toggleActive(v)}>
+              <Switch.Content className="flex-row items-center gap-2">
                 <Switch.Control><Switch.Thumb /></Switch.Control>
+                <span className="text-[13px] text-foreground">Active</span>
               </Switch.Content>
-              <span className="ml-1.5 text-[13px] text-foreground">Active</span>
             </Switch>
             <Button isDisabled={!canWrite || saving || !isDirty} onPress={() => void save()} size="sm">
               {saving ? <Spinner color="current" size="sm" /> : <Save className="size-4" />}
@@ -330,6 +337,12 @@ function EditorInner() {
               nodeTypes={nodeTypes}
               onBeforeDelete={async () => { history.push(); return canWrite; }}
               onConnect={onConnect}
+              onConnectEnd={(_, state) => {
+                // An invalid drop never reaches onConnect, so explain why nothing was connected.
+                if (state.isValid !== false || !state.fromNode || !state.toNode || state.fromHandle?.type !== "source") return;
+                const reason = connectionError({ source: state.fromNode.id, target: state.toNode.id, sourceHandle: state.fromHandle.id ?? null, targetHandle: state.toHandle?.id ?? null }, nodes, edges);
+                if (reason) setNotice({ tone: "danger", text: reason });
+              }}
               onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
               onDrop={(e) => {
                 e.preventDefault();
