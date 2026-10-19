@@ -49,6 +49,7 @@ function EditorInner() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [isActive, setIsActive] = useState(false);
+  const [priority, setPriority] = useState(100);
   const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdge>([]);
   const [savedKey, setSavedKey] = useState("");
@@ -87,9 +88,10 @@ function EditorInner() {
       setMeta(m);
       setName(wf.name);
       setIsActive(wf.is_active);
+      setPriority(wf.priority ?? 100);
       setNodes(f.nodes);
       setEdges(f.edges);
-      setSavedKey(graphKey(f.nodes, f.edges) + wf.name);
+      setSavedKey(graphKey(f.nodes, f.edges) + wf.name + "|" + (wf.priority ?? 100));
       history.reset();
     } catch (error) {
       setLoadError(errorMessage(error, "Unable to load this workflow"));
@@ -99,7 +101,8 @@ function EditorInner() {
 
   useEffect(() => { void load(); }, [load]);
 
-  const isDirty = workflow !== null && graphKey(nodes, edges) + name !== savedKey;
+  const priorityValid = Number.isInteger(priority) && priority >= 1 && priority <= 1000;
+  const isDirty = workflow !== null && graphKey(nodes, edges) + name + "|" + priority !== savedKey;
 
   // Leave guards: tab close, and in-app link clicks.
   useEffect(() => {
@@ -192,13 +195,17 @@ function EditorInner() {
   }
 
   async function persist(extra: { is_active?: boolean } = {}) {
+    if (!priorityValid) {
+      setNotice({ tone: "danger", text: "Run order must be a whole number from 1 to 1000." });
+      return false;
+    }
     setSaving(true);
     setProblems([]);
     try {
-      const saved = await workflowApi.update(id, { name: name.trim() || "Untitled workflow", graph: fromFlow(nodes, edges), ...extra });
+      const saved = await workflowApi.update(id, { name: name.trim() || "Untitled workflow", graph: fromFlow(nodes, edges), priority, ...extra });
       setWorkflow((w) => (w ? { ...w, ...saved, graph: w.graph } : w));
       setIsActive(saved.is_active ?? extra.is_active ?? isActive);
-      setSavedKey(graphKey(nodes, edges) + name);
+      setSavedKey(graphKey(nodes, edges) + name + "|" + priority);
       return true;
     } catch (error) {
       handleProblems(error, "Unable to save the workflow");
@@ -292,6 +299,20 @@ function EditorInner() {
             onChange={(e) => setName(e.target.value)}
             value={name}
           />
+          <label className="flex items-center gap-1.5 text-[12px] text-muted" title="Several workflows can run for the same campaign. Lower numbers run first; the first one that writes a reply handles it, the rest only do non-reply steps like notifications.">
+            Run order
+            <input
+              aria-invalid={!priorityValid}
+              aria-label="Run order (lower runs first)"
+              className={`w-16 rounded-lg border bg-transparent px-2 py-1 text-[13px] text-foreground outline-none transition focus:border-accent ${priorityValid ? "border-border" : "border-danger"}`}
+              disabled={!canWrite}
+              max={1000}
+              min={1}
+              onChange={(e) => setPriority(e.target.value === "" ? Number.NaN : Number(e.target.value))}
+              type="number"
+              value={Number.isNaN(priority) ? "" : priority}
+            />
+          </label>
           <span className={`text-[12px] ${isDirty ? "text-warning" : "text-muted"}`} role="status">{isDirty ? "Unsaved changes" : "All changes saved"}</span>
           <div className="ml-auto flex items-center gap-1.5">
             <Button aria-label="Undo" isDisabled={!history.canUndo || !canWrite} isIconOnly onPress={history.undo} size="sm" variant="ghost"><Undo2 className="size-4" /></Button>

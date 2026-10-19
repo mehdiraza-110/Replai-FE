@@ -1,6 +1,6 @@
 import { Button, Chip, Modal, Spinner, Switch, useOverlayState } from "@heroui/react";
 import { Copy, Plus, Trash2, Workflow as WorkflowIcon, X } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BuiltInFlows } from "../../components/workflows/BuiltInFlows";
 import { NewWorkflowModal, type WorkflowTemplate } from "../../components/workflows/NewWorkflowModal";
@@ -18,6 +18,38 @@ const TRIGGER_LABEL: Record<TriggerType, string> = {
 function SCOPE_LABEL(item: WorkflowSummary) {
   const noun = item.trigger_type === "trigger.plusvibe_reply" ? "campaigns" : "mailboxes";
   return item.trigger_scope === "all" ? `All ${noun}` : `Specific ${noun}`;
+}
+
+const ORDINALS = ["1st", "2nd", "3rd"];
+const ordinal = (n: number) => ORDINALS[n - 1] ?? `${n}th`;
+
+function overlaps(a: WorkflowSummary, b: WorkflowSummary) {
+  if (a.trigger_type !== b.trigger_type) return false;
+  const ta = a.trigger_targets;
+  const tb = b.trigger_targets;
+  if (ta === "all" || tb === "all" || ta == null || tb == null) return true;
+  const set = new Set(tb.map(String));
+  return ta.some((v) => set.has(String(v)));
+}
+
+const specificity = (w: WorkflowSummary) => (w.trigger_targets === "all" ? 0 : 1);
+
+/**
+ * For each active workflow that shares scope with other active ones (same trigger, same campaign/mailbox or "all"):
+ * its place in the run order (priority, then more specific scope first, then id) and how many run together.
+ */
+function runOrderOf(items: WorkflowSummary[]) {
+  const active = items.filter((w) => w.is_active && w.trigger_type);
+  const result = new Map<number, { position: number; total: number }>();
+  for (const w of active) {
+    const group = active.filter((o) => o.id === w.id || overlaps(w, o));
+    if (group.length < 2) continue;
+    const before = group.filter((o) => o.id !== w.id && (
+      (o.priority ?? 100) - (w.priority ?? 100) || specificity(w) - specificity(o) || o.id - w.id
+    ) < 0).length;
+    result.set(w.id, { position: before + 1, total: group.length });
+  }
+  return result;
 }
 
 export function Workflows() {
@@ -52,6 +84,8 @@ export function Workflows() {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+
+  const runOrder = useMemo(() => runOrderOf(items), [items]);
 
   function openNew(template: boolean) {
     setTemplateDefault(template);
@@ -147,6 +181,12 @@ export function Workflows() {
       ) : null}
       {notice ? <p className="rounded-2xl border border-success/20 bg-success/10 px-4 py-3 text-sm text-success" role="status">{notice}</p> : null}
 
+      {!loading && runOrder.size > 0 ? (
+        <p className="rounded-xl border border-border/70 bg-surface px-3 py-2 text-[12px] leading-5 text-muted" role="note">
+          Several workflows can run for the same campaign. They run in order; the first one that writes a reply handles it, the rest only do non-reply steps like notifications.
+        </p>
+      ) : null}
+
       {!loading && !error ? <BuiltInFlows items={items} plusvibeConnected={plusvibeConnected} /> : null}
 
       {loading ? (
@@ -182,6 +222,11 @@ export function Workflows() {
               </div>
               <div className="flex flex-wrap items-center gap-2 text-[12px] text-muted">
                 <Chip color={item.is_active ? "success" : "default"} size="sm" variant="soft">{item.is_active ? "Active" : "Inactive"}</Chip>
+                {runOrder.has(item.id) ? (
+                  <Chip color="accent" size="sm" variant="soft">
+                    Runs {ordinal(runOrder.get(item.id)!.position)} of {runOrder.get(item.id)!.total}
+                  </Chip>
+                ) : null}
                 {item.trigger_type ? (
                   <>
                     <span>{TRIGGER_LABEL[item.trigger_type]}{item.trigger_scope ? ` · ${SCOPE_LABEL(item)}` : ""}</span>

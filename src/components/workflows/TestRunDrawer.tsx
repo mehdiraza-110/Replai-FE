@@ -71,6 +71,7 @@ export function TestRunDrawer({
               <Chip color={statusTone(run.status)} size="sm" variant="soft">{run.status}</Chip>
             </div>
             {run.error ? <p className="text-[12px] text-danger">{run.error}</p> : null}
+            {run.note ? <p className="rounded-xl border border-border/70 bg-surface-secondary px-3 py-2 text-[12px] leading-4 text-foreground">{run.note}</p> : null}
             <StepTrace nodeLabels={nodeLabels} run={run} />
           </section>
         ) : null}

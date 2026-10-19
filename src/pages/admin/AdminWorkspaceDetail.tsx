@@ -99,7 +99,7 @@ export function AdminWorkspaceDetail() {
       <SettingsCard data={data} onSaved={() => load(true)} />
       <PlanCard data={data} onChanged={() => load(true)} />
       <UsageCard data={data} />
-      <AiProvidersCard data={data} />
+      <AiProvidersCard data={data} onSaved={() => load(true)} />
       <MembersCard
         data={data}
         tempPassword={tempPassword}
@@ -141,7 +141,6 @@ function SettingsCard({ data, onSaved }: { data: Detail; onSaved: () => Promise<
   const [status, setStatus] = useState(data.status);
   const [ar, setAr] = useState(data.auto_responder_enabled);
   const [cm, setCm] = useState(data.cold_mailer_enabled);
-  const [ai, setAi] = useState(data.platform_ai_enabled);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -152,7 +151,6 @@ function SettingsCard({ data, onSaved }: { data: Detail; onSaved: () => Promise<
     setStatus(data.status);
     setAr(data.auto_responder_enabled);
     setCm(data.cold_mailer_enabled);
-    setAi(data.platform_ai_enabled);
   }, [data]);
 
   const dirty =
@@ -160,8 +158,7 @@ function SettingsCard({ data, onSaved }: { data: Detail; onSaved: () => Promise<
     type !== data.type ||
     status !== data.status ||
     ar !== data.auto_responder_enabled ||
-    cm !== data.cold_mailer_enabled ||
-    ai !== data.platform_ai_enabled;
+    cm !== data.cold_mailer_enabled;
 
   async function save() {
     if (!name.trim()) {
@@ -178,7 +175,6 @@ function SettingsCard({ data, onSaved }: { data: Detail; onSaved: () => Promise<
         ...(status !== data.status ? { status } : {}),
         ...(ar !== data.auto_responder_enabled ? { auto_responder_enabled: ar } : {}),
         ...(cm !== data.cold_mailer_enabled ? { cold_mailer_enabled: cm } : {}),
-        ...(ai !== data.platform_ai_enabled ? { platform_ai_enabled: ai } : {}),
       });
       await onSaved();
       setSaved(true);
@@ -221,12 +217,6 @@ function SettingsCard({ data, onSaved }: { data: Detail; onSaved: () => Promise<
           <ProductToggle checked={ar} description="Lets members use AI-drafted replies to inbound mail." label="Auto Responder" onChange={setAr} />
           <ProductToggle checked={cm} description="Lets members run cold email campaigns and warmup." label="Cold Mailer" onChange={setCm} />
         </div>
-        <ProductToggle
-          checked={ai}
-          description="When on, this workspace can use the platform's own AI provider keys if it has not added its own, and the platform pays for that usage. When off, the workspace must connect its own keys in Settings, and AI features stop working until it does."
-          label="Platform AI keys allowed"
-          onChange={setAi}
-        />
         {error ? <ErrorBanner message={error} /> : null}
       </div>
     </Section>
@@ -252,10 +242,51 @@ function UsageCard({ data }: { data: Detail }) {
 
 const providerNames: Record<string, string> = { openai: "OpenAI", anthropic: "Anthropic", gemini: "Gemini" };
 
-function AiProvidersCard({ data }: { data: Detail }) {
+function AiProvidersCard({ data, onSaved }: { data: Detail; onSaved: () => Promise<void> }) {
   const providers = data.aiProviders ?? [];
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  async function setPlatformKeys(next: boolean) {
+    setIsSaving(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await adminApi.updateWorkspace(data.id, { platform_ai_enabled: next });
+      await onSaved();
+      setNotice(next ? "This workspace can now use the platform's built-in AI keys." : "Built-in AI keys switched off for this workspace.");
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  const ownKeys = providers.filter((p) => p.configured && p.source !== "platform").length;
+
   return (
     <Section description="Which AI keys this workspace's features will use." title="AI providers">
+      <div className="space-y-3 border-b border-border/60 p-4">
+        <ProductToggle
+          checked={data.platform_ai_enabled}
+          description="On: this workspace may use the platform's own built-in AI keys whenever it has not added its own, and the platform pays for that usage. Off: it must connect its own keys under AI Keys, and AI drafting stops until it does. A workspace's own key is always used first. Changes apply immediately."
+          disabled={isSaving}
+          label="Use the platform's built-in AI keys"
+          onChange={(next) => void setPlatformKeys(next)}
+        />
+        <p className="text-[12px] text-muted">
+          {data.platform_ai_enabled
+            ? ownKeys > 0
+              ? `Using its own ${ownKeys === 1 ? "key" : "keys"} where connected, the built-in keys for the rest.`
+              : "No own keys connected: every AI request uses the built-in keys and is paid for by the platform."
+            : ownKeys > 0
+              ? "Using only its own connected keys."
+              : "No AI is available to this workspace yet: it has no own key and built-in keys are off."}
+        </p>
+        {error ? <ErrorBanner message={error} /> : null}
+        {notice ? <p className="rounded-xl border border-success/20 bg-success/10 px-3 py-2 text-[13px] text-success" role="status">{notice}</p> : null}
+      </div>
       {providers.length === 0 ? (
         <p className="px-4 py-8 text-center text-sm text-muted">No provider information available.</p>
       ) : (
@@ -269,10 +300,10 @@ function AiProvidersCard({ data }: { data: Detail }) {
                   {p.updated_at ? ` - updated ${formatDate(p.updated_at)}` : ""}
                 </p>
               </div>
-              {p.configured ? (
-                <StatusPill tone="success">{p.source === "platform" ? "Platform key" : "Own key"}</StatusPill>
+              {p.configured && p.source !== "platform" ? (
+                <StatusPill tone="success">Own key</StatusPill>
               ) : p.source === "platform" ? (
-                <StatusPill tone="accent">Platform fallback</StatusPill>
+                <StatusPill tone="accent">Built-in key</StatusPill>
               ) : (
                 <StatusPill tone="warning">Not connected</StatusPill>
               )}
