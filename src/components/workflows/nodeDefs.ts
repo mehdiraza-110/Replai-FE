@@ -108,15 +108,18 @@ export function summarize(node: Pick<GraphNode, "type" | "data">, meta: Workflow
       const ids = d.campaignIds;
       if (ids === "all" || ids === undefined) return "All campaigns";
       if (ids.length === 0) return "No campaign selected";
-      if (ids.length === 1) return meta?.plusvibeCampaigns.find((c) => c.id === ids[0])?.name ?? "1 campaign";
+      if (ids.length === 1) return (meta?.plusvibeCampaigns ?? []).find((c) => c.id === ids[0])?.name ?? "1 campaign";
       return `${ids.length} campaigns`;
     }
     case "action.save_to_db":
       return "Message and lead profile";
     case "action.ai_agent": {
-      const agent = meta?.agents.find((a) => a.id === d.agentId)?.name;
-      const mode = d.mode === "auto_send" ? "auto-send" : "review first";
-      return agent ? `${agent}, ${mode}` : "Choose an agent";
+      const agent = d.agentId === "campaign"
+        ? "Campaign's agent"
+        : meta?.agents.find((a) => a.id === d.agentId)?.name;
+      if (!agent) return "Choose an agent";
+      if (d.mode === "agent_default") return `${agent} · follows agent settings`;
+      return `${agent} · ${d.mode === "auto_send" ? "auto-send" : "review first"}`;
     }
     case "action.send_reply":
       if (d.via === "plusvibe") return "Via PlusVibe";

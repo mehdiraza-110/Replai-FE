@@ -12,10 +12,10 @@ export type NodeType =
 export type WorkflowNodeData = {
   mailboxIds?: number[] | "all";
   campaignIds?: string[] | "all";
-  agentId?: number;
+  agentId?: number | "campaign";
   tone?: string;
   instructions?: string;
-  mode?: "auto_send" | "review";
+  mode?: "auto_send" | "review" | "agent_default";
   via?: "plusvibe" | "mailbox";
   mailboxId?: number;
   keywords?: string[];
@@ -54,6 +54,7 @@ export interface WorkflowSummary {
   is_active: boolean;
   node_count: number;
   trigger_type: TriggerType | null;
+  trigger_scope?: "all" | "specific" | null;
   updated_at: string;
   last_run: RunSummary | null;
 }
@@ -84,11 +85,19 @@ export interface Run {
   finished_at: string | null;
 }
 
+export interface CampaignInfo {
+  id: string;
+  name: string;
+  agentId?: number | null;
+  agentName?: string | null;
+}
+
 export interface WorkflowMeta {
   mailboxes: { id: number; email: string }[];
   agents: { id: number; name: string }[];
   plusvibeConnected: boolean;
-  plusvibeCampaigns: { id: string; name: string }[];
+  plusvibeCampaigns: CampaignInfo[];
+  campaigns?: CampaignInfo[];
 }
 
 export interface WorkflowProblem {
