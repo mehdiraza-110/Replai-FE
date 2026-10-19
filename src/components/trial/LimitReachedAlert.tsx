@@ -1,10 +1,11 @@
 import { Button } from "@heroui/react";
-import { OctagonAlert, TriangleAlert } from "lucide-react";
+import { Gauge, OctagonAlert } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { isSystemEnabled } from "../../constants/systems";
 import { useAuth } from "../../context/AuthContext";
 import { TRIAL_LIMIT_REACHED_EVENT } from "../../services/api";
+import { getViewAs } from "../../utils/viewAs";
 import { limitLine, reachedLimits } from "./trialUtils";
 
 const REFRESH_EVERY_MS = 60_000;
@@ -44,45 +45,49 @@ export function usePlanFreshness(enabled: boolean) {
 }
 
 /**
- * Alert listing every limit that has been reached; renders nothing when none is. It is RED only when the daily email
- * limit has been reached (sending is actually paused); any other reached limit (domains, mailboxes, workflows...)
- * is a yellow warning.
+ * A single, calm notice for the dashboards (never a global banner). Reached limits that are just an allowance being
+ * used up (domains, mailboxes, workflows...) are a soft amber note; only the daily email limit, which really pauses
+ * sending, is red. Renders nothing when no limit is reached, or in View as.
  */
-export function LimitReachedAlert({ variant }: { variant: "banner" | "card" }) {
+export function LimitReachedAlert() {
   const { activeWorkspace, plan } = useAuth();
   const navigate = useNavigate();
   const reached = reachedLimits(plan);
-  if (reached.length === 0 || !activeWorkspace) return null;
+  if (reached.length === 0 || !activeWorkspace || getViewAs()) return null;
 
   const canRequest = activeWorkspace.role !== "member" && isSystemEnabled("mailer", activeWorkspace);
-  const title = plan?.type === "trial" ? "Trial limit reached" : "Limit reached";
-  const card = variant === "card";
   const critical = reached.some((item) => item.key === "emails");
+  const sending = reached.find((item) => item.key === "emails");
+  const allowance = reached.filter((item) => item.key !== "emails");
+  const title = critical ? "Daily email limit reached" : plan?.type === "trial" ? "Your trial allowance is fully used" : "Limit reached";
   const tone = critical
-    ? { box: "border-danger/40 bg-danger/10", title: "text-danger", iconColor: "text-danger", icon: OctagonAlert }
-    : { box: "border-warning/50 bg-warning/10", title: "text-foreground", iconColor: "text-warning", icon: TriangleAlert };
+    ? { box: "border-danger/30 bg-danger/5", title: "text-danger", iconColor: "text-danger", icon: OctagonAlert }
+    : { box: "border-warning/30 bg-warning/5", title: "text-foreground", iconColor: "text-warning", icon: Gauge };
   const ToneIcon = tone.icon;
 
   return (
     <div
-      className={`${card ? "rounded-2xl p-4" : "px-4 py-2.5 sm:px-5 lg:ml-[212px]"} flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border ${tone.box} text-foreground ${card ? "" : "border-x-0 border-t-0"}`}
-      data-testid={`limit-alert-${variant}`}
-      role="alert"
+      className={`flex flex-wrap items-start justify-between gap-x-4 gap-y-3 rounded-2xl border p-4 text-foreground ${tone.box}`}
+      data-testid="limit-alert-card"
+      role="status"
     >
-      <div className="flex min-w-0 flex-1 basis-72 items-start gap-2.5">
-        <ToneIcon aria-hidden className={`mt-0.5 shrink-0 ${tone.iconColor} ${card ? "size-5" : "size-4"}`} />
+      <div className="flex min-w-0 flex-1 basis-72 items-start gap-3">
+        <ToneIcon aria-hidden className={`mt-0.5 size-5 shrink-0 ${tone.iconColor}`} />
         <div className="min-w-0">
-          <p className={`${card ? "text-[15px]" : "text-[13px]"} font-semibold ${tone.title}`}>{title}</p>
-          <ul className={`mt-0.5 space-y-0.5 ${card ? "text-[13px]" : "text-[12px]"}`}>
-            {reached.map((item) => (
+          <p className={`text-[14px] font-semibold ${tone.title}`}>{title}</p>
+          <ul className="mt-1 space-y-0.5 text-[13px] text-foreground/80">
+            {sending ? <li>{limitLine(sending)}. Sending continues automatically once it resets.</li> : null}
+            {allowance.map((item) => (
               <li key={item.key}>{limitLine(item)}</li>
             ))}
           </ul>
-          {!canRequest ? <p className="mt-1 text-[12px] text-muted">Ask your workspace admin to request more.</p> : null}
+          <p className="mt-1.5 text-[12px] text-muted">
+            {canRequest ? "Need more? Send a request and our team will raise it." : "Ask your workspace admin to request more."}
+          </p>
         </div>
       </div>
       {canRequest ? (
-        <Button size="sm" variant={critical ? "danger" : "secondary"} onClick={() => navigate(`/mailer/orders?request=limits&key=${reached[0].key}`)}>
+        <Button size="sm" variant="secondary" onClick={() => navigate(`/mailer/orders?request=limits&key=${reached[0].key}`)}>
           Request more
         </Button>
       ) : null}

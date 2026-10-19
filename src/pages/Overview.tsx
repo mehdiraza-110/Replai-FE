@@ -46,7 +46,7 @@ export function Overview() {
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-6">
-      <LimitReachedAlert variant="card" />
+      <LimitReachedAlert />
       <div>
         <h2 className="text-lg font-semibold text-foreground">{enabled.length === 1 ? `Welcome to ${enabled[0].label}` : "Choose a system"}</h2>
         <p className="mt-1 text-sm text-muted">

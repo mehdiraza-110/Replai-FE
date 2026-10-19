@@ -9,7 +9,7 @@ import { useViewAs } from "../../hooks/useViewAs";
 import { Hourglass, PauseCircle } from "lucide-react";
 import { TrialEndedNotice } from "../trial/TrialEndedNotice";
 import { TrialModal } from "../trial/TrialModal";
-import { LimitReachedAlert, usePlanFreshness } from "../trial/LimitReachedAlert";
+import { usePlanFreshness } from "../trial/LimitReachedAlert";
 
 export function AppShell() {
   const { activeWorkspace, workspaceEpoch, isSuperAdmin, isTrialEnded } = useAuth();
@@ -25,7 +25,6 @@ export function AppShell() {
 
   // Keep the plan fresh so the red limit notice appears (and clears) without a reload.
   usePlanFreshness(!viewAs && !isSuspended);
-  const showLimitBanner = !viewAs && !showTrialEnded && !isSuspended;
 
   // If the current page belongs to a system this workspace (or member) can't use, send them to one they can.
   useEffect(() => {
@@ -48,7 +47,6 @@ export function AppShell() {
       <TrialModal />
       <Sidebar />
       <TopBar />
-      {showLimitBanner ? <LimitReachedAlert variant="banner" /> : null}
       <main className="min-w-0 overflow-x-hidden px-4 py-5 sm:px-5 lg:ml-[212px]" key={workspaceEpoch}>
         {isSuspended ? (
           <div className="mx-auto mt-16 flex max-w-[460px] flex-col items-center gap-3 rounded-2xl border border-border/70 bg-surface p-8 text-center apple-shadow" role="alert">
