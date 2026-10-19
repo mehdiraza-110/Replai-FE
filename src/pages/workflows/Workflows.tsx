@@ -2,6 +2,7 @@ import { Button, Chip, Modal, Spinner, Switch, useOverlayState } from "@heroui/r
 import { Copy, Plus, Trash2, Workflow as WorkflowIcon, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { BuiltInFlows } from "../../components/workflows/BuiltInFlows";
 import { NewWorkflowModal } from "../../components/workflows/NewWorkflowModal";
 import { formatWhen, statusTone } from "../../components/workflows/runUi";
 import { useWorkflowAccess } from "../../components/workflows/useWorkflowAccess";
@@ -12,6 +13,7 @@ export function Workflows() {
   const navigate = useNavigate();
   const { canWrite } = useWorkflowAccess();
   const [items, setItems] = useState<WorkflowSummary[]>([]);
+  const [plusvibeConnected, setPlusvibeConnected] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -28,7 +30,9 @@ export function Workflows() {
     setLoading(true);
     setError(null);
     try {
-      setItems(await workflowApi.list());
+      const [list, meta] = await Promise.all([workflowApi.list(), workflowApi.meta().catch(() => null)]);
+      setItems(list);
+      setPlusvibeConnected(Boolean(meta?.plusvibeConnected));
     } catch (e) {
       setError(errorMessage(e, "Unable to load workflows"));
     } finally {
@@ -131,6 +135,8 @@ export function Workflows() {
         </div>
       ) : null}
       {notice ? <p className="rounded-2xl border border-success/20 bg-success/10 px-4 py-3 text-sm text-success" role="status">{notice}</p> : null}
+
+      {!loading && !error ? <BuiltInFlows items={items} plusvibeConnected={plusvibeConnected} /> : null}
 
       {loading ? (
         <div className="grid gap-3 md:grid-cols-2">
