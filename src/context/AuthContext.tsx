@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ApiRequestError, authService, SESSION_EXPIRED_EVENT, workspaceService, type LoginPayload, type RegisterPayload } from "../services/api";
 import { reconnectRealtime } from "../services/realtime";
 import type { AuthUser, WorkspaceSummary, WorkspaceType } from "../types";
@@ -31,6 +31,7 @@ interface AuthContextValue {
 }
 
 const STORAGE_KEY = "replai.auth";
+export const SESSION_EXPIRED_NOTICE_KEY = "replai.sessionExpired";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -69,6 +70,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     reconnectRealtime();
   }, []);
 
+  // The server no longer accepts this session (cookie expired or invalidated): leave a note for the login screen.
+  const expireSession = useCallback(() => {
+    try {
+      window.sessionStorage.setItem(SESSION_EXPIRED_NOTICE_KEY, "1");
+    } catch {
+      /* the notice is a courtesy only */
+    }
+    clearLocalSession();
+  }, [clearLocalSession]);
+
   const updateUser = useCallback((nextUser: AuthUser) => {
     setSession((current) => {
       if (!current) return current;
@@ -85,10 +96,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       updateUser(fresh);
       return fresh;
     } catch (error) {
-      if (error instanceof ApiRequestError && error.status === 401) clearLocalSession();
+      if (error instanceof ApiRequestError && error.status === 401) expireSession();
       return null;
     }
-  }, [clearLocalSession, updateUser]);
+  }, [expireSession, updateUser]);
 
   // Re-validate a stored session on load so workspace membership and flags are fresh.
   useEffect(() => {
@@ -101,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (isActive) updateUser(fresh);
       })
       .catch((error) => {
-        if (isActive && error instanceof ApiRequestError && error.status === 401) clearLocalSession();
+        if (isActive && error instanceof ApiRequestError && error.status === 401) expireSession();
       })
       .finally(() => {
         if (isActive) setIsReady(true);
@@ -110,12 +121,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       isActive = false;
     };
-  }, [clearLocalSession, updateUser]);
+  }, [expireSession, updateUser]);
 
   useEffect(() => {
-    window.addEventListener(SESSION_EXPIRED_EVENT, clearLocalSession);
-    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, clearLocalSession);
-  }, [clearLocalSession]);
+    window.addEventListener(SESSION_EXPIRED_EVENT, expireSession);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, expireSession);
+  }, [expireSession]);
+
+  // The session cookie is shared by every tab, so a switch, login or logout in one tab changes what the others'
+  // requests act on. Follow it here so a stale tab never shows one workspace while writing to another.
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
+  useEffect(() => {
+    function handleStorage(event: StorageEvent) {
+      if (event.key !== STORAGE_KEY) return;
+      const next = readStoredSession();
+      const current = sessionRef.current;
+
+      if (!next) {
+        clearViewAs();
+        setSession(null);
+        setViewedWorkspace(null);
+        setIsReady(true);
+        reconnectRealtime();
+        return;
+      }
+
+      const changed = next.user?.id !== current?.user?.id || next.user?.active_workspace_id !== current?.user?.active_workspace_id;
+      setSession(next);
+      if (changed) {
+        clearViewAs();
+        setWorkspaceEpoch((epoch) => epoch + 1);
+        reconnectRealtime();
+      }
+    }
+
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
 
   // While a super admin views as another workspace, load that workspace's flags so navigation matches it.
   useEffect(() => {

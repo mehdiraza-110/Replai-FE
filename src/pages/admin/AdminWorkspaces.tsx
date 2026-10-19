@@ -226,9 +226,9 @@ function CreateWorkspaceModal({ isOpen, onClose, onCreated }: { isOpen: boolean;
     if (!name.trim()) next.name = "Enter a workspace name.";
     if (!/^\S+@\S+\.\S+$/.test(ownerEmail.trim())) next.ownerEmail = "Enter a valid owner email.";
     setErrors(next);
+    setServerError(null);
     if (Object.keys(next).length) return;
     setIsBusy(true);
-    setServerError(null);
     try {
       onCreated(await adminApi.createWorkspace({ name: name.trim(), type, ownerEmail: ownerEmail.trim() }));
     } catch (e) {

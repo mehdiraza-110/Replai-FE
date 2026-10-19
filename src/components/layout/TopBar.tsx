@@ -3,6 +3,7 @@ import { Button, Dropdown } from "@heroui/react";
 import { Bell, Menu, Sidebar as SidebarIcon } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { WorkspaceMenu } from "./WorkspaceMenu";
+import { OPEN_NAV_EVENT } from "./Sidebar";
 import { LoadingState } from "../ui/LoadingState";
 import { StatusPill } from "../ui/StatusPill";
 import { NOTIFICATION_EVENT_TYPES } from "../../constants/notificationEventTypes";
@@ -28,6 +29,7 @@ const titles: Record<string, { title: string; subtitle: string }> = {
   "/mailer/warmup": { title: "Warmup", subtitle: "Ramp schedules, per-mailbox progress, and warmup strategies." },
   "/mailer/health": { title: "Health", subtitle: "Reputation monitoring, flagged mailboxes, and AWS concentration risk mitigation." },
   "/mailer/campaigns": { title: "Campaigns", subtitle: "Cold outbound campaigns and the sending pipeline." },
+  "/mailer/orders": { title: "Orders", subtitle: "Request domains or mailboxes and follow their progress." },
   "/mailer/campaigns/new": { title: "New Campaign", subtitle: "Audience, message, sending mailboxes, schedule, and the pre-flight safety check." },
   "/responder": { title: "AI Auto Responder", subtitle: "Reply automation loop, agent performance, and review queue." },
   "/review": { title: "Human Review", subtitle: "Approve, edit, or take over AI replies before they are sent." },
@@ -50,6 +52,7 @@ const titles: Record<string, { title: string; subtitle: string }> = {
   "/ai-keys": { title: "AI Keys", subtitle: "Connect your own OpenAI, Anthropic, or Gemini key for this workspace." },
   "/admin": { title: "Admin", subtitle: "Platform-wide activity across every workspace." },
   "/admin/workspaces": { title: "Workspaces", subtitle: "Every workspace on the platform, their products, and their owners." },
+  "/admin/orders": { title: "Orders", subtitle: "Domain and mailbox requests from every workspace." },
   "/admin/users": { title: "Users", subtitle: "Everyone with an account, and the workspaces they belong to." },
   "/notifications": { title: "Notifications", subtitle: "Everything that needs your attention across ReplyOS." },
 };
@@ -81,7 +84,8 @@ function findTitle(pathname: string) {
 }
 
 export function TopBar() {
-  const { user } = useAuth();
+  const { user, activeWorkspace } = useAuth();
+  const workspaceId = activeWorkspace?.id ?? null;
   const location = useLocation();
   const current = findTitle(location.pathname);
   const firstName = user?.first_name || user?.email?.split("@")[0] || "there";
@@ -105,11 +109,14 @@ export function TopBar() {
   }, []);
 
   useEffect(() => {
+    // A different workspace has different notifications: never show the previous one's while loading.
+    setNotifications([]);
+    setIsLoading(true);
     loadNotifications();
     const interval = window.setInterval(loadNotifications, POLL_INTERVAL_MS);
 
     return () => window.clearInterval(interval);
-  }, [loadNotifications]);
+  }, [loadNotifications, workspaceId]);
 
   // Live push: the moment any other signed-in tab triggers a notification-worthy
   // event, this dropdown refreshes on its own — no refresh needed.
@@ -134,7 +141,7 @@ export function TopBar() {
     <header className="sticky top-0 z-20 h-[56px] bg-background/90 px-4 backdrop-blur-xl sm:px-5 lg:ml-[212px]">
       <div className="flex h-full items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
-          <Button className="lg:hidden" size="sm" variant="secondary" aria-label="Open navigation">
+          <Button className="lg:hidden" size="sm" variant="secondary" aria-label="Open navigation" onPress={() => window.dispatchEvent(new Event(OPEN_NAV_EVENT))}>
             <Menu className="size-4" />
           </Button>
           <SidebarIcon className="hidden size-4 text-foreground lg:block" />

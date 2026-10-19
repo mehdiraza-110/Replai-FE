@@ -896,14 +896,19 @@ function StepContent({
         {isProviderKeyMissing ? (
           <div className="flex items-start gap-3 rounded-xl bg-warning/10 p-3 text-sm font-medium text-warning md:col-span-2">
             <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-            <p>{modelsError}</p>
+            <p>
+              {modelsError}{" "}
+              <Link className="font-semibold underline underline-offset-2" to="/ai-keys">
+                Open AI Keys
+              </Link>
+            </p>
           </div>
         ) : modelsError ? (
           <p className="text-sm font-medium text-danger md:col-span-2">{modelsError}</p>
         ) : null}
         <div className="flex items-start gap-3 rounded-2xl bg-surface-secondary p-4 text-sm text-muted">
           <ShieldCheck className="mt-0.5 size-5 shrink-0 text-accent" />
-          <p>Model access is resolved by backend environment credentials. Agent records store provider and model configuration only.</p>
+          <p>Models are listed with your workspace's AI key (or the platform key, if your workspace is allowed to use it). Agent records store provider and model configuration only.</p>
         </div>
       </div>
     );

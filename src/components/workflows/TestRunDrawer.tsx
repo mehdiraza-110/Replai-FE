@@ -59,7 +59,7 @@ export function TestRunDrawer({
         <label className="block space-y-1.5"><span className="text-[12px] font-medium">From</span><input className={inputClass} onChange={(e) => set({ from: e.target.value })} value={sample.from} /></label>
         <label className="block space-y-1.5"><span className="text-[12px] font-medium">Subject</span><input className={inputClass} onChange={(e) => set({ subject: e.target.value })} value={sample.subject} /></label>
         <label className="block space-y-1.5"><span className="text-[12px] font-medium">Body</span><textarea className={`${inputClass} min-h-28 resize-y`} onChange={(e) => set({ body: e.target.value })} value={sample.body} /></label>
-        <Button isDisabled={isRunning} onPress={() => onRun(sample)} size="sm">
+        <Button aria-disabled={isRunning} onPress={() => { if (!isRunning) onRun(sample); }} size="sm">
           {isRunning ? <Spinner color="current" size="sm" /> : <FlaskConical className="size-4" />}
           {isRunning ? "Running..." : "Run test"}
         </Button>

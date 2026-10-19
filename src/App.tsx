@@ -4,7 +4,6 @@ import { AppShell } from "./components/layout/AppShell";
 import { LoadingState } from "./components/ui/LoadingState";
 import { useAuth } from "./context/AuthContext";
 import { WORKSPACE_REQUIRED_EVENT } from "./services/api";
-import { AIDebugging } from "./pages/AIDebugging";
 import { AIAgents } from "./pages/AIAgents";
 import { Analytics } from "./pages/Analytics";
 import { Auth } from "./pages/Auth";
@@ -14,7 +13,6 @@ import { DomainOnboarding } from "./pages/DomainOnboarding";
 import { EventLogs } from "./pages/EventLogs";
 import { ForwardedLeads } from "./pages/ForwardedLeads";
 import { HumanReview } from "./pages/HumanReview";
-import { InboxManagers } from "./pages/InboxManagers";
 import { Integrations } from "./pages/Integrations";
 import { KnowledgeBase } from "./pages/KnowledgeBase";
 import { KnowledgeForm } from "./pages/KnowledgeForm";
@@ -33,13 +31,14 @@ import { Notifications } from "./pages/Notifications";
 import { Overview } from "./pages/Overview";
 import { PlusVibeCampaigns } from "./pages/PlusVibeCampaigns";
 import { Settings } from "./pages/Settings";
-import { Training } from "./pages/Training";
 import { AdminDashboard } from "./pages/admin/AdminDashboard";
 import { AdminUsers } from "./pages/admin/AdminUsers";
 import { AdminWorkspaceDetail } from "./pages/admin/AdminWorkspaceDetail";
 import { AdminWorkspaces } from "./pages/admin/AdminWorkspaces";
 import { AIKeys } from "./pages/AIKeys";
 import { CreateWorkspace } from "./pages/CreateWorkspace";
+import { Orders } from "./pages/Orders";
+import { AdminOrders } from "./pages/admin/AdminOrders";
 import { Team } from "./pages/Team";
 import { WorkflowEditor } from "./pages/workflows/WorkflowEditor";
 import { Workflows } from "./pages/workflows/Workflows";
@@ -114,6 +113,8 @@ export default function App() {
       <Route element={<ProtectedShell />}>
         <Route path="workflows" element={<Workflows />} />
         <Route path="workflows/:id" element={<WorkflowEditor />} />
+        <Route path="mailer/orders" element={<Orders />} />
+        <Route path="admin/orders" element={<AdminOrders />} />
         <Route path="team" element={<Team />} />
         <Route path="ai-keys" element={<AIKeys />} />
         <Route path="admin" element={<AdminDashboard />} />
@@ -123,7 +124,8 @@ export default function App() {
         <Route index element={<Overview />} />
         <Route path="responder" element={<Dashboard />} />
         <Route path="review" element={<HumanReview />} />
-        <Route path="inbox" element={<InboxManagers />} />
+        {/* Demo-only pages (static sample data, not tenant data) are not exposed to real workspaces. */}
+        <Route path="inbox" element={<Navigate replace to="/" />} />
         <Route path="messages" element={<Messages />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="leads" element={<Leads />} />
@@ -144,11 +146,11 @@ export default function App() {
         <Route path="mailer/campaigns/new" element={<MailerCampaignNew />} />
         <Route path="knowledge" element={<KnowledgeBase />} />
         <Route path="knowledge/new" element={<KnowledgeForm />} />
-        <Route path="training" element={<Training />} />
+        <Route path="training" element={<Navigate replace to="/" />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="integrations" element={<Integrations />} />
         <Route path="events" element={<EventLogs />} />
-        <Route path="debugging" element={<AIDebugging />} />
+        <Route path="debugging" element={<Navigate replace to="/" />} />
         <Route path="settings" element={<Settings />} />
         <Route path="*" element={<Navigate replace to="/" />} />
       </Route>

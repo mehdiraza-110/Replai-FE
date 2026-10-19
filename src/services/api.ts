@@ -1,5 +1,4 @@
 import {
-  agents,
   aiDebugRun,
   conversations,
   inboxManagers,
@@ -184,7 +183,7 @@ function uploadWithProgress<T>(path: string, file: File, fieldName: string, onPr
   });
 }
 
-const SURFACED_ERROR_CODES = new Set(["WORKSPACE_REQUIRED", "AI_PROVIDER_KEY_MISSING", "CALENDAR_CONFIG_MISSING", "CALENDAR_ENCRYPTION_KEY_MISSING", "CALENDAR_STATE_INVALID", "CALENDAR_CONNECTION_REVOKED"]);
+const SURFACED_ERROR_CODES = new Set(["WORKSPACE_REQUIRED", "AI_PROVIDER_KEY_MISSING", "AI_KEY_REJECTED", "AI_KEY_INVALID", "AI_KEY_REQUIRED", "AI_PROVIDER_UNSUPPORTED", "CALENDAR_CONFIG_MISSING", "CALENDAR_ENCRYPTION_KEY_MISSING", "CALENDAR_STATE_INVALID", "CALENDAR_CONNECTION_REVOKED"]);
 
 function getFriendlyErrorMessage({
   message,
@@ -203,6 +202,9 @@ function getFriendlyErrorMessage({
   // These are admin-facing setup/config problems, not internal errors to hide —
   // surfacing them is what lets someone actually fix the missing env var.
   if (code && SURFACED_ERROR_CODES.has(code) && message) return message;
+
+  // An intentional upstream failure that carries its own code and a clear message (e.g. an AI provider that can't be reached).
+  if ((status === 502 || status === 503 || status === 504) && code && message && !isTechnicalErrorMessage(message)) return message;
 
   if (status === 0) return "We could not reach the server. Please check that ReplyOS is running and try again.";
   if (status === 401 || status === 403) {
@@ -391,7 +393,6 @@ export const inboxManagerService = {
 };
 
 export const mailerService = {
-  listDomains: () => mailerDomains,
   listCampaigns: () => mailerCampaigns,
   createCampaign: (campaign: MailerCampaign) => {
     mailerCampaigns.unshift(campaign);
@@ -643,17 +644,9 @@ export const inboxService = {
 
 export const aiAgentService = {
   async list() {
-    try {
-      const response = await apiRequest<Agent[]>("/api/v1/ai-agents");
+    const response = await apiRequest<Agent[]>("/api/v1/ai-agents");
 
-      return response.data.map(normalizeAgentForUi);
-    } catch (error) {
-      if (!(error instanceof ApiRequestError) || error.status >= 500) {
-        return agents;
-      }
-
-      throw error;
-    }
+    return response.data.map(normalizeAgentForUi);
   },
 
   async get(id: number) {

@@ -35,7 +35,7 @@ function MultiSelect<T extends string | number>({
   const all = value === "all" || value === undefined;
   const selected = all ? [] : value;
   return (
-    <fieldset className="space-y-1" disabled={disabled}>
+    <fieldset className="min-w-0 space-y-1" disabled={disabled}>
       <label className="flex items-center gap-2 rounded-lg px-1 py-1 text-[13px] text-foreground">
         <input checked={all} className="accent-[var(--accent)]" onChange={(e) => onChange(e.target.checked ? "all" : [])} type="checkbox" />
         {allLabel}
@@ -43,15 +43,15 @@ function MultiSelect<T extends string | number>({
       <div className={`max-h-48 space-y-0.5 overflow-y-auto rounded-xl border border-border/70 p-1.5 ${all || disabled ? "opacity-50" : ""}`}>
         {options.length === 0 ? <p className="px-1 py-1 text-[12px] text-muted">{emptyText}</p> : null}
         {options.map((option) => (
-          <label className="flex items-center gap-2 rounded-lg px-1.5 py-1 text-[13px] text-foreground hover:bg-default-100" key={option.id}>
+          <label className="flex min-w-0 items-center gap-2 rounded-lg px-1.5 py-1 text-[13px] text-foreground hover:bg-default-100" key={option.id}>
             <input
               checked={selected.includes(option.id)}
-              className="accent-[var(--accent)]"
+              className="shrink-0 accent-[var(--accent)]"
               disabled={all}
               onChange={(e) => onChange(e.target.checked ? [...selected, option.id] : selected.filter((x) => x !== option.id))}
               type="checkbox"
             />
-            <span className="truncate">{option.label}</span>
+            <span className="min-w-0 truncate" title={option.label}>{option.label}</span>
           </label>
         ))}
       </div>
@@ -232,7 +232,7 @@ export function NodeInspector({
           <X className="size-4" />
         </button>
       </header>
-      <div className="flex-1 space-y-4 overflow-y-auto p-4">
+      <div className="min-w-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden p-4">
         {problems.length > 0 ? (
           <ul className="space-y-1 rounded-xl border border-danger/25 bg-danger/10 p-3 text-[12px] leading-4 text-danger">
             {problems.map((p, i) => <li key={i}>{p}</li>)}
