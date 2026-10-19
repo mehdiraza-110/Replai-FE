@@ -25,7 +25,7 @@ export function Orders() {
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
-  const [prefill, setPrefill] = useState<{ type: "limits"; key: string | null } | null>(null);
+  const [prefill, setPrefill] = useState<{ type: "limits" | "domains"; key: string | null } | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -43,11 +43,13 @@ export function Orders() {
     void load();
   }, [load]);
 
-  // ?request=limits&key=<limitKey> (from the red limit notice) opens the "More limits" form straight away.
+  // ?request=limits&key=<limitKey> (from the red limit notice) opens the "More limits" form straight away;
+  // ?request=domains (from the Domains page) opens the form on the Domains tab.
   useEffect(() => {
-    if (searchParams.get("request") !== "limits") return;
+    const request = searchParams.get("request");
+    if (request !== "limits" && request !== "domains") return;
     if (canManage) {
-      setPrefill({ type: "limits", key: searchParams.get("key") });
+      setPrefill(request === "limits" ? { type: "limits", key: searchParams.get("key") } : { type: "domains", key: null });
       setIsModalOpen(true);
     }
     setSearchParams({}, { replace: true });
