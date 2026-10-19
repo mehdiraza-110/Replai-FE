@@ -156,6 +156,113 @@ export interface AdminAnalytics {
   }>;
 }
 
+
+export interface AdminDomainWorkspaceRef {
+  id: number;
+  name: string;
+  slug: string;
+  type: WorkspaceType;
+  status: WorkspaceStatus;
+}
+
+export interface AdminDomain {
+  id: number;
+  domain: string;
+  provider: string;
+  provider_label: string;
+  status: string;
+  mailbox_count: number;
+  active_mailbox_count: number;
+  warmup: { stages: Record<string, number>; avg_daily_limit: number | null };
+  workspace: AdminDomainWorkspaceRef;
+  owner: { id: number; email: string; name: string } | null;
+  assigned_at: string | null;
+  assigned_by_email: string | null;
+  previous_workspace: { id: number; name: string } | null;
+  created_at: string;
+}
+
+export interface AdminDomainMailbox {
+  id: number;
+  email: string;
+  status: string;
+  provider: string;
+  provider_label: string;
+  daily_limit: number | null;
+  warmup_stage: string | null;
+  warmup_strategy_name: string | null;
+}
+
+export interface AdminDomainHistoryEntry {
+  at: string;
+  from_workspace: string | null;
+  to_workspace: string | null;
+  by_email: string | null;
+  notes: string | null;
+}
+
+export interface AdminDomainDetail extends AdminDomain {
+  mailboxes: AdminDomainMailbox[];
+  history: AdminDomainHistoryEntry[];
+}
+
+export interface AdminDomainListParams {
+  search?: string;
+  workspaceId?: number | "";
+  provider?: string;
+  status?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface AssignPreview {
+  domains: Array<{
+    domain: string;
+    provider_label: string;
+    // The backend sends `workspace` / `owner_email`; the `current_*` names are accepted for older responses.
+    workspace?: { id: number; name: string } | null;
+    owner_email?: string | null;
+    current_workspace?: { id: number; name: string } | null;
+    current_owner_email?: string | null;
+    mailboxes: Array<{ email: string; warmup_stage: string | null; daily_limit: number | null }>;
+  }>;
+  campaigns: Array<{
+    id: number;
+    name: string;
+    workspaceName: string;
+    mode?: string;
+    isWarmup?: boolean;
+    willKeepRunning: boolean;
+    remainingMailboxes: number;
+    willPause: boolean;
+  }>;
+  mailboxesMoving: number;
+  warnings: string[];
+  blocked: string[];
+  requiresConfirmation?: boolean;
+  requiresPlatformConfirmation?: boolean;
+}
+
+export interface AssignDomainsRequest {
+  domains: string[];
+  workspaceId: number;
+  orderId?: number;
+  confirmFromPlatform?: boolean;
+  notes?: string;
+}
+
+export interface AssignDomainsResult {
+  workspace: { id: number; name: string };
+  domains: Array<{ id: number; domain: string; from_workspace: string | { id?: number; name: string } | null; mailboxes?: unknown[] }>;
+  mailboxesMoved: number;
+  campaigns: Array<{ id: number; name: string; outcome: "kept" | "paused"; remainingMailboxes: number }>;
+  warmup?: unknown;
+  order?: unknown;
+}
+
+/** The platform's own workspace: domains sitting here are the pool the super admin hands out from. */
+export const PLATFORM_WORKSPACE_SLUG = "koval-group";
+
 function qs(params: Record<string, string | number | undefined | null>) {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
@@ -214,6 +321,28 @@ export const adminApi = {
   },
   async removeMember(workspaceId: number | string, userId: number) {
     await apiRequest<null>(`/api/v1/admin/workspaces/${workspaceId}/members/${userId}`, json("DELETE"));
+  },
+  async listDomains(params: AdminDomainListParams) {
+    return (await apiRequest<Paged<AdminDomain>>(`/api/v1/admin/domains${qs({ ...params })}`)).data;
+  },
+  async getDomain(id: number | string) {
+    return (await apiRequest<AdminDomainDetail>(`/api/v1/admin/domains/${id}`)).data;
+  },
+  async previewAssign(payload: { domains: string[]; workspaceId: number }) {
+    return (await apiRequest<AssignPreview>("/api/v1/admin/domains/assign/preview", json("POST", payload))).data;
+  },
+  async assignDomains(payload: AssignDomainsRequest) {
+    return (await apiRequest<AssignDomainsResult>("/api/v1/admin/domains/assign", json("POST", payload))).data;
+  },
+  /** Every workspace, for pickers (pages through the list endpoint). */
+  async listAllWorkspaces() {
+    const all: AdminWorkspace[] = [];
+    for (let page = 1; page <= 20; page += 1) {
+      const result = await adminApi.listWorkspaces({ page, limit: 100 });
+      all.push(...result.items);
+      if (all.length >= result.total || result.items.length === 0) break;
+    }
+    return all;
   },
   async listUsers(params: { search?: string; page?: number; limit?: number }) {
     return (await apiRequest<Paged<AdminUser>>(`/api/v1/admin/users${qs({ ...params })}`)).data;
