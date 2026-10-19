@@ -84,6 +84,7 @@ export class ApiRequestError extends Error {
 export const WORKSPACE_REQUIRED_EVENT = "replai:workspace-required";
 export const SESSION_EXPIRED_EVENT = "replai:session-expired";
 export const TRIAL_ENDED_EVENT = "replai:trial-ended";
+export const TRIAL_LIMIT_REACHED_EVENT = "replai:trial-limit-reached";
 
 const SESSION_PROBLEM_PATTERN = /no token|invalid or expired token|no access to this route|sign in to continue|session has expired/i;
 
@@ -97,6 +98,8 @@ function notifyForSpecialCodes({ code, status, message }: { code?: string; statu
     window.dispatchEvent(new Event(WORKSPACE_REQUIRED_EVENT));
   } else if (code === "TRIAL_ENDED") {
     window.dispatchEvent(new Event(TRIAL_ENDED_EVENT));
+  } else if (code === "TRIAL_LIMIT_REACHED") {
+    window.dispatchEvent(new Event(TRIAL_LIMIT_REACHED_EVENT));
   } else if (status === 401 && message && SESSION_PROBLEM_PATTERN.test(message)) {
     window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
   }

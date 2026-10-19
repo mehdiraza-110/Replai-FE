@@ -1,6 +1,7 @@
 import { Button } from "@heroui/react";
 import { ChevronDown, PackageOpen, Plus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ConfirmDialog, ErrorBanner } from "../components/admin/AdminModal";
 import { PageHeader } from "../components/admin/AdminBits";
 import { NewOrderModal } from "../components/orders/NewOrderModal";
@@ -23,6 +24,8 @@ export function Orders() {
   const [isCancelling, setIsCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [prefill, setPrefill] = useState<{ type: "limits"; key: string | null } | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -39,6 +42,16 @@ export function Orders() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // ?request=limits&key=<limitKey> (from the red limit notice) opens the "More limits" form straight away.
+  useEffect(() => {
+    if (searchParams.get("request") !== "limits") return;
+    if (canManage) {
+      setPrefill({ type: "limits", key: searchParams.get("key") });
+      setIsModalOpen(true);
+    }
+    setSearchParams({}, { replace: true });
+  }, [canManage, searchParams, setSearchParams]);
 
   const openCount = orders.filter((o) => ["requested", "approved", "in_progress"].includes(o.status)).length;
 
@@ -69,7 +82,7 @@ export function Orders() {
             </Button>
           ) : null
         }
-        description="Request domains or mailboxes. Our team provisions them and they appear in your workspace."
+        description="Request domains, mailboxes or higher limits. Our team provisions them and they appear in your workspace."
         title="Orders"
       />
 
@@ -118,7 +131,7 @@ export function Orders() {
             <p className="text-sm font-medium text-foreground">No requests yet</p>
             <p className="max-w-sm text-[13px] text-muted">
               {canManage
-                ? "Submit a request when you need more domains or mailboxes. You can follow its progress here."
+                ? "Submit a request when you need more domains, mailboxes or a higher limit. You can follow its progress here."
                 : "Requests made by your workspace owners and admins will appear here."}
             </p>
             {canManage ? (
@@ -187,11 +200,17 @@ export function Orders() {
       </div>
 
       <NewOrderModal
+        initialLimitKey={prefill?.key ?? null}
+        initialType={prefill?.type ?? "domains"}
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setPrefill(null);
+        }}
         onCreated={(created) => {
           setOrders((prev) => [created, ...prev]);
           setIsModalOpen(false);
+          setPrefill(null);
           setNotice("Request submitted. We will review it shortly.");
         }}
       />

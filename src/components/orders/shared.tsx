@@ -15,7 +15,14 @@ export function OrderStatusPill({ status }: { status: OrderStatus }) {
   return <StatusPill tone={TONES[status] ?? "default"}>{ORDER_STATUS_LABEL[status] ?? status}</StatusPill>;
 }
 
-export function orderTitle(order: Pick<OrderRequest, "type" | "quantity">) {
+const LIMIT_LABELS: Record<string, string> = { domains: "Domains", mailboxes: "Mailboxes", emails: "Emails sent", workflows: "Workflows", ai_requests: "AI requests" };
+export const limitLabel = (key: string | undefined) => (key ? LIMIT_LABELS[key] ?? key : "Limit");
+
+export function orderTitle(order: Pick<OrderRequest, "type" | "quantity"> & { details?: OrderRequest["details"] }) {
+  if (order.type === "limits") {
+    const d = order.details;
+    return d?.requestedLimit ? `Raise ${limitLabel(d.limitKey).toLowerCase()} limit to ${d.requestedLimit.toLocaleString()}` : "More limits";
+  }
   const one = order.type === "domains" ? "domain" : "mailbox";
   const many = order.type === "domains" ? "domains" : "mailboxes";
   return `${order.quantity} ${order.quantity === 1 ? one : many}`;
@@ -53,14 +60,22 @@ function Chips({ values }: { values: string[] }) {
 /** Read-only rendering of everything the requester supplied. Shared by the tenant list and the admin drawer. */
 export function OrderDetailsList({ order, domainNames }: { order: OrderRequest; domainNames?: Record<number, string> }) {
   const d = order.details ?? {};
-  const hasAny = Boolean(
+  const hasAny = order.type === "limits" ? Boolean(d.notes) : Boolean(
     d.preferredDomains?.length || d.mailboxesPerDomain || d.mailboxNames?.length || d.notes || d.domainIds?.length,
   );
 
   return (
     <dl className="grid gap-2.5">
-      <Row label="Type">{order.type === "domains" ? "Domains" : "Mailboxes"}</Row>
-      <Row label="Quantity">{order.quantity}</Row>
+      <Row label="Type">{order.type === "domains" ? "Domains" : order.type === "limits" ? "More limits" : "Mailboxes"}</Row>
+      {order.type === "limits" ? (
+        <>
+          <Row label="Limit">{limitLabel(d.limitKey)}{d.period ? ` (${d.period === "day" ? "per 24 hours" : "in total"})` : ""}</Row>
+          {d.currentLimit != null ? <Row label="Limit when requested">{d.currentLimit.toLocaleString()}</Row> : null}
+          <Row label="Requested limit"><span className="font-semibold">{d.requestedLimit?.toLocaleString() ?? "-"}</span></Row>
+        </>
+      ) : (
+        <Row label="Quantity">{order.quantity}</Row>
+      )}
       {d.preferredDomains?.length ? (
         <Row label="Preferred domains">
           <Chips values={d.preferredDomains} />

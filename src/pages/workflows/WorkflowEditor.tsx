@@ -375,6 +375,7 @@ function EditorInner() {
               meta={meta}
               node={selectedNode}
               nodes={nodes}
+              edges={edges}
               onChange={(data) => updateNodeData(selectedNode.id, data)}
               onClose={() => setSelectedId(null)}
               readOnly={!canWrite}

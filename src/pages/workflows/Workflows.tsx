@@ -3,7 +3,7 @@ import { Copy, Plus, Trash2, Workflow as WorkflowIcon, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BuiltInFlows } from "../../components/workflows/BuiltInFlows";
-import { NewWorkflowModal } from "../../components/workflows/NewWorkflowModal";
+import { NewWorkflowModal, type WorkflowTemplate } from "../../components/workflows/NewWorkflowModal";
 import { formatWhen, statusTone } from "../../components/workflows/runUi";
 import { useWorkflowAccess } from "../../components/workflows/useWorkflowAccess";
 import { Skeleton } from "../../components/ui/Skeleton";
@@ -59,11 +59,11 @@ export function Workflows() {
     newModal.open();
   }
 
-  async function create(name: string, template: boolean) {
+  async function create(name: string, template: WorkflowTemplate, trigger: "inbox_mail" | "plusvibe_reply") {
     setCreating(true);
     setCreateError(null);
     try {
-      const wf = await workflowApi.create({ name, ...(template ? { template: "default_reply" as const } : {}) });
+      const wf = await workflowApi.create({ name, ...(template ? { template } : {}), ...(template === "book_meetings" ? { trigger } : {}) });
       newModal.close();
       navigate(`/workflows/${wf.id}`);
     } catch (e) {
@@ -214,7 +214,7 @@ export function Workflows() {
         </div>
       )}
 
-      <NewWorkflowModal error={createError} initialTemplate={templateDefault} isCreating={creating} key={String(templateDefault) + String(newModal.isOpen)} onCreate={(n, t) => void create(n, t)} state={newModal} />
+      <NewWorkflowModal error={createError} initialTemplate={templateDefault} isCreating={creating} key={String(templateDefault) + String(newModal.isOpen)} onCreate={(n, t, tr) => void create(n, t, tr)} plusvibeConnected={plusvibeConnected} state={newModal} />
 
       <Modal state={deleteModal}>
         <Modal.Backdrop className="bg-foreground/30 backdrop-blur-[2px]">

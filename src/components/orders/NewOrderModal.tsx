@@ -1,6 +1,8 @@
 import { Button } from "@heroui/react";
 import { useEffect, useMemo, useState } from "react";
 import { AdminModal, ErrorBanner } from "../admin/AdminModal";
+import { useAuth } from "../../context/AuthContext";
+import { periodLabel, sortedLimits } from "../trial/trialUtils";
 import { domainService } from "../../services/api";
 import { orderService, type CreateOrderPayload, type OrderRequest, type OrderType } from "../../services/orderApi";
 import type { Domain } from "../../types";
@@ -13,7 +15,13 @@ interface NewOrderModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreated: (order: OrderRequest) => void;
+  /** Open on this request type (e.g. "limits" from the red limit notice). */
+  initialType?: OrderType;
+  /** With initialType "limits": the limit to preselect. */
+  initialLimitKey?: string | null;
 }
+
+const MAX_REQUESTED_LIMIT = 1_000_000;
 
 function Label({ htmlFor, children, hint }: { htmlFor: string; children: React.ReactNode; hint?: string }) {
   return (
@@ -26,7 +34,11 @@ function Label({ htmlFor, children, hint }: { htmlFor: string; children: React.R
   );
 }
 
-export function NewOrderModal({ isOpen, onClose, onCreated }: NewOrderModalProps) {
+export function NewOrderModal({ isOpen, onClose, onCreated, initialType = "domains", initialLimitKey = null }: NewOrderModalProps) {
+  const { plan } = useAuth();
+  const settable = useMemo(() => sortedLimits(plan).filter((item) => item.limit !== null), [plan]);
+  const [limitKey, setLimitKey] = useState("");
+  const [wanted, setWanted] = useState("");
   const [type, setType] = useState<OrderType>("domains");
   const [quantity, setQuantity] = useState("1");
   const [preferred, setPreferred] = useState<string[]>([]);
@@ -43,7 +55,9 @@ export function NewOrderModal({ isOpen, onClose, onCreated }: NewOrderModalProps
 
   useEffect(() => {
     if (!isOpen) return;
-    setType("domains");
+    setType(initialType);
+    setLimitKey(initialLimitKey && settable.some((item) => item.key === initialLimitKey) ? initialLimitKey : settable[0]?.key ?? "");
+    setWanted("");
     setQuantity("1");
     setPreferred([]);
     setPerDomain("2");
@@ -52,7 +66,12 @@ export function NewOrderModal({ isOpen, onClose, onCreated }: NewOrderModalProps
     setSelectedIds([]);
     setError(null);
     setTouched(false);
+    // Reset only when the modal opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
+
+  const selectedLimit = settable.find((item) => item.key === limitKey) ?? null;
+  const wantedNum = Number(wanted);
 
   useEffect(() => {
     if (!isOpen || type !== "mailboxes" || domains.length > 0) return;
@@ -77,11 +96,38 @@ export function NewOrderModal({ isOpen, onClose, onCreated }: NewOrderModalProps
     quantity: !Number.isInteger(qty) || qty < 1 ? "Enter a whole number of at least 1." : qty > 1000 ? "That is a lot. Add a note or request fewer at a time." : null,
     perDomain: type === "mailboxes" && (!Number.isInteger(per) || per < 1 || per > 50) ? "Enter a number between 1 and 50." : null,
   };
-  const hasErrors = Boolean(errors.quantity || errors.perDomain);
+  const limitError =
+    type !== "limits" || !selectedLimit
+      ? null
+      : wanted.trim() === "" || !Number.isInteger(wantedNum)
+        ? "Enter the new limit as a whole number."
+        : wantedNum <= (selectedLimit.limit ?? 0)
+          ? `Enter a number higher than the current limit of ${(selectedLimit.limit ?? 0).toLocaleString()}.`
+          : wantedNum > MAX_REQUESTED_LIMIT
+            ? `The most you can request is ${MAX_REQUESTED_LIMIT.toLocaleString()}.`
+            : null;
+  const hasErrors = type === "limits" ? Boolean(!selectedLimit || limitError) : Boolean(errors.quantity || errors.perDomain);
 
   async function submit() {
     setTouched(true);
     if (hasErrors) return;
+
+    if (type === "limits" && selectedLimit) {
+      setIsBusy(true);
+      setError(null);
+      try {
+        const created = await orderService.create({
+          type: "limits",
+          details: { limitKey: selectedLimit.key, requestedLimit: wantedNum, ...(notes.trim() ? { notes: notes.trim() } : {}) },
+        });
+        onCreated(created);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "We could not submit your request. Please try again.");
+      } finally {
+        setIsBusy(false);
+      }
+      return;
+    }
 
     const details: NonNullable<CreateOrderPayload["details"]> = {};
     if (type === "domains" && preferred.length) details.preferredDomains = preferred;
@@ -122,8 +168,8 @@ export function NewOrderModal({ isOpen, onClose, onCreated }: NewOrderModalProps
       onClose={onClose}
     >
       <div className="grid gap-4">
-        <div aria-label="Request type" className="grid grid-cols-2 gap-1 rounded-xl bg-default-100 p-1" role="tablist">
-          {(["domains", "mailboxes"] as const).map((value) => (
+        <div aria-label="Request type" className="grid grid-cols-3 gap-1 rounded-xl bg-default-100 p-1" role="tablist">
+          {(["domains", "mailboxes", "limits"] as const).map((value) => (
             <button
               aria-selected={type === value}
               className={`h-8 rounded-lg text-[13px] font-medium transition ${
@@ -134,11 +180,54 @@ export function NewOrderModal({ isOpen, onClose, onCreated }: NewOrderModalProps
               type="button"
               onClick={() => setType(value)}
             >
-              {value === "domains" ? "Domains" : "Mailboxes"}
+              {value === "domains" ? "Domains" : value === "mailboxes" ? "Mailboxes" : "More limits"}
             </button>
           ))}
         </div>
 
+        {type === "limits" ? (
+          settable.length === 0 ? (
+            <p className="rounded-xl bg-default-100 px-3 py-2 text-[13px] text-muted">Your workspace has no limits to raise.</p>
+          ) : (
+            <>
+              <div>
+                <Label htmlFor="order-limit-key" hint="Which limit you want raised.">
+                  Limit
+                </Label>
+                <select className={fieldClass} id="order-limit-key" value={limitKey} onChange={(e) => setLimitKey(e.target.value)}>
+                  {settable.map((item) => (
+                    <option key={item.key} value={item.key}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+                {selectedLimit ? (
+                  <p className="mt-1.5 text-[12px] text-muted">
+                    Now: {(selectedLimit.limit ?? 0).toLocaleString()} {periodLabel(selectedLimit.period)}. Used: {selectedLimit.used.toLocaleString()}.
+                  </p>
+                ) : null}
+              </div>
+              <div>
+                <Label htmlFor="order-wanted" hint="The limit you would like to have.">
+                  New limit
+                </Label>
+                <input
+                  aria-invalid={touched && limitError ? true : undefined}
+                  className={fieldClass}
+                  id="order-wanted"
+                  inputMode="numeric"
+                  min={1}
+                  type="number"
+                  value={wanted}
+                  onChange={(e) => setWanted(e.target.value)}
+                />
+                {touched && limitError ? <p className="mt-1 text-[12px] text-danger">{limitError}</p> : null}
+              </div>
+            </>
+          )
+        ) : null}
+
+        {type !== "limits" ? (
         <div>
           <Label htmlFor="order-quantity" hint={type === "domains" ? "How many new domains you need." : "How many new mailboxes you need in total."}>
             Quantity
@@ -155,8 +244,9 @@ export function NewOrderModal({ isOpen, onClose, onCreated }: NewOrderModalProps
           />
           {touched && errors.quantity ? <p className="mt-1 text-[12px] text-danger">{errors.quantity}</p> : null}
         </div>
+        ) : null}
 
-        {type === "domains" ? (
+        {type === "limits" ? null : type === "domains" ? (
           <div>
             <Label htmlFor="order-preferred" hint="Optional. Names you would like us to try. Press Enter or comma after each one.">
               Preferred domains

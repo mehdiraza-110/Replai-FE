@@ -2,7 +2,7 @@ import { Handle, NodeToolbar, Position, useReactFlow, type NodeProps } from "@xy
 import { AlertTriangle, Trash2 } from "lucide-react";
 import { memo } from "react";
 import { WorkflowMetaContext, useWorkflowMeta } from "./metaContext";
-import { NODE_DEF_BY_TYPE, isTrigger, summarize } from "./nodeDefs";
+import { GROUP_KIND, NODE_DEF_BY_TYPE, NODE_HANDLES, isTrigger, summarize } from "./nodeDefs";
 import type { FlowNode } from "./graphRules";
 
 const handleBase = "!size-3 !border-2 !border-surface !bg-muted transition-colors hover:!bg-accent";
@@ -25,7 +25,7 @@ function WorkflowNodeView({ id, type, data, selected }: NodeProps<FlowNode>) {
   const problems = data.__problems ?? [];
   const status = data.__status;
   const trigger = isTrigger(type!);
-  const isCondition = type === "condition.keyword";
+  const handles = NODE_HANDLES[type!];
   const isEnd = type === "action.send_reply";
 
   return (
@@ -51,7 +51,7 @@ function WorkflowNodeView({ id, type, data, selected }: NodeProps<FlowNode>) {
           <Icon className="size-[18px]" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-muted">{def.group.slice(0, -1)}</p>
+          <p className="text-[10px] font-medium uppercase tracking-wide text-muted">{GROUP_KIND[def.group]}</p>
           <p className="truncate text-[13px] font-semibold text-foreground">{def.label}</p>
           <p className="mt-0.5 line-clamp-2 text-[12px] leading-4 text-muted">{summarize({ type: type!, data }, meta)}</p>
         </div>
@@ -73,12 +73,19 @@ function WorkflowNodeView({ id, type, data, selected }: NodeProps<FlowNode>) {
         </div>
       ) : null}
 
-      {isCondition ? (
+      {handles ? (
         <>
-          <Handle className={`${handleBase} !-right-1.5 !top-[34%] !bg-success`} id="yes" position={Position.Right} type="source" />
-          <Handle className={`${handleBase} !-right-1.5 !top-[68%] !bg-danger`} id="no" position={Position.Right} type="source" />
-          <span className="pointer-events-none absolute -right-8 top-[34%] -translate-y-1/2 text-[10px] font-semibold text-success">yes</span>
-          <span className="pointer-events-none absolute -right-7 top-[68%] -translate-y-1/2 text-[10px] font-semibold text-danger">no</span>
+          {handles.map((h, index) => {
+            const top = `${Math.round(((index + 1) / (handles.length + 1)) * 100)}%`;
+            const color = h.tone === "success" ? "!bg-success" : h.tone === "warning" ? "!bg-warning" : "!bg-danger";
+            const text = h.tone === "success" ? "text-success" : h.tone === "warning" ? "text-warning" : "text-danger";
+            return (
+              <span key={h.id}>
+                <Handle className={`${handleBase} !-right-1.5 ${color}`} id={h.id} position={Position.Right} style={{ top }} type="source" />
+                <span className={`pointer-events-none absolute left-[calc(100%+10px)] -translate-y-1/2 text-[10px] font-semibold ${text}`} style={{ top }}>{h.label}</span>
+              </span>
+            );
+          })}
         </>
       ) : !isEnd ? (
         <Handle className={`${handleBase} !-right-1.5`} position={Position.Right} type="source" />

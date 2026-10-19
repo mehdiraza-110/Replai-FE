@@ -7,7 +7,11 @@ export type NodeType =
   | "action.save_to_db"
   | "action.ai_agent"
   | "action.send_reply"
-  | "condition.keyword";
+  | "condition.keyword"
+  | "action.offer_times"
+  | "condition.slot_selected"
+  | "action.book_meeting"
+  | "action.notify_email";
 
 export type WorkflowNodeData = {
   mailboxIds?: number[] | "all";
@@ -20,6 +24,14 @@ export type WorkflowNodeData = {
   mailboxId?: number;
   keywords?: string[];
   matchOn?: "reply" | "subject";
+  /** offer_times: how many times to offer (1-5, default 3). */
+  count?: number;
+  /** notify_email */
+  to?: string[];
+  notifyOwners?: boolean;
+  subject?: string;
+  message?: string;
+  includeReply?: boolean;
   [key: string]: unknown;
 };
 
@@ -98,6 +110,8 @@ export interface WorkflowMeta {
   plusvibeConnected: boolean;
   plusvibeCampaigns: CampaignInfo[];
   campaigns?: CampaignInfo[];
+  /** Agents (of this workspace) with a connected Google Calendar. */
+  calendarAgentIds?: number[];
 }
 
 export interface WorkflowProblem {
@@ -169,7 +183,14 @@ export const workflowApi = {
   async get(id: number | string) {
     return (await apiRequest<Workflow>(`/api/v1/workflows/${id}`)).data;
   },
-  create(body: { name: string; description?: string; template?: "default_reply" }) {
+  create(body: {
+    name: string;
+    description?: string;
+    template?: "default_reply" | "book_meetings";
+    /** book_meetings only. */
+    trigger?: "inbox_mail" | "plusvibe_reply";
+    mode?: "auto_send" | "review" | "agent_default";
+  }) {
     return writeRequest<Workflow>("/api/v1/workflows", "POST", body);
   },
   update(id: number | string, body: { name?: string; description?: string; graph?: Graph; is_active?: boolean }) {

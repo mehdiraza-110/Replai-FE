@@ -462,6 +462,8 @@ export interface PlanLimitUsage {
   period: PlanLimitPeriod;
   used: number;
   remaining: number | null;
+  /** When a reached rolling-window limit frees room again (ISO), otherwise null. */
+  resets_at?: string | null;
 }
 
 export interface WorkspacePlan {

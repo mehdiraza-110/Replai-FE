@@ -1,7 +1,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { Button } from "@heroui/react";
 import { Eye, EyeOff, LockKeyhole, Mail, UserRound, X } from "lucide-react";
-import { Navigate, useLocation } from "react-router-dom";
+import { Link, Navigate, useLocation } from "react-router-dom";
 import { SESSION_EXPIRED_NOTICE_KEY, useAuth } from "../context/AuthContext";
 
 type AuthMode = "login" | "signup";
@@ -152,6 +152,17 @@ export function Auth() {
               {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
             </button>
           </label>
+
+          {mode === "login" ? (
+            <div className="-mt-1 flex justify-end">
+              <Link
+                className="text-[13px] font-semibold text-[#0A66CC] transition hover:text-[#004A99] focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                to="/forgot-password"
+              >
+                Forgot password?
+              </Link>
+            </div>
+          ) : null}
 
           {notice && !error ? (
             <p className="rounded-xl bg-[#FFF6E5] px-3 py-2 text-[13px] leading-5 text-[#8A5A00]" role="status">

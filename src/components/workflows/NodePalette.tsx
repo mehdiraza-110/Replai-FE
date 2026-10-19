@@ -1,7 +1,7 @@
 import { NODE_DEFS, type NodeGroup } from "./nodeDefs";
 import type { NodeType } from "../../services/workflowApi";
 
-const GROUPS: NodeGroup[] = ["Triggers", "Actions", "Logic"];
+const GROUPS: NodeGroup[] = ["Triggers", "Actions", "Meetings", "Logic"];
 export const DRAG_MIME = "application/x-replai-node";
 
 export function NodePalette({ onAdd, disabled }: { onAdd: (type: NodeType) => void; disabled?: boolean }) {
