@@ -184,7 +184,8 @@ function EditorInner() {
   function handleProblems(error: unknown, fallback: string) {
     if (error instanceof WorkflowProblemsError) {
       setProblems(error.problems);
-      setNotice({ tone: "danger", text: `${error.message} Check the highlighted nodes.` });
+      const highlighted = error.problems.some((p) => p.nodeId && nodes.some((n) => n.id === p.nodeId));
+      setNotice({ tone: "danger", text: highlighted ? `${error.message} Check the highlighted nodes.` : error.message });
     } else {
       setNotice({ tone: "danger", text: errorMessage(error, fallback) });
     }
@@ -373,6 +374,7 @@ function EditorInner() {
             <NodeInspector
               meta={meta}
               node={selectedNode}
+              nodes={nodes}
               onChange={(data) => updateNodeData(selectedNode.id, data)}
               onClose={() => setSelectedId(null)}
               readOnly={!canWrite}

@@ -7,7 +7,18 @@ import { NewWorkflowModal } from "../../components/workflows/NewWorkflowModal";
 import { formatWhen, statusTone } from "../../components/workflows/runUi";
 import { useWorkflowAccess } from "../../components/workflows/useWorkflowAccess";
 import { Skeleton } from "../../components/ui/Skeleton";
-import { WorkflowProblemsError, errorMessage, workflowApi, type WorkflowSummary } from "../../services/workflowApi";
+import { WorkflowProblemsError, errorMessage, workflowApi, type TriggerType, type WorkflowSummary } from "../../services/workflowApi";
+
+const TRIGGER_LABEL: Record<TriggerType, string> = {
+  "trigger.plusvibe_reply": "PlusVibe reply",
+  "trigger.inbox_mail": "Inbox mail",
+  "trigger.mail_sent": "Mail sent",
+};
+
+function SCOPE_LABEL(item: WorkflowSummary) {
+  const noun = item.trigger_type === "trigger.plusvibe_reply" ? "campaigns" : "mailboxes";
+  return item.trigger_scope === "all" ? `All ${noun}` : `Specific ${noun}`;
+}
 
 export function Workflows() {
   const navigate = useNavigate();
@@ -171,6 +182,12 @@ export function Workflows() {
               </div>
               <div className="flex flex-wrap items-center gap-2 text-[12px] text-muted">
                 <Chip color={item.is_active ? "success" : "default"} size="sm" variant="soft">{item.is_active ? "Active" : "Inactive"}</Chip>
+                {item.trigger_type ? (
+                  <>
+                    <span>{TRIGGER_LABEL[item.trigger_type]}{item.trigger_scope ? ` · ${SCOPE_LABEL(item)}` : ""}</span>
+                    <span aria-hidden>·</span>
+                  </>
+                ) : null}
                 <span>{item.node_count} nodes</span>
                 <span aria-hidden>·</span>
                 {item.last_run ? (

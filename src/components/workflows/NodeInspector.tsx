@@ -97,12 +97,14 @@ function Chips({ value, onChange }: { value: string[]; onChange: (next: string[]
 
 export function NodeInspector({
   node,
+  nodes,
   meta,
   readOnly,
   onChange,
   onClose,
 }: {
   node: FlowNode;
+  nodes?: FlowNode[];
   meta: WorkflowMeta | null;
   readOnly: boolean;
   onChange: (data: WorkflowNodeData) => void;
@@ -114,6 +116,12 @@ export function NodeInspector({
   const mailboxOptions = (meta?.mailboxes ?? []).map((m) => ({ id: m.id, label: m.email }));
   const pvConnected = meta?.plusvibeConnected ?? false;
   const problems = d.__problems ?? [];
+  const trigger = (nodes ?? []).find((n) => n.type?.startsWith("trigger."));
+  const allowCampaignAgent = trigger?.type === "trigger.plusvibe_reply" || trigger?.type === "trigger.inbox_mail";
+  const scopeIds = trigger?.type === "trigger.plusvibe_reply" ? trigger.data.campaignIds : undefined;
+  const singleCampaign = Array.isArray(scopeIds) && scopeIds.length === 1
+    ? [...(meta?.plusvibeCampaigns ?? []), ...(meta?.campaigns ?? [])].find((c) => String(c.id) === String(scopeIds[0]))
+    : undefined;
 
   let form: ReactNode = null;
   switch (node.type) {
@@ -146,11 +154,21 @@ export function NodeInspector({
       form = (
         <div className="space-y-4">
           <Field label="Agent" hint={meta && meta.agents.length === 0 ? "Create an AI agent first, then select it here." : undefined}>
-            <select className={inputClass} disabled={readOnly} onChange={(e) => set({ agentId: e.target.value ? Number(e.target.value) : undefined })} value={d.agentId ?? ""}>
+            <select className={inputClass} disabled={readOnly} onChange={(e) => set({ agentId: e.target.value === "campaign" ? "campaign" : e.target.value ? Number(e.target.value) : undefined })} value={d.agentId ?? ""}>
               <option value="">Select an agent</option>
+              {allowCampaignAgent || d.agentId === "campaign" ? <option value="campaign">Use the campaign's assigned agent</option> : null}
               {(meta?.agents ?? []).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
           </Field>
+          {d.agentId === "campaign" ? (
+            <p className="-mt-2 text-[11px] leading-4 text-muted">
+              Each reply is drafted by the agent assigned to the campaign it belongs to.
+              {singleCampaign?.agentName ? ` This campaign's agent today: ${singleCampaign.agentName}.` : ""}
+            </p>
+          ) : null}
+          {d.agentId === "campaign" && !allowCampaignAgent ? (
+            <p className="-mt-2 text-[11px] leading-4 text-danger">The campaign's agent is only available with the PlusVibe reply and inbox mail triggers.</p>
+          ) : null}
           <Field label="Tone" hint="For example: warm, concise, professional.">
             <input className={inputClass} disabled={readOnly} onChange={(e) => set({ tone: e.target.value })} value={d.tone ?? ""} />
           </Field>
@@ -162,6 +180,7 @@ export function NodeInspector({
             {([
               ["review", "Send for review", "A person approves each reply first."],
               ["auto_send", "Send automatically", "The reply goes out without review."],
+              ["agent_default", "Follow the agent's own settings", "Sends automatically only when the agent is set to auto-reply and confident enough; otherwise waits for your review. Same as today's built-in handling."],
             ] as const).map(([value, title, text]) => (
               <label className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-2.5 transition ${(d.mode ?? "review") === value ? "border-accent bg-accent/5" : "border-border/70 hover:bg-default-100"}`} key={value}>
                 <input checked={(d.mode ?? "review") === value} className="mt-0.5 accent-[var(--accent)]" name={`mode-${node.id}`} onChange={() => set({ mode: value })} type="radio" />
