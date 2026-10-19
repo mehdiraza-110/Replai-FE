@@ -54,7 +54,7 @@ export const NODE_DEFS: NodeDef[] = [
   {
     type: "action.save_to_db",
     label: "Save to database",
-    description: "Store the message and the lead profile.",
+    description: "Optional: the message and lead profile are always saved, even without this step.",
     group: "Actions",
     icon: Database,
     tone: "bg-success/12 text-success",

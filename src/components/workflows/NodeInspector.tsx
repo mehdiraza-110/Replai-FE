@@ -148,7 +148,7 @@ export function NodeInspector({
       );
       break;
     case "action.save_to_db":
-      form = <p className="text-[13px] leading-5 text-muted">Saves the message and builds the lead profile. There is nothing to configure.</p>;
+      form = <p className="text-[13px] leading-5 text-muted">Saves the message and builds the lead profile. This step is optional: everything is saved automatically right after the trigger even if you remove it. Nothing to configure.</p>;
       break;
     case "action.ai_agent":
       form = (
