@@ -83,6 +83,7 @@ export class ApiRequestError extends Error {
 /** Window events the app shell listens to, so the request layer can steer navigation without hard reloads. */
 export const WORKSPACE_REQUIRED_EVENT = "replai:workspace-required";
 export const SESSION_EXPIRED_EVENT = "replai:session-expired";
+export const TRIAL_ENDED_EVENT = "replai:trial-ended";
 
 const SESSION_PROBLEM_PATTERN = /no token|invalid or expired token|no access to this route|sign in to continue|session has expired/i;
 
@@ -94,6 +95,8 @@ function applyViewAsHeader(setHeader: (name: string, value: string) => void) {
 function notifyForSpecialCodes({ code, status, message }: { code?: string; status: number; message?: string }) {
   if (code === "WORKSPACE_REQUIRED") {
     window.dispatchEvent(new Event(WORKSPACE_REQUIRED_EVENT));
+  } else if (code === "TRIAL_ENDED") {
+    window.dispatchEvent(new Event(TRIAL_ENDED_EVENT));
   } else if (status === 401 && message && SESSION_PROBLEM_PATTERN.test(message)) {
     window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
   }
@@ -183,7 +186,7 @@ function uploadWithProgress<T>(path: string, file: File, fieldName: string, onPr
   });
 }
 
-const SURFACED_ERROR_CODES = new Set(["WORKSPACE_REQUIRED", "AI_PROVIDER_KEY_MISSING", "AI_KEY_REJECTED", "AI_KEY_INVALID", "AI_KEY_REQUIRED", "AI_PROVIDER_UNSUPPORTED", "CALENDAR_CONFIG_MISSING", "CALENDAR_ENCRYPTION_KEY_MISSING", "CALENDAR_STATE_INVALID", "CALENDAR_CONNECTION_REVOKED"]);
+const SURFACED_ERROR_CODES = new Set(["WORKSPACE_REQUIRED", "TRIAL_LIMIT_REACHED", "TRIAL_ENDED", "AI_PROVIDER_KEY_MISSING", "AI_KEY_REJECTED", "AI_KEY_INVALID", "AI_KEY_REQUIRED", "AI_PROVIDER_UNSUPPORTED", "CALENDAR_CONFIG_MISSING", "CALENDAR_ENCRYPTION_KEY_MISSING", "CALENDAR_STATE_INVALID", "CALENDAR_CONNECTION_REVOKED"]);
 
 function getFriendlyErrorMessage({
   message,

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button, Dropdown } from "@heroui/react";
 import { Bell, Menu, Sidebar as SidebarIcon } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { TrialChip } from "../trial/TrialChip";
 import { WorkspaceMenu } from "./WorkspaceMenu";
 import { OPEN_NAV_EVENT } from "./Sidebar";
 import { LoadingState } from "../ui/LoadingState";
@@ -151,6 +152,7 @@ export function TopBar() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <TrialChip />
           <div className="min-w-0 lg:hidden">
             <WorkspaceMenu compact />
           </div>

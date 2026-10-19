@@ -1,4 +1,5 @@
 import { apiRequest } from "./api";
+import type { PlanLimitKey, PlanLimitPeriod, WorkspacePlan } from "../types";
 
 export type WorkspaceType = "organization" | "individual";
 export type WorkspaceStatus = "active" | "suspended";
@@ -33,7 +34,40 @@ export interface AdminWorkspace {
   member_count: number;
   owner: { id: number; email: string; name: string } | null;
   counts: { domains: number; mailboxes: number; campaigns: number; agents: number };
+  /** List rows carry the plan name plus trial_ends_at/days_left; the detail endpoint returns the full plan object. */
+  plan?: "trial" | "standard" | WorkspacePlan;
+  trial_ends_at?: string | null;
+  days_left?: number;
 }
+
+export interface AdminPlanInfo {
+  type: "trial" | "standard";
+  startedAt: string | null;
+  endsAt: string | null;
+  daysLeft: number;
+  ended: boolean;
+  limits: NonNullable<WorkspacePlan["limits"]>;
+}
+
+/** Reads a workspace's plan from either the list shape (string + trial_ends_at) or the detail shape (object). */
+export function resolveAdminPlan(w: AdminWorkspace): AdminPlanInfo {
+  const plan = w.plan;
+  if (plan && typeof plan === "object") {
+    return {
+      type: plan.type,
+      startedAt: plan.trial_started_at ?? null,
+      endsAt: plan.trial_ends_at ?? null,
+      daysLeft: plan.days_left ?? 0,
+      ended: Boolean(plan.ended),
+      limits: plan.limits ?? [],
+    };
+  }
+  const endsAt = w.trial_ends_at ?? null;
+  const ended = plan === "trial" && endsAt ? new Date(endsAt).getTime() < Date.now() : false;
+  return { type: plan === "trial" ? "trial" : "standard", startedAt: null, endsAt, daysLeft: w.days_left ?? 0, ended, limits: [] };
+}
+
+export type PlanLimitsPayload = Partial<Record<PlanLimitKey, { limit: number | null; period: PlanLimitPeriod }>>;
 
 export interface AdminAiProvider {
   provider: string;
@@ -70,6 +104,10 @@ export interface WorkspacePatch {
   auto_responder_enabled?: boolean;
   cold_mailer_enabled?: boolean;
   platform_ai_enabled?: boolean;
+  plan?: "trial" | "standard";
+  trial_ends_at?: string;
+  extend_trial_days?: number;
+  limits?: PlanLimitsPayload;
 }
 
 export interface AddMemberPayload {
@@ -147,6 +185,12 @@ export const adminApi = {
   },
   async updateWorkspace(id: number | string, patch: WorkspacePatch) {
     return (await apiRequest<AdminWorkspace>(`/api/v1/admin/workspaces/${id}`, json("PATCH", patch))).data;
+  },
+  async startTrial(id: number | string, payload: { days?: number; limits?: PlanLimitsPayload } = {}) {
+    return (await apiRequest<unknown>(`/api/v1/admin/workspaces/${id}/trial`, json("POST", payload))).data;
+  },
+  async resetUsage(id: number | string, kind?: PlanLimitKey) {
+    return (await apiRequest<unknown>(`/api/v1/admin/workspaces/${id}/usage/reset`, json("POST", kind ? { kind } : {}))).data;
   },
   async deleteWorkspace(id: number | string) {
     await apiRequest<null>(`/api/v1/admin/workspaces/${id}`, json("DELETE"));
