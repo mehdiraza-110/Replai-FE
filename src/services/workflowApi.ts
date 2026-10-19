@@ -67,6 +67,10 @@ export interface WorkflowSummary {
   node_count: number;
   trigger_type: TriggerType | null;
   trigger_scope?: "all" | "specific" | null;
+  /** "all" or the campaign/mailbox ids the trigger is limited to. */
+  trigger_targets?: "all" | (string | number)[] | null;
+  /** Run order among workflows active for the same trigger: lower runs first (1 to 1000, default 100). */
+  priority?: number;
   updated_at: string;
   last_run: RunSummary | null;
 }
@@ -95,6 +99,9 @@ export interface Run {
   error: string | null;
   started_at: string;
   finished_at: string | null;
+  /** Test runs only: other active workflows that would also run on this trigger. */
+  note?: string;
+  other_active_workflows?: { id: number; name: string; priority: number }[];
 }
 
 export interface CampaignInfo {
@@ -161,9 +168,7 @@ async function writeRequest<T>(path: string, method: string, body: unknown): Pro
     | { message?: string; code?: string; data?: { problems?: WorkflowProblem[] } & T }
     | null;
   if (!response.ok) {
-    const message = payload?.message || (response.status === 409
-      ? "Another workflow is already active for this trigger."
-      : "The workflow could not be saved.");
+    const message = payload?.message || "The workflow could not be saved.";
     const problems = payload?.data?.problems;
     if (Array.isArray(problems) && problems.length > 0) {
       throw new WorkflowProblemsError(message, problems, response.status);
@@ -190,10 +195,11 @@ export const workflowApi = {
     /** book_meetings only. */
     trigger?: "inbox_mail" | "plusvibe_reply";
     mode?: "auto_send" | "review" | "agent_default";
+    priority?: number;
   }) {
     return writeRequest<Workflow>("/api/v1/workflows", "POST", body);
   },
-  update(id: number | string, body: { name?: string; description?: string; graph?: Graph; is_active?: boolean }) {
+  update(id: number | string, body: { name?: string; description?: string; graph?: Graph; is_active?: boolean; priority?: number }) {
     return writeRequest<Workflow>(`/api/v1/workflows/${id}`, "PUT", body);
   },
   async remove(id: number | string) {

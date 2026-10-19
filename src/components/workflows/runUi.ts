@@ -29,6 +29,7 @@ export function describeStep(step: { type: string; status: string; output?: unkn
   const o = (step.output && typeof step.output === "object" ? step.output : {}) as Record<string, unknown>;
   const text = (v: unknown) => (typeof v === "string" && v ? v : null);
   const reason = text(o.detail) ?? text(o.reason);
+  if (o.reason === "reply_already_handled" && step.status === "skipped") return `Skipped: ${reason}`;
   switch (step.type) {
     case "action.offer_times": {
       const slots = Array.isArray(o.slots) ? (o.slots as { label?: string }[]).map((s) => s.label).filter(Boolean) : [];
