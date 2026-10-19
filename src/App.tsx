@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { AppShell } from "./components/layout/AppShell";
 import { LoadingState } from "./components/ui/LoadingState";
@@ -44,6 +44,12 @@ import { AdminOrders } from "./pages/admin/AdminOrders";
 import { Team } from "./pages/Team";
 import { WorkflowEditor } from "./pages/workflows/WorkflowEditor";
 import { Workflows } from "./pages/workflows/Workflows";
+
+/** Page only the platform team may use; everyone else is sent to the order form instead. */
+function SuperAdminOr({ to, children }: { to: string; children: ReactNode }) {
+  const { isSuperAdmin } = useAuth();
+  return isSuperAdmin ? <>{children}</> : <Navigate replace to={to} />;
+}
 
 function ProtectedShell() {
   const { activeWorkspace, isAuthenticated, isReady, isSuperAdmin } = useAuth();
@@ -143,7 +149,7 @@ export default function App() {
         <Route path="mailer/domains" element={<Mailer />} />
         <Route path="mailer/domains/new" element={<Navigate replace to="/mailer/orders?request=domains" />} />
         <Route path="mailer/mailboxes" element={<Mailboxes />} />
-        <Route path="mailer/mailboxes/new" element={<MailboxOnboarding />} />
+        <Route path="mailer/mailboxes/new" element={<SuperAdminOr to="/mailer/orders?request=mailboxes"><MailboxOnboarding /></SuperAdminOr>} />
         <Route path="mailer/inbox" element={<MailerInbox />} />
         <Route path="mailer/warmup" element={<MailerWarmup />} />
         <Route path="mailer/health" element={<MailerHealth />} />

@@ -16,6 +16,8 @@ import {
   X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { SyncMaildosoButton } from "../components/mailer/SyncMaildosoButton";
 import { DomainAnalyticsDrawer } from "../components/mailer/DomainAnalyticsDrawer";
 import { SkeletonRow } from "../components/ui/Skeleton";
 import { domainService } from "../services/api";
@@ -26,6 +28,8 @@ const emptyCounts: DomainStatusCounts = { total: 0, verified: 0, pending: 0, fai
 
 export function Mailer() {
   const navigate = useNavigate();
+  const { isSuperAdmin } = useAuth();
+  const [showAddInfo, setShowAddInfo] = useState(false);
   const [domains, setDomains] = useState<Domain[]>([]);
   const [statusCounts, setStatusCounts] = useState<DomainStatusCounts>(emptyCounts);
   const [page, setPage] = useState(1);
@@ -138,12 +142,32 @@ export function Mailer() {
             {refreshingAll ? <Spinner color="current" size="sm" /> : <RefreshCw className="size-4" />}
             Refresh statuses
           </Button>
-          <Button onPress={() => navigate("/mailer/orders?request=domains")} size="sm">
-            <Plus className="size-4" />
-            Request domains
-          </Button>
+          {isSuperAdmin ? (
+            <>
+              <SyncMaildosoButton onDone={() => load(1, search)} />
+              <Button onPress={() => setShowAddInfo((v) => !v)} size="sm">
+                <Plus className="size-4" />
+                Add domains
+              </Button>
+            </>
+          ) : (
+            <Button onPress={() => navigate("/mailer/orders?request=domains")} size="sm">
+              <Plus className="size-4" />
+              Request domains
+            </Button>
+          )}
         </div>
       </div>
+
+      {isSuperAdmin && showAddInfo ? (
+        <div className="rounded-2xl border border-border/70 bg-surface px-4 py-3 text-sm text-foreground">
+          <p className="font-semibold">How domains are added</p>
+          <p className="mt-1 text-[13px] text-muted">
+            Buy the domains (and their mailboxes) in Maildoso, then press <span className="font-medium text-foreground">Sync from Maildoso</span>.
+            New domains and mailboxes are pulled into the platform pool (Koval Group). Assign them to a client from Admin → Domains.
+          </p>
+        </div>
+      ) : null}
 
       {error ? (
         <div className="flex items-center justify-between gap-3 rounded-2xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -265,19 +289,21 @@ export function Mailer() {
                           <Tooltip.Content>View analytics</Tooltip.Content>
                         </Tooltip>
 
-                        <Tooltip delay={200}>
-                          <Tooltip.Trigger>
-                            <button
-                              aria-label="Delete domain"
-                              className="grid size-8 place-items-center rounded-full text-muted transition hover:bg-danger/10 hover:text-danger"
-                              onClick={() => requestDelete(domain)}
-                              type="button"
-                            >
-                              <Trash2 className="size-4" />
-                            </button>
-                          </Tooltip.Trigger>
-                          <Tooltip.Content>Delete domain</Tooltip.Content>
-                        </Tooltip>
+                        {isSuperAdmin ? (
+                          <Tooltip delay={200}>
+                            <Tooltip.Trigger>
+                              <button
+                                aria-label="Delete domain"
+                                className="grid size-8 place-items-center rounded-full text-muted transition hover:bg-danger/10 hover:text-danger"
+                                onClick={() => requestDelete(domain)}
+                                type="button"
+                              >
+                                <Trash2 className="size-4" />
+                              </button>
+                            </Tooltip.Trigger>
+                            <Tooltip.Content>Delete domain</Tooltip.Content>
+                          </Tooltip>
+                        ) : null}
                       </div>
                     </td>
                   </tr>

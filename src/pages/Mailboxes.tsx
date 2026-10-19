@@ -22,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import { MailboxAnalyticsDrawer } from "../components/mailer/MailboxAnalyticsDrawer";
 import { MailboxInboxDrawer } from "../components/mailer/MailboxInboxDrawer";
 import { SkeletonRow } from "../components/ui/Skeleton";
@@ -33,6 +34,7 @@ const emptyCounts: MailboxStatusCounts = { total: 0, active: 0, paused: 0, error
 
 export function Mailboxes() {
   const navigate = useNavigate();
+  const { isSuperAdmin } = useAuth();
   const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
   const [statusCounts, setStatusCounts] = useState<MailboxStatusCounts>(emptyCounts);
   const [page, setPage] = useState(1);
@@ -144,10 +146,17 @@ export function Mailboxes() {
             {refreshingAll ? <Spinner color="current" size="sm" /> : <RefreshCw className="size-4" />}
             Refresh statuses
           </Button>
-          <Button onPress={() => navigate("/mailer/mailboxes/new")} size="sm">
-            <Plus className="size-4" />
-            Add Mailboxes
-          </Button>
+          {isSuperAdmin ? (
+            <Button onPress={() => navigate("/mailer/mailboxes/new")} size="sm">
+              <Plus className="size-4" />
+              Add Mailboxes
+            </Button>
+          ) : (
+            <Button onPress={() => navigate("/mailer/orders?request=mailboxes")} size="sm">
+              <Plus className="size-4" />
+              Request mailboxes
+            </Button>
+          )}
         </div>
       </div>
 
@@ -212,7 +221,7 @@ export function Mailboxes() {
               ) : mailboxes.length === 0 ? (
                 <tr>
                   <td className="px-4 py-10 text-center text-sm font-medium text-muted" colSpan={12}>
-                    {total === 0 && !search ? "No mailboxes yet. Click “Add Mailboxes” to create sender identities under a verified domain." : "No mailboxes match your search."}
+                    {total === 0 && !search ? (isSuperAdmin ? "No mailboxes yet. Click “Add Mailboxes” to create sender identities under a verified domain." : "No mailboxes yet. Click “Request mailboxes” to order some.") : "No mailboxes match your search."}
                   </td>
                 </tr>
               ) : (
@@ -345,19 +354,30 @@ export function Mailboxes() {
                           <Tooltip.Content>Warmup settings</Tooltip.Content>
                         </Tooltip>
 
-                        <Tooltip delay={200}>
-                          <Tooltip.Trigger>
-                            <button
-                              aria-label="Delete mailbox"
-                              className="grid size-8 place-items-center rounded-full text-muted transition hover:bg-danger/10 hover:text-danger"
-                              onClick={() => requestDelete(mailbox)}
-                              type="button"
-                            >
-                              <Trash2 className="size-4" />
-                            </button>
-                          </Tooltip.Trigger>
-                          <Tooltip.Content>Delete mailbox</Tooltip.Content>
-                        </Tooltip>
+                        {isSuperAdmin ? (
+                          <Tooltip delay={200}>
+                            <Tooltip.Trigger>
+                              <button
+                                aria-label="Delete mailbox"
+                                className="grid size-8 place-items-center rounded-full text-muted transition hover:bg-danger/10 hover:text-danger"
+                                onClick={() => requestDelete(mailbox)}
+                                type="button"
+                              >
+                                <Trash2 className="size-4" />
+                              </button>
+                            </Tooltip.Trigger>
+                            <Tooltip.Content>Delete mailbox</Tooltip.Content>
+                          </Tooltip>
+                        ) : (
+                          <Tooltip delay={200}>
+                            <Tooltip.Trigger>
+                              <span aria-label="Delete mailbox (unavailable)" className="grid size-8 cursor-not-allowed place-items-center rounded-full text-muted/40">
+                                <Trash2 className="size-4" />
+                              </span>
+                            </Tooltip.Trigger>
+                            <Tooltip.Content>Contact support to remove a mailbox</Tooltip.Content>
+                          </Tooltip>
+                        )}
                       </div>
                     </td>
                   </tr>
