@@ -1,6 +1,7 @@
+import type { PlanLimitKey, PlanLimitPeriod } from "../types";
 import { apiRequest } from "./api";
 
-export type OrderType = "domains" | "mailboxes";
+export type OrderType = "domains" | "mailboxes" | "limits";
 export type OrderStatus = "requested" | "approved" | "in_progress" | "fulfilled" | "rejected" | "cancelled";
 
 export interface OrderDetails {
@@ -9,6 +10,11 @@ export interface OrderDetails {
   mailboxNames?: string[];
   notes?: string;
   domainIds?: number[];
+  /** "limits" requests: which limit, the value wanted, and the limit at request time. */
+  limitKey?: PlanLimitKey;
+  requestedLimit?: number;
+  currentLimit?: number;
+  period?: PlanLimitPeriod;
 }
 
 export interface OrderRequest {
@@ -26,6 +32,14 @@ export interface OrderRequest {
 
 export interface AdminOrderRequest extends OrderRequest {
   workspace: { id: number; name: string; slug: string };
+  /** Present on "limits" requests: the live limit now versus the one asked for. */
+  limit_info?: {
+    key: PlanLimitKey;
+    label: string;
+    current_limit: number | null;
+    period: PlanLimitPeriod | null;
+    requested_limit: number;
+  };
 }
 
 export interface AdminOrderPage {
@@ -43,7 +57,8 @@ export interface OrderCounts {
 
 export interface CreateOrderPayload {
   type: OrderType;
-  quantity: number;
+  /** Ignored for "limits" requests (always 1). */
+  quantity?: number;
   details?: OrderDetails;
 }
 
@@ -115,6 +130,9 @@ export const adminOrderService = {
   },
   async update(id: number, patch: { status?: OrderStatus; admin_notes?: string }) {
     return (await apiRequest<AdminOrderRequest>(`/api/v1/admin/orders/${id}`, json("PATCH", patch))).data;
+  },
+  async applyLimits(id: number, payload: { admin_notes?: string } = {}) {
+    return (await apiRequest<AdminOrderRequest>(`/api/v1/admin/orders/${id}/apply-limits`, json("POST", payload))).data;
   },
   async assignDomains(workspaceId: number, payload: AssignDomainsPayload) {
     return (await apiRequest<unknown>(`/api/v1/admin/workspaces/${workspaceId}/assign-domains`, json("POST", payload))).data;

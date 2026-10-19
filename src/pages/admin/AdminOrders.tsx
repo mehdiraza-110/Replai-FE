@@ -85,7 +85,7 @@ export function AdminOrders() {
 
   return (
     <div className="mx-auto flex max-w-[1480px] flex-col gap-5">
-      <PageHeader description="Review domain and mailbox requests from every workspace, then approve and fulfil them." title="Orders" />
+      <PageHeader description="Review domain, mailbox and limit requests from every workspace, then approve and fulfil them." title="Orders" />
 
       <div aria-label="Filter by status" className="flex flex-wrap gap-1.5" role="tablist">
         {TABS.map((tab) => {
@@ -147,8 +147,12 @@ export function AdminOrders() {
                         {order.workspace.name}
                       </Link>
                     </td>
-                    <td className="px-2 py-3 capitalize">{order.type}</td>
-                    <td className="px-2 py-3">{order.quantity}</td>
+                    <td className="px-2 py-3">{order.type === "limits" ? "More limits" : <span className="capitalize">{order.type}</span>}</td>
+                    <td className="px-2 py-3">
+                      {order.type === "limits"
+                        ? `${order.limit_info?.label ?? order.details?.limitKey}: ${order.limit_info?.current_limit?.toLocaleString() ?? "-"} → ${order.details?.requestedLimit?.toLocaleString() ?? "-"}`
+                        : order.quantity}
+                    </td>
                     <td className="px-2 py-3">
                       <p className="text-foreground">{order.requested_by?.name || order.requested_by?.email || "-"}</p>
                       {order.requested_by?.name ? <p className="text-[12px] text-muted">{order.requested_by.email}</p> : null}
@@ -190,6 +194,7 @@ function OrderDetailModal({
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [confirmStatus, setConfirmStatus] = useState<OrderStatus | null>(null);
+  const [confirmApply, setConfirmApply] = useState(false);
   const orderId = order?.id;
   const serverNotes = order?.admin_notes ?? "";
 
@@ -198,6 +203,7 @@ function OrderDetailModal({
     setError(null);
     setSaved(false);
     setConfirmStatus(null);
+    setConfirmApply(false);
     // Reset only when a different order is opened.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
@@ -219,6 +225,25 @@ function OrderDetailModal({
     }
   }
 
+  async function applyLimit() {
+    if (!order) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await adminOrderService.applyLimits(order.id, notesDirty ? { admin_notes: notes } : {});
+      onUpdated({ ...order, ...updated, workspace: updated.workspace ?? order.workspace });
+      setConfirmApply(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "The limit could not be applied.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const isLimits = order?.type === "limits";
+  const canApply = Boolean(order && isLimits && ["requested", "approved", "in_progress"].includes(order.status));
+  const info = order?.limit_info;
+
   const next = order ? ADMIN_TRANSITIONS[order.status] : [];
   const notesDirty = notes !== serverNotes;
   const destructive = (s: OrderStatus) => s === "rejected" || s === "cancelled";
@@ -232,8 +257,8 @@ function OrderDetailModal({
             Close
           </Button>
         }
-        isOpen={order !== null && confirmStatus === null}
-        title={order ? `${orderTitle(order)} requested` : "Request"}
+        isOpen={order !== null && confirmStatus === null && !confirmApply}
+        title={order ? (order.type === "limits" ? orderTitle(order) : `${orderTitle(order)} requested`) : "Request"}
         width={560}
         onClose={onClose}
       >
@@ -245,6 +270,17 @@ function OrderDetailModal({
             </div>
 
             <OrderDetailsList order={order} />
+
+            {isLimits && info ? (
+              <div className="rounded-xl border border-border/70 bg-default-50 px-3 py-2.5 text-[13px]" data-testid="limit-compare">
+                <p className="font-medium text-foreground">{info.label}</p>
+                <p className="mt-0.5 text-muted">
+                  Current limit now: <span className="font-semibold text-foreground">{info.current_limit?.toLocaleString() ?? "not set"}</span>
+                  {info.period ? ` ${info.period === "day" ? "per 24 hours" : "in total"}` : ""}
+                  {" · "}Requested: <span className="font-semibold text-foreground">{info.requested_limit.toLocaleString()}</span>
+                </p>
+              </div>
+            ) : null}
 
             <div>
               <label className="text-sm font-medium text-foreground" htmlFor="admin-notes">
@@ -290,17 +326,44 @@ function OrderDetailModal({
               )}
             </div>
 
+            {canApply ? (
+              <div>
+                <Button isDisabled={busy} size="sm" onClick={() => setConfirmApply(true)}>
+                  Apply requested limit
+                </Button>
+                <p className="mt-1 text-[12px] text-muted">Sets the limit to the requested value, marks this request fulfilled and emails the requester.</p>
+              </div>
+            ) : null}
+
             {error ? <ErrorBanner message={error} /> : null}
 
-            <AssignDomainsPanel
-              linkable={!["fulfilled", "rejected", "cancelled"].includes(order.status)}
-              orderId={order.id}
-              workspaceId={order.workspace.id}
-              workspaceName={order.workspace.name}
-            />
+            {isLimits ? null : (
+              <AssignDomainsPanel
+                linkable={!["fulfilled", "rejected", "cancelled"].includes(order.status)}
+                orderId={order.id}
+                workspaceId={order.workspace.id}
+                workspaceName={order.workspace.name}
+              />
+            )}
           </div>
         ) : null}
       </AdminModal>
+
+      <ConfirmDialog
+        confirmLabel="Apply limit"
+        description={
+          order && info
+            ? `Set ${order.workspace.name}'s ${info.label.toLowerCase()} limit from ${info.current_limit?.toLocaleString() ?? "unset"} to ${info.requested_limit.toLocaleString()}? The request is marked fulfilled and the requester is emailed.`
+            : undefined
+        }
+        error={error}
+        isBusy={busy}
+        isOpen={confirmApply}
+        title="Apply this limit?"
+        tone="primary"
+        onClose={() => setConfirmApply(false)}
+        onConfirm={() => void applyLimit()}
+      />
 
       <ConfirmDialog
         confirmLabel={confirmStatus ? ACTION_LABEL[confirmStatus] : "Confirm"}

@@ -1,6 +1,6 @@
 import type { Connection, Edge, Node } from "@xyflow/react";
 import type { Graph, GraphEdge, GraphNode, NodeType, WorkflowNodeData } from "../../services/workflowApi";
-import { isTrigger } from "./nodeDefs";
+import { NODE_HANDLES, isTrigger } from "./nodeDefs";
 
 export type FlowNodeData = WorkflowNodeData & { __problems?: string[]; __status?: string };
 export type FlowNode = Node<FlowNodeData, NodeType>;
@@ -65,6 +65,9 @@ export function connectionError(conn: Connection | Edge, nodes: FlowNode[], edge
   if (source.id === target.id) return "A node cannot connect to itself.";
   if (isTrigger(target.type!)) return "Triggers cannot have inputs.";
   if (source.type === "action.send_reply") return "Send reply is the end of a flow.";
+  const handles = NODE_HANDLES[source.type!];
+  if (handles && !handles.some((h) => h.id === conn.sourceHandle)) return `Connect one of this step's outputs: ${handles.map((h) => h.label).join(" or ")}.`;
+  if (!handles && conn.sourceHandle) return "This step has a single output.";
   const dup = edges.some(
     (e) => e.source === conn.source && e.target === conn.target && (e.sourceHandle ?? null) === (conn.sourceHandle ?? null),
   );
@@ -107,4 +110,17 @@ export function nextNodeId(nodes: FlowNode[], type: string) {
   let i = 1;
   while (nodes.some((n) => n.id === `${base}_${i}`)) i += 1;
   return `${base}_${i}`;
+}
+
+/** Steps reachable from a "Slot selected" step's yes output (where "Book meeting" belongs). */
+export function afterSlotYes(nodes: FlowNode[], edges: FlowEdge[]): Set<string> {
+  const out = new Set<string>();
+  const stack = edges.filter((e) => nodes.find((n) => n.id === e.source)?.type === "condition.slot_selected" && e.sourceHandle === "yes").map((e) => e.target);
+  while (stack.length) {
+    const id = stack.pop()!;
+    if (out.has(id)) continue;
+    out.add(id);
+    edges.filter((e) => e.source === id).forEach((e) => stack.push(e.target));
+  }
+  return out;
 }

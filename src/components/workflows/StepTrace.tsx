@@ -1,7 +1,7 @@
 import { Chip } from "@heroui/react";
 import type { Run } from "../../services/workflowApi";
 import { NODE_DEF_BY_TYPE } from "./nodeDefs";
-import { statusTone } from "./runUi";
+import { describeStep, statusTone } from "./runUi";
 
 export function StepTrace({ run, nodeLabels }: { run: Run; nodeLabels?: Record<string, string> }) {
   return (
@@ -16,6 +16,7 @@ export function StepTrace({ run, nodeLabels }: { run: Run; nodeLabels?: Record<s
               <p className="text-[13px] font-medium text-foreground">{i + 1}. {nodeLabels?.[step.nodeId] ?? def?.label ?? step.type}</p>
               <Chip color={statusTone(step.status)} size="sm" variant="soft">{step.status}</Chip>
             </div>
+            {describeStep(step) ? <p className="mt-1.5 text-[12px] leading-4 text-foreground">{describeStep(step)}</p> : null}
             {step.error ? <p className="mt-1.5 text-[12px] text-danger">{step.error}</p> : null}
             {output ? <pre className="mt-1.5 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-surface p-2 text-[11px] leading-4 text-muted">{output}</pre> : null}
           </li>

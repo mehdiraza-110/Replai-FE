@@ -1,8 +1,11 @@
 import { X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import type { WorkflowMeta, WorkflowNodeData } from "../../services/workflowApi";
-import type { FlowNode } from "./graphRules";
+import { afterSlotYes, type FlowEdge, type FlowNode } from "./graphRules";
 import { NODE_DEF_BY_TYPE } from "./nodeDefs";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const VARIABLES = ["lead_email", "lead_name", "subject", "reply", "agent", "campaign", "workspace", "review_link"];
 
 const inputClass =
   "w-full rounded-xl border border-border bg-surface-secondary px-3 py-2 text-[13px] text-foreground outline-none transition placeholder:text-muted focus:border-accent disabled:opacity-50";
@@ -59,45 +62,92 @@ function MultiSelect<T extends string | number>({
   );
 }
 
-function Chips({ value, onChange }: { value: string[]; onChange: (next: string[]) => void }) {
+function Chips({
+  value,
+  onChange,
+  placeholder = "Type a keyword and press Enter",
+  validate,
+  max,
+  disabled,
+}: {
+  value: string[];
+  onChange: (next: string[]) => void;
+  placeholder?: string;
+  validate?: (word: string) => string | null;
+  max?: number;
+  disabled?: boolean;
+}) {
   const [draft, setDraft] = useState("");
+  const [error, setError] = useState<string | null>(null);
   function commit() {
     const word = draft.trim();
-    if (word && !value.some((v) => v.toLowerCase() === word.toLowerCase())) onChange([...value, word]);
+    if (!word) return;
+    if (value.some((v) => v.toLowerCase() === word.toLowerCase())) {
+      setDraft("");
+      return;
+    }
+    const problem = validate?.(word) ?? (max && value.length >= max ? `You can add up to ${max}.` : null);
+    if (problem) {
+      setError(problem);
+      return;
+    }
+    setError(null);
+    onChange([...value, word]);
     setDraft("");
   }
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-1.5">
         {value.map((word) => (
-          <span className="inline-flex items-center gap-1 rounded-full bg-default-100 py-0.5 pl-2.5 pr-1 text-[12px] text-foreground" key={word}>
-            {word}
-            <button aria-label={`Remove ${word}`} className="grid size-4 place-items-center rounded-full text-muted hover:bg-default-200 hover:text-foreground" onClick={() => onChange(value.filter((v) => v !== word))} type="button">
+          <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-default-100 py-0.5 pl-2.5 pr-1 text-[12px] text-foreground" key={word}>
+            <span className="truncate">{word}</span>
+            <button aria-label={`Remove ${word}`} className="grid size-4 shrink-0 place-items-center rounded-full text-muted hover:bg-default-200 hover:text-foreground" disabled={disabled} onClick={() => onChange(value.filter((v) => v !== word))} type="button">
               <X className="size-3" />
             </button>
           </span>
         ))}
       </div>
       <input
-        className={inputClass}
+        aria-invalid={error ? true : undefined}
+        className={`${inputClass} ${error ? "!border-danger" : ""}`}
+        disabled={disabled}
         onBlur={commit}
-        onChange={(e) => setDraft(e.target.value)}
+        onChange={(e) => { setDraft(e.target.value); setError(null); }}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === ",") {
             e.preventDefault();
             commit();
           } else if (e.key === "Backspace" && !draft && value.length) onChange(value.slice(0, -1));
         }}
-        placeholder="Type a keyword and press Enter"
+        placeholder={placeholder}
         value={draft}
       />
+      {error ? <p className="text-[11px] leading-4 text-danger">{error}</p> : null}
     </div>
   );
+}
+
+function Toggle({ label, hint, checked, onChange, disabled }: { label: string; hint?: string; checked: boolean; onChange: (next: boolean) => void; disabled?: boolean }) {
+  return (
+    <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-border/70 p-2.5 transition hover:bg-default-100">
+      <input checked={checked} className="mt-0.5 accent-[var(--accent)]" disabled={disabled} onChange={(e) => onChange(e.target.checked)} type="checkbox" />
+      <span>
+        <span className="block text-[13px] font-medium text-foreground">{label}</span>
+        {hint ? <span className="block text-[11px] leading-4 text-muted">{hint}</span> : null}
+      </span>
+    </label>
+  );
+}
+
+function Note({ tone = "muted", children }: { tone?: "muted" | "warning" | "danger"; children: ReactNode }) {
+  const cls = tone === "warning" ? "border-warning/30 bg-warning/10 text-foreground" : tone === "danger" ? "border-danger/25 bg-danger/10 text-danger" : "border-border/70 bg-surface-secondary text-muted";
+  return <p className={`rounded-xl border px-3 py-2 text-[12px] leading-4 ${cls}`}>{children}</p>;
 }
 
 export function NodeInspector({
   node,
   nodes,
+  edges,
   meta,
   readOnly,
   onChange,
@@ -105,6 +155,7 @@ export function NodeInspector({
 }: {
   node: FlowNode;
   nodes?: FlowNode[];
+  edges?: FlowEdge[];
   meta: WorkflowMeta | null;
   readOnly: boolean;
   onChange: (data: WorkflowNodeData) => void;
@@ -123,8 +174,86 @@ export function NodeInspector({
     ? [...(meta?.plusvibeCampaigns ?? []), ...(meta?.campaigns ?? [])].find((c) => String(c.id) === String(scopeIds[0]))
     : undefined;
 
+  const hasOffer = (nodes ?? []).some((n) => n.type === "action.offer_times");
+  const bookIsAfterYes = afterSlotYes(nodes ?? [], edges ?? []).has(node.id);
+  const calendarIds = meta?.calendarAgentIds;
+  const agentSelect = (
+    <div className="space-y-2">
+      <Field label="Agent (its Google Calendar is used)" hint={meta && meta.agents.length === 0 ? "Create an AI agent first, then select it here." : undefined}>
+        <select className={inputClass} disabled={readOnly} onChange={(e) => set({ agentId: e.target.value === "campaign" ? "campaign" : e.target.value ? Number(e.target.value) : undefined })} value={d.agentId ?? ""}>
+          <option value="">Select an agent</option>
+          {allowCampaignAgent || d.agentId === "campaign" ? <option value="campaign">Use the campaign's assigned agent</option> : null}
+          {(meta?.agents ?? []).map((a) => (
+            <option key={a.id} value={a.id}>{a.name}{calendarIds && !calendarIds.includes(a.id) ? " (no calendar)" : ""}</option>
+          ))}
+        </select>
+      </Field>
+      {typeof d.agentId === "number" && calendarIds && !calendarIds.includes(d.agentId) ? (
+        <Note tone="warning">This agent has no Google Calendar connected. Connect one in the agent's settings, or this step cannot be saved as active.</Note>
+      ) : null}
+      {d.agentId === "campaign" ? <Note>Each reply uses the calendar of the agent assigned to the campaign it belongs to. If that agent has no calendar, the reply points the prospect to its meeting link instead.</Note> : null}
+      {d.agentId === "campaign" && !allowCampaignAgent ? <Note tone="danger">The campaign's agent is only available with the PlusVibe reply and inbox mail triggers.</Note> : null}
+    </div>
+  );
+
   let form: ReactNode = null;
   switch (node.type) {
+    case "action.offer_times": {
+      const count = Math.min(5, Math.max(1, d.count ?? 3));
+      form = (
+        <div className="space-y-4">
+          {agentSelect}
+          <Field label="How many times to offer" hint="Free times in the agent's working hours over the next business days. Times already offered on this conversation are never repeated.">
+            <div className="flex items-center gap-2">
+              <button aria-label="Fewer times" className="grid size-8 place-items-center rounded-lg border border-border bg-surface-secondary text-[16px] text-foreground disabled:opacity-40" disabled={readOnly || count <= 1} onClick={() => set({ count: count - 1 })} type="button">-</button>
+              <span aria-live="polite" className="w-8 text-center text-[14px] font-semibold text-foreground">{count}</span>
+              <button aria-label="More times" className="grid size-8 place-items-center rounded-lg border border-border bg-surface-secondary text-[16px] text-foreground disabled:opacity-40" disabled={readOnly || count >= 5} onClick={() => set({ count: count + 1 })} type="button">+</button>
+            </div>
+          </Field>
+          <Note>Connect this step to an AI agent step: it writes the reply listing these times. If the calendar is not connected or nothing is free, the AI step sends the prospect to the agent's meeting link instead and never mentions the problem.</Note>
+        </div>
+      );
+      break;
+    }
+    case "condition.slot_selected":
+      form = (
+        <div className="space-y-3">
+          {!hasOffer ? <Note tone="warning">There is no "Offer times" step in this workflow. This check only finds a choice when times were offered earlier in the same conversation.</Note> : null}
+          <Note>Looks at the prospect's latest reply (quoted text ignored). It goes down <strong>yes</strong> only when the reply clearly picks one of the times offered earlier, for example "option 2", "the second one", "Thursday at 2pm" or "2:30". Declines, "none of these" and counter-proposals go down <strong>no</strong>.</Note>
+          <Note>When a reply is genuinely unclear (like "sounds good" with several times offered), an AI check decides, and only if it is at least 70% sure. That uses one AI request. Without an AI key it goes down no.</Note>
+        </div>
+      );
+      break;
+    case "action.book_meeting":
+      form = (
+        <div className="space-y-4">
+          {agentSelect}
+          {!bookIsAfterYes ? <Note tone="danger">Connect this step to the yes output of a "Slot selected" step. It books the time the prospect picked.</Note> : null}
+          <Note>Re-checks the time is still free, creates the calendar event with a Google Meet link and invites the prospect. One meeting per conversation. Use <strong>booked</strong> to confirm with the AI step, and <strong>unavailable</strong> (time taken or booking failed) to offer new times with an apology.</Note>
+        </div>
+      );
+      break;
+    case "action.notify_email":
+      form = (
+        <div className="space-y-4">
+          <Field label="Recipients" hint="Up to 10 addresses. Press Enter to add.">
+            <Chips disabled={readOnly} max={10} onChange={(v) => set({ to: v })} placeholder="name@company.com" validate={(w) => (EMAIL_RE.test(w) ? null : "Enter a valid email address.")} value={d.to ?? []} />
+          </Field>
+          <Toggle checked={Boolean(d.notifyOwners)} disabled={readOnly} hint="Also email every owner and admin of this workspace." label="Notify workspace owners and admins" onChange={(v) => set({ notifyOwners: v })} />
+          <Field label="Subject">
+            <input className={inputClass} disabled={readOnly} maxLength={200} onChange={(e) => set({ subject: e.target.value })} value={d.subject ?? ""} />
+          </Field>
+          <Field label="Message">
+            <textarea className={`${inputClass} min-h-28 resize-y`} disabled={readOnly} maxLength={4000} onChange={(e) => set({ message: e.target.value })} value={d.message ?? ""} />
+          </Field>
+          <p className="text-[11px] leading-4 text-muted">
+            Variables: {VARIABLES.map((v) => <code className="mr-1 rounded bg-default-100 px-1" key={v}>{`{{${v}}}`}</code>)}
+          </p>
+          <Toggle checked={Boolean(d.includeReply)} disabled={readOnly} hint="Adds the prospect's reply (and the AI draft, when one exists) below your message." label="Include the reply" onChange={(v) => set({ includeReply: v })} />
+          <Note>Best effort: a failed email never stops the workflow. Each person gets at most one email per run. Not counted toward your trial email limit.</Note>
+        </div>
+      );
+      break;
     case "trigger.inbox_mail":
     case "trigger.mail_sent":
       form = (
@@ -230,7 +359,7 @@ export function NodeInspector({
             </select>
           </Field>
           <Field label="Keywords" hint="Matches go down the yes branch, everything else down no.">
-            <Chips onChange={(v) => !readOnly && set({ keywords: v })} value={d.keywords ?? []} />
+            <Chips disabled={readOnly} onChange={(v) => !readOnly && set({ keywords: v })} value={d.keywords ?? []} />
           </Field>
         </div>
       );

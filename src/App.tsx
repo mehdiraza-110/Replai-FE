@@ -7,6 +7,8 @@ import { WORKSPACE_REQUIRED_EVENT } from "./services/api";
 import { AIAgents } from "./pages/AIAgents";
 import { Analytics } from "./pages/Analytics";
 import { Auth } from "./pages/Auth";
+import { ForgotPassword } from "./pages/ForgotPassword";
+import { ResetPassword } from "./pages/ResetPassword";
 import { CreateAgent } from "./pages/CreateAgent";
 import { Dashboard } from "./pages/Dashboard";
 import { DomainOnboarding } from "./pages/DomainOnboarding";
@@ -109,6 +111,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="login" element={<Auth />} />
+      <Route path="forgot-password" element={<ForgotPassword />} />
+      <Route path="reset-password" element={<ResetPassword />} />
       <Route path="create-workspace" element={<CreateWorkspace />} />
       <Route element={<ProtectedShell />}>
         <Route path="workflows" element={<Workflows />} />

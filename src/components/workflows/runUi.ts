@@ -23,3 +23,34 @@ export function formatWhen(iso: string | null | undefined) {
   if (min < 60 * 24) return `${Math.round(min / 60)} h ago`;
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
+
+/** One readable line for the meeting and notification steps (the raw output stays available below it). */
+export function describeStep(step: { type: string; status: string; output?: unknown }): string | null {
+  const o = (step.output && typeof step.output === "object" ? step.output : {}) as Record<string, unknown>;
+  const text = (v: unknown) => (typeof v === "string" && v ? v : null);
+  const reason = text(o.detail) ?? text(o.reason);
+  switch (step.type) {
+    case "action.offer_times": {
+      const slots = Array.isArray(o.slots) ? (o.slots as { label?: string }[]).map((s) => s.label).filter(Boolean) : [];
+      if (slots.length) return `Offering ${slots.length} time${slots.length === 1 ? "" : "s"}: ${slots.join("; ")}`;
+      if (typeof o.wouldOfferTimes === "number") return `Would offer ${o.wouldOfferTimes} times from the campaign agent's calendar.`;
+      return step.status === "skipped" ? `No times offered${reason ? `: ${reason}` : ""}${o.fallbackUrl ? ". The reply will use the meeting link." : ""}` : null;
+    }
+    case "condition.slot_selected": {
+      if (o.selected === true) return `Yes: option ${String(o.slot)} (${String(o.time ?? "")}) chosen, decided by ${o.method === "model" ? "the AI check" : "rules"}.`;
+      return `No: ${text(o.reason) ?? "no offered time was chosen"}`;
+    }
+    case "action.book_meeting": {
+      if (text(o.booked)) return `Booked ${String(o.booked)}${text(o.meetLink) ? ` with ${String(o.meetLink)}` : ""}.`;
+      if (text(o.wouldBook)) return `Would book ${String(o.wouldBook)}.`;
+      return reason ? `Not booked: ${reason}` : null;
+    }
+    case "action.notify_email": {
+      if (Array.isArray(o.emailed)) return `Emailed ${(o.emailed as string[]).join(", ")}.`;
+      if (Array.isArray(o.wouldEmail)) return `Would email ${(o.wouldEmail as string[]).join(", ")}.`;
+      return reason ? `Not sent: ${reason}` : null;
+    }
+    default:
+      return null;
+  }
+}
