@@ -36,7 +36,7 @@ const PIPELINE_STEPS = [
   { label: "Health Check", detail: "Reputation gate", icon: ShieldCheck },
   { label: "Daily Limit Check", detail: "Warmup ceiling", icon: Gauge },
   { label: "Rate Limiter", detail: "Paced delivery", icon: Timer },
-  { label: "Amazon SES", detail: "Delivered", icon: Send },
+  { label: "Your mailbox", detail: "Delivered", icon: Send },
 ];
 
 const statusTone: Record<MailerCampaign["status"], StatusTone> = {
@@ -139,7 +139,7 @@ export function MailerCampaigns() {
       <div className="apple-shadow rounded-2xl border border-border/70 bg-surface p-5">
         <div className="mb-5">
           <h3 className="text-[15px] font-semibold text-foreground">Sending pipeline</h3>
-          <p className="mt-0.5 text-[12px] text-muted">Every campaign send and AI-agent reply passes through this queue before reaching Amazon SES.</p>
+          <p className="mt-0.5 text-[12px] text-muted">Every campaign send and AI-agent reply passes through this queue before it is sent from your mailbox.</p>
         </div>
         <div className="overflow-x-auto pt-1.5">
           <div className="flex min-w-[880px] items-start">

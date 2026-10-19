@@ -22,7 +22,7 @@ const POLL_INTERVAL_MS = 120_000;
 const titles: Record<string, { title: string; subtitle: string }> = {
   "/": { title: "Good morning, Kate", subtitle: "" },
   "/mailer": { title: "AI Cold Mailer", subtitle: "Sending volume, warmup ramp, and mailbox reputation at a glance." },
-  "/mailer/domains": { title: "Domains", subtitle: "Manage sending domains, DNS verification, and SES identities." },
+  "/mailer/domains": { title: "Domains", subtitle: "Your sending domains, their verification status, and their mailboxes." },
   "/mailer/domains/new": { title: "Add Domain", subtitle: "Onboard a new sending domain, verify DNS, provision mailboxes, and assign a warmup strategy." },
   "/mailer/mailboxes": { title: "Mailboxes", subtitle: "Sender identities across your verified domains, daily limits, and warmup stage." },
   "/mailer/mailboxes/new": { title: "Add Mailboxes", subtitle: "Create one or more sender identities under a verified domain." },

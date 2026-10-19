@@ -11,7 +11,6 @@ import { ForgotPassword } from "./pages/ForgotPassword";
 import { ResetPassword } from "./pages/ResetPassword";
 import { CreateAgent } from "./pages/CreateAgent";
 import { Dashboard } from "./pages/Dashboard";
-import { DomainOnboarding } from "./pages/DomainOnboarding";
 import { EventLogs } from "./pages/EventLogs";
 import { ForwardedLeads } from "./pages/ForwardedLeads";
 import { HumanReview } from "./pages/HumanReview";
@@ -140,7 +139,7 @@ export default function App() {
         <Route path="campaigns" element={<PlusVibeCampaigns />} />
         <Route path="mailer" element={<MailerDashboard />} />
         <Route path="mailer/domains" element={<Mailer />} />
-        <Route path="mailer/domains/new" element={<DomainOnboarding />} />
+        <Route path="mailer/domains/new" element={<Navigate replace to="/mailer/orders?request=domains" />} />
         <Route path="mailer/mailboxes" element={<Mailboxes />} />
         <Route path="mailer/mailboxes/new" element={<MailboxOnboarding />} />
         <Route path="mailer/inbox" element={<MailerInbox />} />

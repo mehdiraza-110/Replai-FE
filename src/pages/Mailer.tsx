@@ -11,7 +11,6 @@ import {
   Plus,
   RefreshCw,
   Search,
-  ShieldCheck,
   Trash2,
   Users,
   X,
@@ -32,7 +31,8 @@ export function Mailer() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const [accountStatus, setAccountStatus] = useState<SesAccountStatus | null>(null);
+  // SES is no longer used for sending, so there is no account status to show.
+  const accountStatus: SesAccountStatus | null = null;
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -41,7 +41,6 @@ export function Mailer() {
   const [refreshingDomain, setRefreshingDomain] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Domain | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const productionModal = useOverlayState({});
   const deleteModal = useOverlayState({});
 
   useEffect(() => {
@@ -59,16 +58,12 @@ export function Mailer() {
     setIsLoading(true);
     setError(null);
     try {
-      const [domainsPage, statusData] = await Promise.all([
-        domainService.list({ page: nextPage, limit: PAGE_SIZE, search: nextSearch }),
-        domainService.getAccountStatus().catch(() => null),
-      ]);
+      const domainsPage = await domainService.list({ page: nextPage, limit: PAGE_SIZE, search: nextSearch });
       setDomains(domainsPage.items);
       setStatusCounts(domainsPage.statusCounts);
       setPage(domainsPage.page);
       setTotalPages(domainsPage.totalPages);
       setTotal(domainsPage.total);
-      setAccountStatus(statusData);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to load domains");
       setDomains([]);
@@ -143,35 +138,12 @@ export function Mailer() {
             {refreshingAll ? <Spinner color="current" size="sm" /> : <RefreshCw className="size-4" />}
             Refresh statuses
           </Button>
-          <Button onPress={() => navigate("/mailer/domains/new")} size="sm">
+          <Button onPress={() => navigate("/mailer/orders?request=domains")} size="sm">
             <Plus className="size-4" />
-            Add Domain
+            Request domains
           </Button>
         </div>
       </div>
-
-      {accountStatus && !accountStatus.productionAccessEnabled ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-warning/30 bg-warning/10 px-4 py-3">
-          <div className="flex items-start gap-2.5">
-            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
-            <div>
-              <p className="text-[13px] font-semibold text-foreground">AWS SES is in Sandbox mode</p>
-              <p className="text-[12px] text-muted">
-                Max {accountStatus.max24HourSend ?? "—"} emails/24h, {accountStatus.maxSendRate ?? "—"}/sec, and only verified recipients. {" "}
-                {accountStatus.latestRequest
-                  ? `Production access requested ${new Date(accountStatus.latestRequest.requestedAt).toLocaleDateString()} — awaiting AWS review.`
-                  : "Tell AWS this is a real business sending legitimate bulk marketing email to lift these limits."}
-              </p>
-            </div>
-          </div>
-          {!accountStatus.latestRequest ? (
-            <Button onPress={productionModal.open} size="sm" variant="secondary">
-              <ShieldCheck className="size-4" />
-              Request production access
-            </Button>
-          ) : null}
-        </div>
-      ) : null}
 
       {error ? (
         <div className="flex items-center justify-between gap-3 rounded-2xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -229,7 +201,7 @@ export function Mailer() {
               ) : domains.length === 0 ? (
                 <tr>
                   <td className="px-4 py-10 text-center text-sm font-medium text-muted" colSpan={7}>
-                    {total === 0 && !search ? "No domains onboarded yet. Click “Add Domain” to onboard one from Route53." : "No domains match your search."}
+                    {total === 0 && !search ? "No domains yet. Use “Request domains” and our team will add them to your workspace." : "No domains match your search."}
                   </td>
                 </tr>
               ) : (
@@ -338,10 +310,6 @@ export function Mailer() {
         onRefresh={refreshOne}
       />
 
-      <ProductionAccessModal
-        onSubmitted={(request) => setAccountStatus((current) => (current ? { ...current, latestRequest: request } : current))}
-        state={productionModal}
-      />
 
       <DeleteDomainModal
         domain={deleteTarget}
@@ -444,111 +412,6 @@ function VerifiedBadge({ label, status }: { label: string; status: DnsCheckStatu
     <Chip color={color} size="sm" variant="soft">
       {label}
     </Chip>
-  );
-}
-
-function ProductionAccessModal({
-  state,
-  onSubmitted,
-}: {
-  state: ReturnType<typeof useOverlayState>;
-  onSubmitted: (request: import("../types").SesAccountRequest) => void;
-}) {
-  const [mailType, setMailType] = useState<"MARKETING" | "TRANSACTIONAL">("MARKETING");
-  const [websiteUrl, setWebsiteUrl] = useState("https://www.kovalai.ai/");
-  const [useCaseDescription, setUseCaseDescription] = useState(
-    "Koval AI (kovalai.ai) operates ReplyOS (replyos.kovalai.ai), a B2B SaaS platform providing AI-powered cold email outreach and reply automation for staffing and recruiting agencies. We manage a portfolio of dedicated outreach domains used exclusively to send opt-in-appropriate, permission-based B2B marketing emails introducing our staffing brokerage services to business prospects sourced from compiled B2B contact lists. Expected volume is up to ~2,000 sending mailboxes across our onboarded domains, sending an estimated 2,000,000+ marketing emails per month, with low per-mailbox volume and gradual warmup ramps to protect sender reputation. Every domain is authenticated with SPF, DKIM (SES Easy DKIM), a custom MAIL FROM domain, and DMARC. We maintain bounce/complaint suppression lists, honor unsubscribe requests, and throttle sending per mailbox with gradual daily-limit ramps."
-  );
-  const [contactEmail, setContactEmail] = useState("mahdi.r@kovalai.ai");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [localError, setLocalError] = useState<string | null>(null);
-
-  async function submit() {
-    setIsSubmitting(true);
-    setLocalError(null);
-    try {
-      const request = await domainService.requestProductionAccess({
-        mailType,
-        websiteUrl,
-        useCaseDescription,
-        additionalContactEmailAddresses: contactEmail ? [contactEmail] : undefined,
-      });
-      onSubmitted(request);
-      state.close();
-    } catch (requestError) {
-      setLocalError(requestError instanceof Error ? requestError.message : "Unable to submit production access request");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  return (
-    <Modal state={state}>
-      <Modal.Backdrop className="bg-foreground/30 backdrop-blur-[2px]">
-        <Modal.Container className="w-[min(680px,calc(100vw-32px))]" placement="center" scroll="inside" size="lg">
-          <Modal.Dialog className="overflow-hidden rounded-[20px] border border-border/70 bg-surface shadow-[0_8px_30px_color-mix(in_oklch,var(--foreground)_18%,transparent)]">
-            <Modal.Header className="flex items-start justify-between gap-4 border-b border-border/70 px-5 py-4">
-              <div>
-                <Modal.Heading className="text-base font-semibold leading-6 text-foreground">Request AWS SES production access</Modal.Heading>
-                <p className="mt-1 text-[13px] leading-5 text-muted">Tells AWS you're a legitimate business sending bulk marketing email, to lift the sandbox's 200/day limit.</p>
-              </div>
-              <Modal.CloseTrigger className="grid size-8 shrink-0 place-items-center rounded-full bg-default-100 text-foreground transition hover:bg-default-200" aria-label="Close">
-                <X className="size-4" />
-              </Modal.CloseTrigger>
-            </Modal.Header>
-
-            <Modal.Body className="thin-scrollbar max-h-[72vh] overflow-y-auto px-5 py-5">
-              <div className="grid gap-4">
-                <label className="grid gap-1.5 text-sm font-medium text-foreground">
-                  Mail type
-                  <select
-                    className="agent-field h-10 w-full px-3 text-sm text-foreground outline-none"
-                    onChange={(event) => setMailType(event.target.value as "MARKETING" | "TRANSACTIONAL")}
-                    value={mailType}
-                  >
-                    <option value="MARKETING">Marketing</option>
-                    <option value="TRANSACTIONAL">Transactional</option>
-                  </select>
-                </label>
-                <label className="grid gap-1.5 text-sm font-medium text-foreground">
-                  Website URL
-                  <input
-                    className="h-10 w-full rounded-xl border border-border bg-surface-secondary px-3 text-sm outline-none transition focus:border-accent"
-                    onChange={(event) => setWebsiteUrl(event.target.value)}
-                    value={websiteUrl}
-                  />
-                </label>
-                <label className="grid gap-1.5 text-sm font-medium text-foreground">
-                  Use case description
-                  <textarea
-                    className="min-h-[160px] w-full rounded-xl border border-border bg-surface-secondary px-3 py-2 text-sm outline-none transition focus:border-accent"
-                    onChange={(event) => setUseCaseDescription(event.target.value)}
-                    value={useCaseDescription}
-                  />
-                </label>
-                <label className="grid gap-1.5 text-sm font-medium text-foreground">
-                  Additional contact email
-                  <input
-                    className="h-10 w-full rounded-xl border border-border bg-surface-secondary px-3 text-sm outline-none transition focus:border-accent"
-                    onChange={(event) => setContactEmail(event.target.value)}
-                    value={contactEmail}
-                  />
-                </label>
-                {localError ? <p className="text-sm font-medium text-danger">{localError}</p> : null}
-              </div>
-            </Modal.Body>
-
-            <Modal.Footer className="flex flex-wrap justify-end gap-2 border-t border-border/70 px-5 py-4">
-              <Button isDisabled={isSubmitting} onClick={state.close} size="sm" variant="secondary">Cancel</Button>
-              <Button isDisabled={isSubmitting || !websiteUrl} onClick={submit} size="sm">
-                {isSubmitting ? <Spinner color="current" size="sm" /> : <ShieldCheck className="size-4" />}
-                {isSubmitting ? "Submitting…" : "Submit request"}
-              </Button>
-            </Modal.Footer>
-          </Modal.Dialog>
-        </Modal.Container>
-      </Modal.Backdrop>
-    </Modal>
   );
 }
 
