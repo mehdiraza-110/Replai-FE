@@ -1,5 +1,5 @@
 import { StatusPill } from "../ui/StatusPill";
-import type { WorkspaceStatus, WorkspaceType } from "../../services/adminApi";
+import { resolveAdminPlan, type AdminWorkspace, type WorkspaceStatus, type WorkspaceType } from "../../services/adminApi";
 
 export function WorkspaceStatusPill({ status }: { status: WorkspaceStatus }) {
   return <StatusPill tone={status === "active" ? "success" : "warning"}>{status === "active" ? "Active" : "Suspended"}</StatusPill>;
@@ -16,4 +16,11 @@ export function ProductPills({ autoResponder, coldMailer }: { autoResponder: boo
       <StatusPill tone={coldMailer ? "success" : "default"}>{coldMailer ? "Cold Mailer" : "Cold Mailer off"}</StatusPill>
     </div>
   );
+}
+
+export function WorkspacePlanPill({ workspace }: { workspace: AdminWorkspace }) {
+  const plan = resolveAdminPlan(workspace);
+  if (plan.type !== "trial") return <StatusPill>Standard</StatusPill>;
+  if (plan.ended) return <StatusPill tone="danger">Trial ended</StatusPill>;
+  return <StatusPill tone={plan.daysLeft <= 2 ? "danger" : plan.daysLeft <= 7 ? "warning" : "accent"}>Trial · {plan.daysLeft}d</StatusPill>;
 }

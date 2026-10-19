@@ -1,8 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ApiRequestError, authService, SESSION_EXPIRED_EVENT, workspaceService, type LoginPayload, type RegisterPayload } from "../services/api";
+import { ApiRequestError, authService, SESSION_EXPIRED_EVENT, TRIAL_ENDED_EVENT, workspaceService, type LoginPayload, type RegisterPayload } from "../services/api";
 import { reconnectRealtime } from "../services/realtime";
-import type { AuthUser, WorkspaceSummary, WorkspaceType } from "../types";
-import { clearViewAs } from "../utils/viewAs";
+import type { AuthUser, WorkspacePlan, WorkspaceSummary, WorkspaceType } from "../types";
+import { clearViewAs, getViewAs } from "../utils/viewAs";
 import { useViewAs } from "../hooks/useViewAs";
 
 interface AuthSession {
@@ -28,6 +28,16 @@ interface AuthContextValue {
   refreshUser: () => Promise<AuthUser | null>;
   switchWorkspace: (workspaceId: number) => Promise<void>;
   createWorkspace: (payload: { name: string; type: WorkspaceType }) => Promise<void>;
+  /** The active workspace's plan (trial or standard), when known. */
+  plan: WorkspacePlan | null;
+  /** True when the active workspace's trial has ended (from its plan or from a TRIAL_ENDED API response). */
+  isTrialEnded: boolean;
+  /** Re-reads the active workspace's plan and usage from the server. */
+  refreshPlan: () => Promise<void>;
+  /** The trial info modal: opens once per sign-in, and again whenever the trial chip is clicked. */
+  trialModalOpen: boolean;
+  openTrialModal: () => void;
+  closeTrialModal: () => void;
 }
 
 const STORAGE_KEY = "replai.auth";
@@ -54,6 +64,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isReady, setIsReady] = useState(() => !readStoredSession());
   const [workspaceEpoch, setWorkspaceEpoch] = useState(0);
   const [viewedWorkspace, setViewedWorkspace] = useState<WorkspaceSummary | null>(null);
+  const [trialEndedWorkspaceId, setTrialEndedWorkspaceId] = useState<number | null>(null);
+  // Set on every email/password sign-in (never on reloads or tab restores); consumed when the modal is dismissed.
+  const [signInNoticePending, setSignInNoticePending] = useState(false);
+  const [trialModalManual, setTrialModalManual] = useState(false);
   const viewAs = useViewAs();
 
   const commitSession = useCallback((nextSession: AuthSession) => {
@@ -66,6 +80,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearViewAs();
     setSession(null);
     setViewedWorkspace(null);
+    setSignInNoticePending(false);
+    setTrialModalManual(false);
+    setTrialEndedWorkspaceId(null);
     setIsReady(true);
     reconnectRealtime();
   }, []);
@@ -101,6 +118,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [expireSession, updateUser]);
 
+  // Fetches the active workspace's fresh plan/usage and merges it into the stored user's workspace summary.
+  const refreshPlan = useCallback(async () => {
+    const stored = readStoredSession();
+    const workspaceId = stored?.user?.active_workspace_id;
+    if (!workspaceId || getViewAs()) return;
+
+    try {
+      const detail = await workspaceService.current();
+      if (!detail.plan) return;
+      const plan = detail.plan;
+      setSession((current) => {
+        if (!current?.user.workspaces) return current;
+        const nextSession = {
+          ...current,
+          user: { ...current.user, workspaces: current.user.workspaces.map((w) => (w.id === workspaceId ? { ...w, plan } : w)) },
+        };
+        storeSession(nextSession);
+        return nextSession;
+      });
+      setTrialEndedWorkspaceId((id) => (plan.ended ? workspaceId : id === workspaceId ? null : id));
+    } catch {
+      /* the plan is informational; a failed refresh keeps what the sign-in response carried */
+    }
+  }, []);
+
   // Re-validate a stored session on load so workspace membership and flags are fresh.
   useEffect(() => {
     if (!readStoredSession()) return;
@@ -109,7 +151,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authService
       .me()
       .then((fresh) => {
-        if (isActive) updateUser(fresh);
+        if (!isActive) return;
+        updateUser(fresh);
+        void refreshPlan();
       })
       .catch((error) => {
         if (isActive && error instanceof ApiRequestError && error.status === 401) expireSession();
@@ -121,12 +165,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       isActive = false;
     };
-  }, [expireSession, updateUser]);
+  }, [expireSession, refreshPlan, updateUser]);
 
   useEffect(() => {
     window.addEventListener(SESSION_EXPIRED_EVENT, expireSession);
     return () => window.removeEventListener(SESSION_EXPIRED_EVENT, expireSession);
   }, [expireSession]);
+
+  // Any API call that answers TRIAL_ENDED means the active workspace's trial is over: show the notice right away.
+  useEffect(() => {
+    function handleTrialEnded() {
+      const workspaceId = readStoredSession()?.user?.active_workspace_id ?? null;
+      setTrialEndedWorkspaceId(workspaceId);
+      void refreshPlan();
+    }
+
+    window.addEventListener(TRIAL_ENDED_EVENT, handleTrialEnded);
+    return () => window.removeEventListener(TRIAL_ENDED_EVENT, handleTrialEnded);
+  }, [refreshPlan]);
 
   // The session cookie is shared by every tab, so a switch, login or logout in one tab changes what the others'
   // requests act on. Follow it here so a stale tab never shows one workspace while writing to another.
@@ -188,8 +244,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       commitSession(nextSession);
       setIsReady(true);
       reconnectRealtime();
+      // Refresh usage first so the sign-in trial notice shows current numbers.
+      void refreshPlan().finally(() => setSignInNoticePending(true));
     },
-    [commitSession],
+    [commitSession, refreshPlan],
   );
 
   const register = useCallback(
@@ -198,8 +256,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       commitSession(nextSession);
       setIsReady(true);
       reconnectRealtime();
+      // Refresh usage first so the sign-in trial notice shows current numbers.
+      void refreshPlan().finally(() => setSignInNoticePending(true));
     },
-    [commitSession],
+    [commitSession, refreshPlan],
   );
 
   const logout = useCallback(async () => {
@@ -267,6 +327,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return user?.workspaces?.find((workspace) => workspace.id === user.active_workspace_id) ?? null;
   }, [user, viewAs, viewedWorkspace]);
 
+  const plan = activeWorkspace?.plan ?? null;
+  const isTrialEnded = Boolean(plan?.ended) || (activeWorkspace != null && trialEndedWorkspaceId === activeWorkspace.id);
+  const canShowTrialNotice = Boolean(plan && plan.type === "trial" && !plan.ended && !isTrialEnded && !viewAs);
+  const trialModalOpen = trialModalManual || (signInNoticePending && canShowTrialNotice);
+
+  // A sign-in notice that doesn't apply (standard plan, ended trial, view as) is dropped rather than shown later.
+  useEffect(() => {
+    if (signInNoticePending && activeWorkspace && !canShowTrialNotice) setSignInNoticePending(false);
+  }, [activeWorkspace, canShowTrialNotice, signInNoticePending]);
+
+  const openTrialModal = useCallback(() => setTrialModalManual(true), []);
+  const closeTrialModal = useCallback(() => {
+    setTrialModalManual(false);
+    setSignInNoticePending(false);
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -283,8 +359,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshUser,
       switchWorkspace,
       createWorkspace,
+      plan,
+      isTrialEnded,
+      refreshPlan,
+      trialModalOpen,
+      openTrialModal,
+      closeTrialModal,
     }),
-    [activeWorkspace, createWorkspace, isReady, login, logout, refreshUser, register, session, switchWorkspace, updateUser, user, workspaceEpoch],
+    [activeWorkspace, closeTrialModal, createWorkspace, isTrialEnded, openTrialModal, plan, refreshPlan, trialModalOpen, isReady, login, logout, refreshUser, register, session, switchWorkspace, updateUser, user, workspaceEpoch],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

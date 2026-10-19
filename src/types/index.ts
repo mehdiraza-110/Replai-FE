@@ -452,6 +452,27 @@ export interface CampaignCreatePayload {
 export type WorkspaceType = "organization" | "individual";
 export type WorkspaceRole = "owner" | "admin" | "member";
 
+export type PlanLimitKey = "domains" | "mailboxes" | "emails" | "workflows" | "ai_requests";
+export type PlanLimitPeriod = "day" | "total";
+
+export interface PlanLimitUsage {
+  key: PlanLimitKey;
+  label: string;
+  limit: number | null;
+  period: PlanLimitPeriod;
+  used: number;
+  remaining: number | null;
+}
+
+export interface WorkspacePlan {
+  type: "trial" | "standard";
+  trial_started_at: string | null;
+  trial_ends_at: string | null;
+  days_left: number;
+  ended: boolean;
+  limits?: PlanLimitUsage[];
+}
+
 export interface WorkspaceSummary {
   id: number;
   name: string;
@@ -462,6 +483,7 @@ export interface WorkspaceSummary {
   cold_mailer_enabled: boolean;
   role: WorkspaceRole;
   permissions: { auto_responder: boolean; cold_mailer: boolean };
+  plan?: WorkspacePlan;
 }
 
 export interface WorkspaceDetail extends WorkspaceSummary {

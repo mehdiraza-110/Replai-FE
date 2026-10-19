@@ -4,6 +4,7 @@ import { Building2, Check, ChevronsUpDown, Plus, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import type { WorkspaceSummary } from "../../types";
+import { pluralDays } from "../trial/trialUtils";
 
 const typeLabel: Record<WorkspaceSummary["type"], string> = {
   organization: "Organization",
@@ -26,7 +27,7 @@ function WorkspaceIcon({ type, className }: { type: WorkspaceSummary["type"]; cl
  * Not to be confused with the system switcher (Auto Responder / Cold Mailer).
  */
 export function WorkspaceMenu({ compact = false }: { compact?: boolean }) {
-  const { activeWorkspace, switchWorkspace, user } = useAuth();
+  const { activeWorkspace, isTrialEnded, openTrialModal, plan, switchWorkspace, user } = useAuth();
   const navigate = useNavigate();
   const [switchingTo, setSwitchingTo] = useState<WorkspaceSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +61,7 @@ export function WorkspaceMenu({ compact = false }: { compact?: boolean }) {
   }
 
   const name = activeWorkspace?.name ?? "Choose a workspace";
+  const planText = plan?.type === "trial" ? (isTrialEnded ? "Trial ended" : `Trial · ${pluralDays(plan.days_left)} left`) : plan ? "Standard plan" : null;
   const meta = activeWorkspace ? `${roleLabel[activeWorkspace.role]} · ${typeLabel[activeWorkspace.type]}` : "No workspace selected";
 
   return (
@@ -84,6 +86,19 @@ export function WorkspaceMenu({ compact = false }: { compact?: boolean }) {
           </div>
         </Dropdown.Trigger>
         <Dropdown.Popover className="w-[260px]" placement="bottom start">
+          {planText ? (
+            <div className="flex items-center justify-between gap-2 border-b border-border/70 px-3 py-2.5">
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Plan</p>
+                <p className={`truncate text-[13px] font-semibold ${isTrialEnded ? "text-danger" : "text-foreground"}`}>{planText}</p>
+              </div>
+              {plan?.type === "trial" && !isTrialEnded ? (
+                <button className="shrink-0 text-[12px] font-semibold text-accent underline underline-offset-2" type="button" onClick={openTrialModal}>
+                  Details
+                </button>
+              ) : null}
+            </div>
+          ) : null}
           <Dropdown.Menu aria-label="Switch workspace">
             {workspaces.map((workspace) => {
               const isActive = workspace.id === activeWorkspace?.id;

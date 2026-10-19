@@ -14,8 +14,9 @@ import {
 import { setViewAs } from "../../utils/viewAs";
 import { AdminModal, ConfirmDialog, ErrorBanner } from "../../components/admin/AdminModal";
 import { Field, StatTile, formatDate, fullName, inputClass } from "../../components/admin/AdminBits";
+import { PlanCard } from "../../components/admin/PlanCard";
 import { ProductToggle } from "../../components/admin/ProductToggle";
-import { WorkspaceStatusPill, WorkspaceTypePill } from "../../components/admin/WorkspaceStatusPill";
+import { WorkspacePlanPill, WorkspaceStatusPill, WorkspaceTypePill } from "../../components/admin/WorkspaceStatusPill";
 import { StatusPill } from "../../components/ui/StatusPill";
 import { Skeleton } from "../../components/ui/Skeleton";
 
@@ -76,6 +77,7 @@ export function AdminWorkspaceDetail() {
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <WorkspaceTypePill type={data.type} />
             <WorkspaceStatusPill status={data.status} />
+            <WorkspacePlanPill workspace={data} />
             <span className="text-[12px] text-muted">{data.slug} - created {formatDate(data.created_at)}</span>
           </div>
         </div>
@@ -95,6 +97,7 @@ export function AdminWorkspaceDetail() {
       {error ? <ErrorBanner message={error} onRetry={() => void load(true)} /> : null}
 
       <SettingsCard data={data} onSaved={() => load(true)} />
+      <PlanCard data={data} onChanged={() => load(true)} />
       <UsageCard data={data} />
       <AiProvidersCard data={data} />
       <MembersCard

@@ -6,7 +6,7 @@ import { adminApi, errorMessage, type AdminWorkspace, type WorkspaceType } from 
 import { setViewAs } from "../../utils/viewAs";
 import { AdminModal, ConfirmDialog, ErrorBanner } from "../../components/admin/AdminModal";
 import { Field, PageHeader, Pagination, SearchBox, formatDate, inputClass, useDebounced } from "../../components/admin/AdminBits";
-import { ProductPills, WorkspaceStatusPill, WorkspaceTypePill } from "../../components/admin/WorkspaceStatusPill";
+import { ProductPills, WorkspacePlanPill, WorkspaceStatusPill, WorkspaceTypePill } from "../../components/admin/WorkspaceStatusPill";
 import { SkeletonRow } from "../../components/ui/Skeleton";
 
 const LIMIT = 20;
@@ -132,7 +132,7 @@ export function AdminWorkspaces() {
                       <p className="text-[12px] text-muted">{w.slug}</p>
                     </td>
                     <td className="px-2 py-3"><WorkspaceTypePill type={w.type} /></td>
-                    <td className="px-2 py-3"><WorkspaceStatusPill status={w.status} /></td>
+                    <td className="px-2 py-3"><div className="flex flex-wrap gap-1"><WorkspaceStatusPill status={w.status} /><WorkspacePlanPill workspace={w} /></div></td>
                     <td className="px-2 py-3">
                       {w.owner ? (
                         <>
