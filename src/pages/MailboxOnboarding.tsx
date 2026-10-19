@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button, Card, Chip } from "@heroui/react";
-import { ArrowLeft, ArrowRight, Check, Minus, Plus } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Minus, Plus, Wallet } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { DomainCombobox } from "../components/mailer/DomainCombobox";
 import { LoadingState } from "../components/ui/LoadingState";
 import { domainService, mailboxService } from "../services/api";
-import type { Domain, MailboxCreateResult } from "../types";
+import type { Domain, MailboxCostQuote, MailboxCreateResult } from "../types";
 
 const STEPS = [
   { id: 1, label: "Configure mailboxes" },
@@ -25,6 +25,11 @@ export function MailboxOnboarding() {
   const [selectedDomainStatus, setSelectedDomainStatus] = useState<Domain["status"] | null>(null);
   const [localParts, setLocalParts] = useState<string[]>(["sarah.connor"]);
   const [displayName, setDisplayName] = useState("");
+
+  const [quote, setQuote] = useState<MailboxCostQuote | null>(null);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
+  const [isQuoting, setIsQuoting] = useState(false);
+  const [costAccepted, setCostAccepted] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -54,7 +59,38 @@ export function MailboxOnboarding() {
 
   const cleanedLocalParts = useMemo(() => localParts.map((part) => part.trim()).filter(Boolean), [localParts]);
   const invalidLocalParts = cleanedLocalParts.filter((part) => !LOCAL_PART_PATTERN.test(part));
-  const canSubmit = Boolean(domainName) && cleanedLocalParts.length > 0 && invalidLocalParts.length === 0;
+
+  // Re-price whenever the number of mailboxes changes; any earlier confirmation is voided so the
+  // user can only ever confirm the cost that is currently on screen.
+  useEffect(() => {
+    setCostAccepted(false);
+    if (cleanedLocalParts.length === 0) {
+      setQuote(null);
+      return;
+    }
+    let cancelled = false;
+    setIsQuoting(true);
+    setQuoteError(null);
+    const timer = setTimeout(() => {
+      mailboxService
+        .quote(cleanedLocalParts.length)
+        .then((data) => !cancelled && setQuote(data))
+        .catch((requestError) => {
+          if (cancelled) return;
+          setQuote(null);
+          setQuoteError(requestError instanceof Error ? requestError.message : "Unable to estimate the cost");
+        })
+        .finally(() => !cancelled && setIsQuoting(false));
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [cleanedLocalParts.length]);
+
+  const costNeedsConfirmation = Boolean(quote && quote.monthlyIncreaseCents > 0);
+  const costReady = Boolean(quote) && !isQuoting && (!costNeedsConfirmation || costAccepted);
+  const canSubmit = Boolean(domainName) && cleanedLocalParts.length > 0 && invalidLocalParts.length === 0 && costReady;
 
   function updateLocalPart(index: number, value: string) {
     setLocalParts((parts) => parts.map((part, i) => (i === index ? value : part)));
@@ -77,6 +113,8 @@ export function MailboxOnboarding() {
         domain: domainName,
         localParts: cleanedLocalParts,
         displayName: displayName.trim() || undefined,
+        // Server re-checks this against a fresh quote and refuses if it no longer matches.
+        acceptedMonthlyIncreaseCents: quote?.monthlyIncreaseCents ?? 0,
       });
       setResults(data);
     } catch (requestError) {
@@ -118,6 +156,11 @@ export function MailboxOnboarding() {
             selectDomain={selectDomain}
             selectedDomainStatus={selectedDomainStatus}
             setDisplayName={setDisplayName}
+            quote={quote}
+            quoteError={quoteError}
+            isQuoting={isQuoting}
+            costAccepted={costAccepted}
+            setCostAccepted={setCostAccepted}
           />
         ) : (
           <StepResults createdCount={createdCount} isSubmitting={isSubmitting} results={results} submitError={submitError} totalRequested={cleanedLocalParts.length} />
@@ -190,7 +233,17 @@ function StepConfigure({
   invalidLocalParts,
   displayName,
   setDisplayName,
+  quote,
+  quoteError,
+  isQuoting,
+  costAccepted,
+  setCostAccepted,
 }: {
+  quote: MailboxCostQuote | null;
+  quoteError: string | null;
+  isQuoting: boolean;
+  costAccepted: boolean;
+  setCostAccepted: (value: boolean) => void;
   isCheckingDomains: boolean;
   checkError: string | null;
   onRetry: () => void;
@@ -232,7 +285,7 @@ function StepConfigure({
       <div>
         <h2 className="text-[15px] font-semibold text-foreground">Configure mailboxes</h2>
         <p className="mt-0.5 text-[12px] text-muted">
-          These are SES sending identities under a verified domain — they can send outbound email today. Receiving/IMAP isn't wired up yet.
+          These are real Maildoso mailboxes under your domain. They send over SMTP and receive replies over IMAP, and start warming up automatically.
         </p>
       </div>
 
@@ -296,6 +349,69 @@ function StepConfigure({
           <p className="mt-2 text-[12px] text-danger">Invalid mailbox name(s): {invalidLocalParts.join(", ")}</p>
         ) : null}
       </div>
+
+      <CostPanel costAccepted={costAccepted} isQuoting={isQuoting} quote={quote} quoteError={quoteError} setCostAccepted={setCostAccepted} />
+    </div>
+  );
+}
+
+function formatUsd(cents: number) {
+  return `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+/** Shows what this action will cost before anything is created; extra spend needs an explicit tick. */
+function CostPanel({
+  quote,
+  quoteError,
+  isQuoting,
+  costAccepted,
+  setCostAccepted,
+}: {
+  quote: MailboxCostQuote | null;
+  quoteError: string | null;
+  isQuoting: boolean;
+  costAccepted: boolean;
+  setCostAccepted: (value: boolean) => void;
+}) {
+  if (quoteError) {
+    return <div className="rounded-xl border border-danger/20 bg-danger/10 px-4 py-3 text-[12px] text-danger">Couldn't work out the cost, so creation is blocked: {quoteError}</div>;
+  }
+  if (!quote) {
+    return <div className="rounded-xl border border-border/70 bg-surface-secondary px-4 py-3 text-[12px] text-muted">{isQuoting ? "Working out the cost…" : "Add a mailbox to see its cost."}</div>;
+  }
+
+  const extra = quote.monthlyIncreaseCents > 0;
+  return (
+    <div className={`rounded-2xl border px-4 py-4 ${extra ? "border-warning/40 bg-warning/10" : "border-success/30 bg-success/10"}`}>
+      <div className="flex items-center gap-2 text-[13px] font-semibold text-foreground">
+        <Wallet className="size-4" />
+        Cost of this action {isQuoting ? <span className="text-[11px] font-normal text-muted">updating…</span> : null}
+      </div>
+      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-[12px]">
+        <dt className="text-muted">Mailboxes being created</dt>
+        <dd className="text-right font-medium text-foreground">{quote.mailboxCount}</dd>
+        <dt className="text-muted">Prepaid Maildoso slots</dt>
+        <dd className="text-right font-medium text-foreground">{quote.slotsUsed} of {quote.slotsPaid} used</dd>
+        <dt className="text-muted">Price per mailbox</dt>
+        <dd className="text-right font-medium text-foreground">{formatUsd(quote.unitCents)} / month</dd>
+        <dt className="text-muted">Charged today</dt>
+        <dd className="text-right font-medium text-foreground">{formatUsd(quote.dueTodayCents)}</dd>
+        <dt className="font-semibold text-foreground">Added to your monthly bill</dt>
+        <dd className="text-right text-[14px] font-semibold text-foreground">{extra ? `+${formatUsd(quote.monthlyIncreaseCents)}` : formatUsd(0)}</dd>
+        {extra ? (
+          <>
+            <dt className="text-muted">New monthly total</dt>
+            <dd className="text-right font-medium text-foreground">{formatUsd(quote.newMonthlyCents)} (now {formatUsd(quote.currentMonthlyCents)})</dd>
+          </>
+        ) : null}
+      </dl>
+      <p className="mt-2 text-[12px] text-muted">{quote.summary} Billed by Maildoso{quote.renewalDate ? `, next renewal ${new Date(quote.renewalDate).toLocaleDateString()}` : ""}; this is an estimate and their invoice is the final word.</p>
+      {extra ? (
+        <label className="mt-3 flex cursor-pointer items-start gap-2 text-[12px] font-medium text-foreground">
+          <input checked={costAccepted} className="mt-0.5" onChange={(event) => setCostAccepted(event.target.checked)} type="checkbox" />
+          I understand this adds about {formatUsd(quote.monthlyIncreaseCents)} per month to our Maildoso bill.
+        </label>
+      ) : null}
     </div>
   );
 }
@@ -344,7 +460,7 @@ function StepResults({
                     <Chip color={result.status === "Created" ? "success" : "danger"} size="sm" variant="soft">{result.status}</Chip>
                   </td>
                   <td className="px-3 py-2.5 text-muted">
-                    {result.error ?? (result.record?.status === "Active" ? "Ready to send" : "Paused — domain not verified yet")}
+                    {result.error ?? (result.record?.status === "Active" ? "Ready to send" : "Being set up at Maildoso — turns active automatically in a few minutes")}
                   </td>
                 </tr>
               ))}

@@ -33,6 +33,7 @@ import type {
   InboxThreadDetail,
   InboxThreadPage,
   Mailbox,
+  MailboxCostQuote,
   MailboxCreateResult,
   MailboxInboxMessage,
   MailboxInboxPage,
@@ -177,7 +178,13 @@ function getFriendlyErrorMessage({
   if (code && SURFACED_ERROR_CODES.has(code) && message) return message;
 
   if (status === 0) return "We could not reach the server. Please check that ReplyOS is running and try again.";
-  if (status === 401 || status === 403) return "Your session does not have access to this action. Please sign in again.";
+  if (status === 401 || status === 403) {
+    // Login failures (wrong password, disabled account...) carry a specific, user-safe reason from the server.
+    // Only the auth middleware's own token/route messages mean the session itself is the problem.
+    const isSessionProblem = /no token|invalid or expired token|no access to this route/i.test(lowerMessage);
+    if (message && !isSessionProblem && !isTechnicalErrorMessage(message)) return message;
+    return "Your session does not have access to this action. Please sign in again.";
+  }
   if (status === 404) return "We could not find that record. It may have been changed or removed.";
   if (status === 409) return "This item has already been updated. Please refresh and try again.";
   if (status === 429) {
@@ -489,7 +496,15 @@ export const mailboxService = {
     return response.data;
   },
 
-  async create(payload: { domain: string; localParts: string[]; displayName?: string; dailyLimit?: number }) {
+  async quote(count: number) {
+    const response = await apiRequest<MailboxCostQuote>("/api/v1/mailboxes/quote", {
+      method: "POST",
+      body: JSON.stringify({ count }),
+    });
+    return response.data;
+  },
+
+  async create(payload: { domain: string; localParts: string[]; displayName?: string; dailyLimit?: number; acceptedMonthlyIncreaseCents?: number }) {
     const response = await apiRequest<MailboxCreateResult[]>("/api/v1/mailboxes", {
       method: "POST",
       body: JSON.stringify(payload),
