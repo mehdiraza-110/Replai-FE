@@ -1,3 +1,4 @@
+import { LimitReachedAlert } from "../components/trial/LimitReachedAlert";
 import { Button, Card, Chip, Spinner, Tabs } from "@heroui/react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -77,6 +78,7 @@ export function Dashboard() {
 
   return (
     <div className="flex w-full max-w-none flex-col gap-5">
+      <LimitReachedAlert />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Tabs
           aria-label="Dashboard view"

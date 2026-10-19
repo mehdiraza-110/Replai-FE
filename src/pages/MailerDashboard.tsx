@@ -1,3 +1,4 @@
+import { LimitReachedAlert } from "../components/trial/LimitReachedAlert";
 import { useEffect, useMemo, useState } from "react";
 import { Button, Card, Chip, Spinner } from "@heroui/react";
 import { AlertTriangle, ArrowRight, Globe, Mail, Send, ShieldCheck, Zap } from "lucide-react";
@@ -94,6 +95,7 @@ export function MailerDashboard() {
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-5">
+      <LimitReachedAlert />
       {error ? (
         <div className="flex items-center justify-between gap-3 rounded-2xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger">
           <span>{error}</span>
