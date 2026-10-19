@@ -53,6 +53,7 @@ export interface WorkflowSummary {
   description: string | null;
   is_active: boolean;
   node_count: number;
+  trigger_type: TriggerType | null;
   updated_at: string;
   last_run: RunSummary | null;
 }
