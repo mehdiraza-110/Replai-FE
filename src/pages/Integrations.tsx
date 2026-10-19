@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import type { ComponentType } from "react";
 
 import { Button, Card, Chip, Input, Modal, useOverlayState } from "@heroui/react";
-import { ArrowRight, CheckCircle2, RefreshCw, TestTube2, X } from "lucide-react";
+import { ArrowRight, CheckCircle2, Copy, Eye, EyeOff, RefreshCw, ShieldAlert, ShieldCheck, TestTube2, X } from "lucide-react";
 import { LoadingState } from "../components/ui/LoadingState";
+import { useAuth } from "../context/AuthContext";
 import { ghlService, plusVibeService } from "../services/api";
 import type { GhlConnection, PlusVibeConnection } from "../services/api";
 
@@ -154,6 +155,13 @@ export function Integrations() {
           onRefresh={refreshPlusVibe}
         />
 
+        {connection?.id ? (
+          <WebhookSecurityCard
+            connection={connection}
+            onChanged={(patch) => setConnection((current) => (current ? { ...current, ...patch } : current))}
+          />
+        ) : null}
+
         <GhlPanel
           connection={ghlConnection}
           integration={ghlIntegration}
@@ -247,7 +255,7 @@ function PlusVibePanel({
         <div className="flex flex-col justify-between gap-3 rounded-xl bg-surface-secondary p-4">
           <div>
             <p className="text-sm font-semibold text-foreground">Webhook endpoint</p>
-            <p className="mt-1 break-all text-[12px] leading-5 text-muted">{webhookEndpoint}</p>
+            <p className="mt-1 break-all text-[12px] leading-5 text-muted">{maskWebhookToken(webhookEndpoint)}</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button className="h-[34px] rounded-full px-4 text-[14px] font-semibold leading-none" size="sm" onClick={onManage}>
@@ -260,6 +268,173 @@ function PlusVibePanel({
             </Button>
           </div>
         </div>
+      </Card.Content>
+    </Card>
+  );
+}
+
+function maskWebhookToken(url: string) {
+  return url.replace(/([?&]token=)[^&]+/, "$1\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022");
+}
+
+function WebhookSecurityCard({
+  connection,
+  onChanged,
+}: {
+  connection: PlusVibeConnection;
+  onChanged: (patch: Partial<PlusVibeConnection>) => void;
+}) {
+  const { activeWorkspace } = useAuth();
+  const canManage = activeWorkspace?.role === "owner" || activeWorkspace?.role === "admin";
+  const [isRevealed, setIsRevealed] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [confirm, setConfirm] = useState<"rotate" | "enforce" | null>(null);
+  const [isWorking, setIsWorking] = useState(false);
+  const [message, setMessage] = useState<{ tone: "success" | "danger"; text: string } | null>(null);
+
+  const isEnforced = Boolean(connection.webhookSecretEnforced);
+  const hasSecret = /[?&]token=/.test(connection.webhookUrl || "");
+  const url = connection.webhookUrl || plusVibeService.getWebhookEndpoint();
+
+  async function copyUrl() {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setMessage({ tone: "danger", text: "We could not copy automatically. Reveal the URL and copy it by hand." });
+    }
+  }
+
+  async function rotate() {
+    setIsWorking(true);
+    setMessage(null);
+
+    try {
+      const result = await plusVibeService.rotateWebhookSecret();
+      onChanged({ webhookUrl: result.webhookUrl });
+      setIsRevealed(true);
+      setConfirm(null);
+      setMessage({ tone: "success", text: "New secret created. Copy the new URL into PlusVibe now; the old URL is no longer valid once protection is enforced." });
+    } catch (error) {
+      setMessage({ tone: "danger", text: error instanceof Error ? error.message : "We could not create a new secret. Please try again." });
+    } finally {
+      setIsWorking(false);
+    }
+  }
+
+  async function setEnforced(enforced: boolean) {
+    setIsWorking(true);
+    setMessage(null);
+
+    try {
+      await plusVibeService.setWebhookEnforced(enforced);
+      onChanged({ webhookSecretEnforced: enforced });
+      setConfirm(null);
+      setMessage({
+        tone: "success",
+        text: enforced ? "Protection is on. Requests without the secret are now rejected." : "Protection is off. Requests without the secret are accepted again.",
+      });
+    } catch (error) {
+      setMessage({ tone: "danger", text: error instanceof Error ? error.message : "We could not change webhook protection. Please try again." });
+    } finally {
+      setIsWorking(false);
+    }
+  }
+
+  return (
+    <Card className="apple-shadow border border-border/70 bg-surface">
+      <Card.Header className="border-b border-border/70">
+        <div className="flex w-full flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            {isEnforced ? <ShieldCheck className="size-5 text-success" /> : <ShieldAlert className="size-5 text-warning" />}
+            <div>
+              <Card.Title className="text-base">PlusVibe webhook protection</Card.Title>
+              <Card.Description className="mt-0.5">
+                A secret in the webhook URL proves a reply really came from PlusVibe.
+              </Card.Description>
+            </div>
+          </div>
+          <Chip color={isEnforced ? "success" : "warning"} size="sm" variant="soft">
+            {isEnforced ? "Enforced" : "Not enforced yet"}
+          </Chip>
+        </div>
+      </Card.Header>
+
+      <Card.Content className="space-y-4 p-5">
+        <div className="rounded-xl bg-surface-secondary p-4">
+          <p className="text-sm font-semibold text-foreground">Webhook URL for PlusVibe</p>
+          <p className="mt-1 break-all font-mono text-[12px] leading-5 text-muted">{isRevealed ? url : maskWebhookToken(url)}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button size="sm" variant="secondary" onClick={copyUrl}>
+              <Copy className="size-4" />
+              {copied ? "Copied" : "Copy URL"}
+            </Button>
+            {hasSecret ? (
+              <Button aria-pressed={isRevealed} size="sm" variant="secondary" onClick={() => setIsRevealed((current) => !current)}>
+                {isRevealed ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                {isRevealed ? "Hide secret" : "Show secret"}
+              </Button>
+            ) : null}
+          </div>
+        </div>
+
+        <p className="text-[13px] leading-5 text-muted">
+          {isEnforced
+            ? "Protection is on: PlusVibe replies are only accepted when they arrive at the URL above, secret included."
+            : "Protection is not enforced yet, so replies are still accepted without the secret. To switch it on safely, first paste the URL above into PlusVibe, then enforce it here. If you enforce before updating PlusVibe, new replies will stop arriving."}
+        </p>
+
+        {canManage ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {confirm === "rotate" ? (
+              <>
+                <span className="text-[13px] text-muted">This creates a new secret and the current URL stops working once protection is enforced. Continue?</span>
+                <Button isDisabled={isWorking} size="sm" onClick={rotate}>
+                  {isWorking ? "Working..." : "Create new secret"}
+                </Button>
+                <Button isDisabled={isWorking} size="sm" variant="secondary" onClick={() => setConfirm(null)}>
+                  Cancel
+                </Button>
+              </>
+            ) : confirm === "enforce" ? (
+              <>
+                <span className="text-[13px] text-muted">Have you already pasted the URL above into PlusVibe?</span>
+                <Button isDisabled={isWorking} size="sm" onClick={() => setEnforced(true)}>
+                  {isWorking ? "Working..." : "Yes, enforce protection"}
+                </Button>
+                <Button isDisabled={isWorking} size="sm" variant="secondary" onClick={() => setConfirm(null)}>
+                  Not yet
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button size="sm" variant="secondary" onClick={() => setConfirm("rotate")}>
+                  <RefreshCw className="size-4" />
+                  {hasSecret ? "Rotate secret" : "Create secret"}
+                </Button>
+                {isEnforced ? (
+                  <Button isDisabled={isWorking} size="sm" variant="secondary" onClick={() => setEnforced(false)}>
+                    Stop enforcing
+                  </Button>
+                ) : (
+                  <Button isDisabled={!hasSecret} size="sm" onClick={() => setConfirm("enforce")}>
+                    <ShieldCheck className="size-4" />
+                    Enforce protection
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
+        ) : (
+          <p className="text-[13px] text-muted">Only workspace owners and admins can change webhook protection.</p>
+        )}
+
+        {message ? (
+          <p className={`text-[13px] font-medium leading-5 ${message.tone === "success" ? "text-success" : "text-danger"}`} role={message.tone === "danger" ? "alert" : "status"}>
+            {message.text}
+          </p>
+        ) : null}
       </Card.Content>
     </Card>
   );
@@ -294,7 +469,7 @@ function PlusVibeModal({
     setWorkspaceId(connection?.workspaceId || "");
     setWorkspaceName(connection?.workspaceName || "");
     setWebhookEventType(connection?.webhookEventType || "ALL_EMAIL_REPLIES");
-    setWebhookUrl(connection?.webhookUrl || plusVibeService.getWebhookEndpoint());
+    setWebhookUrl((connection?.webhookUrl || plusVibeService.getWebhookEndpoint()).replace(/[?&]token=[^&]*/, ""));
     setLocalError(null);
   }, [connection, state.isOpen]);
 

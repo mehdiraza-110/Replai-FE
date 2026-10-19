@@ -449,6 +449,27 @@ export interface CampaignCreatePayload {
   humanReviewRequired: boolean;
 }
 
+export type WorkspaceType = "organization" | "individual";
+export type WorkspaceRole = "owner" | "admin" | "member";
+
+export interface WorkspaceSummary {
+  id: number;
+  name: string;
+  slug: string;
+  type: WorkspaceType;
+  status: "active" | "suspended";
+  auto_responder_enabled: boolean;
+  cold_mailer_enabled: boolean;
+  role: WorkspaceRole;
+  permissions: { auto_responder: boolean; cold_mailer: boolean };
+}
+
+export interface WorkspaceDetail extends WorkspaceSummary {
+  platform_ai_enabled: boolean;
+  viewingAs: boolean;
+  created_at: string;
+}
+
 export interface AuthUser {
   id: number;
   first_name: string | null;
@@ -464,6 +485,9 @@ export interface AuthUser {
     id: number;
     name: string;
   }>;
+  is_super_admin?: boolean;
+  workspaces?: WorkspaceSummary[];
+  active_workspace_id?: number | null;
 }
 
 export interface ProfileUpdatePayload {

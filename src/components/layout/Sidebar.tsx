@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { Check, ChevronsUpDown, ChevronUp, LogOut } from "lucide-react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { getNavForSystem, getSystem, SYSTEMS, type SystemDefinition, type NavEntry } from "../../constants/systems";
+import { adminNav, getNavForSystem, getSystem, isSystemEnabled, SYSTEMS, workspaceNav, type SystemDefinition, type NavEntry } from "../../constants/systems";
+import { WorkspaceMenu } from "./WorkspaceMenu";
 import { useActiveSystem } from "../../hooks/useActiveSystem";
 import { useRealtimeConnected } from "../../hooks/useRealtimeConnected";
 import { messageService, reviewService } from "../../services/api";
@@ -32,7 +33,7 @@ function NavItem({
         ].join(" ")
       }
       to={item.href}
-      end={item.href === "/responder" || item.href === "/mailer"}
+      end={item.href === "/responder" || item.href === "/mailer" || item.href === "/admin"}
     >
       <Icon className="size-4 shrink-0" />
       <span className="truncate">{item.label}</span>
@@ -53,8 +54,32 @@ function NavItem({
   );
 }
 
+function NavSection({
+  items,
+  label,
+  messageCount,
+  reviewCount,
+}: {
+  items: NavEntry[];
+  label: string;
+  messageCount: string | null;
+  reviewCount: string | null;
+}) {
+  return (
+    <>
+      <div className="my-4 h-px bg-border/70" />
+      <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wide text-muted">{label}</p>
+      <nav aria-label={label} className="space-y-1">
+        {items.map((item) => (
+          <NavItem item={item} key={item.href} messageCount={messageCount} reviewCount={reviewCount} />
+        ))}
+      </nav>
+    </>
+  );
+}
+
 export function Sidebar() {
-  const { logout, user } = useAuth();
+  const { activeWorkspace, isSuperAdmin, logout, user } = useAuth();
   const navigate = useNavigate();
   const isLiveConnected = useRealtimeConnected();
   const activeSystem = useActiveSystem();
@@ -70,7 +95,7 @@ export function Sidebar() {
     .join("")
     .slice(0, 2)
     .toUpperCase();
-  const roleName = user?.roles?.[0]?.name ?? "Admin";
+  const enabledSystems = SYSTEMS.filter((system) => isSystemEnabled(system.id, activeWorkspace));
 
   useEffect(() => {
     let isActive = true;
@@ -122,13 +147,14 @@ export function Sidebar() {
   return (
     <>
       <aside className="fixed inset-y-0 left-0 hidden w-[212px] flex-col border-r border-border/70 bg-[#F4F5F6] px-3 py-4 lg:flex">
-      <Link className="mb-4 flex min-w-0 items-center gap-2.5 px-1" title="All systems" to="/">
-        <div className="size-8 rounded-full bg-[radial-gradient(circle_at_30%_25%,oklch(0.94_0.07_205),oklch(0.79_0.16_254)_48%,oklch(0.78_0.17_310))]" />
-        <div className="min-w-0">
-          <p className="truncate text-[12px] font-semibold leading-4 text-foreground">{displayName}</p>
-          <p className="capitalize text-[11px] leading-3 text-muted">{roleName}</p>
-        </div>
+      <Link className="mb-3 flex min-w-0 items-center gap-2.5 px-1" title="Home" to="/">
+        <div className="size-8 shrink-0 rounded-full bg-[radial-gradient(circle_at_30%_25%,oklch(0.94_0.07_205),oklch(0.79_0.16_254)_48%,oklch(0.78_0.17_310))]" />
+        <p className="truncate text-[14px] font-semibold leading-4 text-foreground">ReplyOS</p>
       </Link>
+
+      <div className="mb-2">
+        <WorkspaceMenu />
+      </div>
 
       <div className="mb-3">
         <Dropdown>
@@ -139,14 +165,14 @@ export function Sidebar() {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[12px] font-semibold leading-4 text-foreground">{currentSystem.shortLabel}</span>
-                <span className="block truncate text-[10px] leading-3 text-muted">Current workspace</span>
+                <span className="block truncate text-[10px] leading-3 text-muted">Current system</span>
               </span>
               <ChevronsUpDown className="size-3.5 shrink-0 text-muted" />
             </div>
           </Dropdown.Trigger>
           <Dropdown.Popover className="w-[236px]" placement="bottom start">
-            <Dropdown.Menu aria-label="Switch workspace">
-              {SYSTEMS.map((system) => {
+            <Dropdown.Menu aria-label="Switch system">
+              {enabledSystems.map((system) => {
                 const Icon = system.icon;
                 const isActive = system.id === activeSystem;
 
@@ -182,6 +208,12 @@ export function Sidebar() {
             <NavItem item={item} key={item.href} messageCount={messageCount} reviewCount={reviewCount} />
           ))}
         </nav>
+
+        <NavSection label="Workspace" items={workspaceNav} messageCount={messageCount} reviewCount={reviewCount} />
+
+        {isSuperAdmin ? (
+          <NavSection label="Admin" items={adminNav} messageCount={messageCount} reviewCount={reviewCount} />
+        ) : null}
       </ScrollShadow>
 
       <div className="mt-auto min-w-0">
@@ -210,7 +242,7 @@ export function Sidebar() {
           </Dropdown.Trigger>
           <Dropdown.Popover className="w-[188px]" placement="top start">
             <Dropdown.Menu aria-label="Account menu">
-              <Dropdown.Item id="logout" className="text-danger-soft-foreground" onAction={logout}>
+              <Dropdown.Item id="logout" className="text-danger-soft-foreground" onAction={() => void logout()}>
                 <LogOut className="size-4" />
                 Log Out
               </Dropdown.Item>
