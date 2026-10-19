@@ -21,7 +21,6 @@ const LIMIT = 20;
 const PROVIDERS = [
   { value: "maildoso", label: "Maildoso" },
   { value: "postal", label: "Hetzner (Postal)" },
-  { value: "ses", label: "Amazon SES" },
 ];
 const STATUSES = ["verified", "pending", "failed"];
 

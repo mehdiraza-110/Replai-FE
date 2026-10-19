@@ -162,7 +162,7 @@ export function MailboxAnalyticsDrawer({
                         <div className="mt-3 flex flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-border/70 py-10 text-center">
                           <p className="text-[12.5px] font-medium text-foreground">No email activity yet for this mailbox</p>
                           <p className="mx-auto max-w-sm text-[11.5px] text-muted">
-                            This mailbox can send via SES today, but campaign sending, reply tracking, and a real inbox (IMAP/receiving) aren't wired up yet. Once campaigns run, a daily new-lead vs. follow-up chart will show up here.
+                            Once campaigns run from this mailbox, a daily new-lead vs. follow-up chart will show up here.
                           </p>
                         </div>
                       </div>
@@ -194,7 +194,7 @@ export function MailboxAnalyticsDrawer({
 
                       {mailbox.domainStatus !== "Verified" ? (
                         <div className="rounded-2xl border border-warning/30 bg-warning/10 px-4 py-3 text-[12px] text-warning">
-                          This mailbox is paused because its parent domain ({mailbox.domain}) isn't fully verified in SES yet. It will automatically become sendable once the domain finishes DNS/DKIM verification.
+                          This mailbox is paused because its parent domain ({mailbox.domain}) isn't fully verified yet. It will automatically become sendable once the domain finishes DNS/DKIM verification.
                         </div>
                       ) : null}
                     </div>

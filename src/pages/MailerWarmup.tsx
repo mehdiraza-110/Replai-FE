@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { Button, Card, Chip, Spinner } from "@heroui/react";
 import { CheckCircle2, Sparkles, TrendingUp, Upload, Users } from "lucide-react";
+import { ConfirmDialog } from "../components/admin/AdminModal";
 import { RampScheduleDrawer } from "../components/mailer/RampScheduleDrawer";
 import { LoadingState } from "../components/ui/LoadingState";
 import { StatusPill } from "../components/ui/StatusPill";
@@ -42,6 +43,7 @@ export function MailerWarmup() {
   const [isUploadingPool, setIsUploadingPool] = useState(false);
   const [poolUploadProgress, setPoolUploadProgress] = useState(0);
   const [poolError, setPoolError] = useState<string | null>(null);
+  const [confirmStrategy, setConfirmStrategy] = useState<WarmupStrategy | null>(null);
   const poolFileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -120,17 +122,34 @@ export function MailerWarmup() {
     load();
   }
 
+  // How many mailboxes are already on this strategy, and how many an "Assign to all" would switch (and so restart).
+  function assignCounts(strategy: WarmupStrategy) {
+    const onStrategy = strategy.assignedMailboxCount;
+    return { onStrategy, toRestart: Math.max(0, totalMailboxes - onStrategy) };
+  }
+
+  function requestAssign(strategy: WarmupStrategy) {
+    if (assignCounts(strategy).toRestart === 0) return;
+    setError(null);
+    setConfirmStrategy(strategy);
+  }
+
   async function assignExisting(strategy: WarmupStrategy) {
     setAssigningStrategyId(strategy.id);
     try {
       const result = await warmupService.assignStrategy(strategy.id, { all: true });
-      setNotice(`"${strategy.name}" assigned to ${result.assignedCount} mailbox${result.assignedCount === 1 ? "" : "es"}.`);
+      const kept = result.alreadyAssignedCount ?? 0;
+      setNotice(
+        `"${strategy.name}" assigned to ${result.assignedCount} mailbox${result.assignedCount === 1 ? "" : "es"}` +
+          (kept ? `; ${kept} already on it ${kept === 1 ? "was" : "were"} not changed.` : "."),
+      );
       window.setTimeout(() => setNotice(null), 5000);
       await load();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to assign strategy");
     } finally {
       setAssigningStrategyId(null);
+      setConfirmStrategy(null);
     }
   }
 
@@ -139,7 +158,7 @@ export function MailerWarmup() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-foreground">Warmup Engine</h2>
-          <p className="text-[12px] text-muted">Industry-observed convention, not an AWS feature — this ramp is enforced per mailbox, once daily, against real domain bounce/complaint rates.</p>
+          <p className="text-[12px] text-muted">Industry-observed convention — this ramp is enforced per mailbox, once daily, against real domain bounce/complaint rates.</p>
         </div>
         <Button onPress={() => setIsDrawerOpen(true)}>
           <TrendingUp className="size-4" />
@@ -294,16 +313,40 @@ export function MailerWarmup() {
                   </div>
                 </Card.Content>
                 <Card.Footer className="justify-between border-t border-border/70 pt-3">
-                  <span className="text-[11px] text-muted">{strategy.assignedMailboxCount} mailboxes assigned</span>
-                  <Button isDisabled={assigningStrategyId === strategy.id} onPress={() => assignExisting(strategy)} size="sm" variant="secondary">
-                    {assigningStrategyId === strategy.id ? "Assigning…" : "Assign to all"}
-                  </Button>
+                  {(() => {
+                    const { onStrategy, toRestart } = assignCounts(strategy);
+                    const allAssigned = totalMailboxes > 0 && toRestart === 0;
+                    return (
+                      <>
+                        <span className="text-[11px] text-muted">{onStrategy} mailbox{onStrategy === 1 ? "" : "es"} on this strategy</span>
+                        <Button isDisabled={assigningStrategyId === strategy.id || allAssigned || totalMailboxes === 0} onPress={() => requestAssign(strategy)} size="sm" variant="secondary">
+                          {assigningStrategyId === strategy.id ? "Assigning…" : allAssigned ? `Assigned to all ${onStrategy}` : "Assign to all"}
+                        </Button>
+                      </>
+                    );
+                  })()}
                 </Card.Footer>
               </Card>
             ))}
           </div>
         )}
       </div>
+
+      {confirmStrategy ? (() => {
+        const { onStrategy, toRestart } = assignCounts(confirmStrategy);
+        return (
+          <ConfirmDialog
+            confirmLabel="Restart warm-up"
+            description={`This restarts the warm-up ramp for ${toRestart} mailbox${toRestart === 1 ? "" : "es"} (they go back to day 1 at ${confirmStrategy.startDailyLimit}/day). ${onStrategy} mailbox${onStrategy === 1 ? "" : "es"} already on this strategy ${onStrategy === 1 ? "is" : "are"} not changed.`}
+            isBusy={assigningStrategyId === confirmStrategy.id}
+            isOpen
+            onClose={() => setConfirmStrategy(null)}
+            onConfirm={() => assignExisting(confirmStrategy)}
+            title={`Assign "${confirmStrategy.name}"?`}
+            tone="danger"
+          />
+        );
+      })() : null}
 
       <RampScheduleDrawer domains={domains} isOpen={isDrawerOpen} onApply={handleApply} onClose={() => setIsDrawerOpen(false)} totalMailboxes={totalMailboxes} />
     </div>

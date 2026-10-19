@@ -28,7 +28,7 @@ const titles: Record<string, { title: string; subtitle: string }> = {
   "/mailer/mailboxes/new": { title: "Add Mailboxes", subtitle: "Create one or more sender identities under a verified domain." },
   "/mailer/inbox": { title: "Inbox", subtitle: "Every reply across every mailbox, in one place." },
   "/mailer/warmup": { title: "Warmup", subtitle: "Ramp schedules, per-mailbox progress, and warmup strategies." },
-  "/mailer/health": { title: "Health", subtitle: "Reputation monitoring, flagged mailboxes, and AWS concentration risk mitigation." },
+  "/mailer/health": { title: "Health", subtitle: "Reputation monitoring and flagged mailboxes." },
   "/mailer/campaigns": { title: "Campaigns", subtitle: "Cold outbound campaigns and the sending pipeline." },
   "/mailer/orders": { title: "Orders", subtitle: "Request domains or mailboxes and follow their progress." },
   "/mailer/campaigns/new": { title: "New Campaign", subtitle: "Audience, message, sending mailboxes, schedule, and the pre-flight safety check." },

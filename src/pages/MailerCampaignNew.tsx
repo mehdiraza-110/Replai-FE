@@ -1275,7 +1275,7 @@ function StepReview({
   flaggedMailboxes: WizardMailbox[];
 }) {
   const checklist = [
-    { label: "Domain DNS / SES verification", pass: dnsReady, detail: dnsReady ? "All sending domains verified and configured." : "One or more sending domains aren't fully verified yet." },
+    { label: "Domain DNS verification", pass: dnsReady, detail: dnsReady ? "All sending domains verified and configured." : "One or more sending domains aren't fully verified yet." },
     { label: "Mailbox reputation", pass: mailboxesHealthy, detail: mailboxesHealthy ? "Every selected mailbox is Healthy." : `${flaggedMailboxes.length} selected mailbox(es) flagged Watch/At Risk.` },
     { label: "Daily-limit sanity check", pass: limitsSane, detail: `Combined capacity: ${dailyCapacity} emails/day across selected mailboxes.` },
     { label: "Blacklist / health flags", pass: true, detail: "No blacklist or health-engine flags on selected sending domains." },
