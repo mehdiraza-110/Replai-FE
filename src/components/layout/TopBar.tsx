@@ -53,6 +53,7 @@ const titles: Record<string, { title: string; subtitle: string }> = {
   "/ai-keys": { title: "AI Keys", subtitle: "Connect your own OpenAI, Anthropic, or Gemini key for this workspace." },
   "/admin": { title: "Admin", subtitle: "Platform-wide activity across every workspace." },
   "/admin/workspaces": { title: "Workspaces", subtitle: "Every workspace on the platform, their products, and their owners." },
+  "/admin/domains": { title: "Domains", subtitle: "Every domain on the platform, who it is assigned to, and where it can move." },
   "/admin/orders": { title: "Orders", subtitle: "Domain and mailbox requests from every workspace." },
   "/admin/users": { title: "Users", subtitle: "Everyone with an account, and the workspaces they belong to." },
   "/notifications": { title: "Notifications", subtitle: "Everything that needs your attention across ReplyOS." },

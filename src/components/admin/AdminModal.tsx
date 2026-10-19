@@ -23,7 +23,7 @@ export function AdminModal({ isOpen, onClose, title, description, children, foot
   return (
     <Modal state={state}>
       <Modal.Backdrop className="bg-foreground/30 backdrop-blur-[2px]">
-        <Modal.Container className={width <= 440 ? "w-[min(440px,calc(100vw-32px))]" : "w-[min(520px,calc(100vw-32px))]"} placement="center" scroll="inside" size="md">
+        <Modal.Container className={width <= 440 ? "w-[min(440px,calc(100vw-32px))]" : width <= 520 ? "w-[min(520px,calc(100vw-32px))]" : "w-[min(760px,calc(100vw-32px))]"} placement="center" scroll="inside" size="md">
           <Modal.Dialog className="overflow-hidden rounded-[20px] border border-border/70 bg-surface shadow-[0_8px_30px_color-mix(in_oklch,var(--foreground)_18%,transparent)]">
             <Modal.Header className="flex items-start justify-between gap-4 border-b border-border/70 px-5 py-4">
               <div className="min-w-0">

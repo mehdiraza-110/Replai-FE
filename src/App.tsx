@@ -39,6 +39,7 @@ import { AdminWorkspaces } from "./pages/admin/AdminWorkspaces";
 import { AIKeys } from "./pages/AIKeys";
 import { CreateWorkspace } from "./pages/CreateWorkspace";
 import { Orders } from "./pages/Orders";
+import { AdminDomains } from "./pages/admin/AdminDomains";
 import { AdminOrders } from "./pages/admin/AdminOrders";
 import { Team } from "./pages/Team";
 import { WorkflowEditor } from "./pages/workflows/WorkflowEditor";
@@ -117,6 +118,7 @@ export default function App() {
         <Route path="workflows" element={<Workflows />} />
         <Route path="workflows/:id" element={<WorkflowEditor />} />
         <Route path="mailer/orders" element={<Orders />} />
+        <Route path="admin/domains" element={<AdminDomains />} />
         <Route path="admin/orders" element={<AdminOrders />} />
         <Route path="team" element={<Team />} />
         <Route path="ai-keys" element={<AIKeys />} />

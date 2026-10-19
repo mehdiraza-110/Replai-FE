@@ -108,6 +108,7 @@ export const adminNav: NavEntry[] = [
   { label: "Dashboard", href: "/admin", icon: ShieldCheck },
   { label: "Workspaces", href: "/admin/workspaces", icon: Building2 },
   { label: "Users", href: "/admin/users", icon: UsersRound },
+  { label: "Domains", href: "/admin/domains", icon: Globe },
   { label: "Orders", href: "/admin/orders", icon: PackageCheck },
 ];
 
