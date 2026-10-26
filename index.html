@@ -13,6 +13,19 @@
       href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap"
       rel="stylesheet"
     />
+    <script>
+      // Set the theme before first paint so dark mode does not flash light. App routes only.
+      (function () {
+        try {
+          var p = location.pathname;
+          if (p !== "/app" && p.indexOf("/app/") !== 0) return;
+          var t = localStorage.getItem("replyos.theme");
+          if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          document.documentElement.classList.toggle("dark", t === "dark");
+          document.documentElement.setAttribute("data-theme", t);
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

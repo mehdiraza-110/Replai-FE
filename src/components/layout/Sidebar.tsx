@@ -201,7 +201,7 @@ export function Sidebar() {
       {mobileOpen ? <div aria-hidden className="fixed inset-0 z-40 bg-foreground/30 lg:hidden" onClick={() => setMobileOpen(false)} /> : null}
       <aside
         aria-label="Navigation"
-        className={`fixed inset-y-0 left-0 w-[212px] flex-col border-r border-border/70 bg-[#F4F5F6] px-3 py-4 lg:z-auto lg:flex ${mobileOpen ? "z-50 flex shadow-2xl" : "hidden"}`}
+        className={`fixed inset-y-0 left-0 w-[212px] flex-col border-r border-border/70 bg-background px-3 py-4 lg:z-auto lg:flex ${mobileOpen ? "z-50 flex shadow-2xl" : "hidden"}`}
       >
       <Link className="mb-3 flex min-w-0 items-center gap-2.5 px-1" title="Home" to="/">
         <div className="size-8 shrink-0 rounded-full bg-[radial-gradient(circle_at_30%_25%,oklch(0.94_0.07_205),oklch(0.79_0.16_254)_48%,oklch(0.78_0.17_310))]" />
@@ -284,7 +284,7 @@ export function Sidebar() {
                 {isLiveConnected ? (
                   <span
                     aria-label="Live updates connected"
-                    className="absolute -right-0.5 -bottom-0.5 size-[10px] rounded-full bg-success ring-2 ring-[#F4F5F6]"
+                    className="absolute -right-0.5 -bottom-0.5 size-[10px] rounded-full bg-success ring-2 ring-background"
                     title="Live updates connected"
                   />
                 ) : null}

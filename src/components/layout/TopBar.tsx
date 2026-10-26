@@ -4,6 +4,7 @@ import { Bell, Menu, Sidebar as SidebarIcon } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { TrialChip } from "../trial/TrialChip";
 import { WorkspaceMenu } from "./WorkspaceMenu";
+import { ThemeToggle } from "./ThemeToggle";
 import { OPEN_NAV_EVENT } from "./Sidebar";
 import { LoadingState } from "../ui/LoadingState";
 import { StatusPill } from "../ui/StatusPill";
@@ -157,6 +158,7 @@ export function TopBar() {
           <div className="min-w-0 lg:hidden">
             <WorkspaceMenu compact />
           </div>
+          <ThemeToggle />
           <Dropdown onOpenChange={handleOpenChange}>
             <Dropdown.Trigger aria-label="Notifications" className="relative grid size-[34px] min-w-[34px] place-items-center rounded-full bg-surface-secondary text-foreground transition hover:bg-surface-tertiary">
               <Bell className="size-[17px]" strokeWidth={2} />

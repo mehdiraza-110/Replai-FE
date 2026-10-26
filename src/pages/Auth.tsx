@@ -87,7 +87,7 @@ export function Auth() {
   }
 
   return (
-    <main className="auth-screen min-h-screen bg-[#F2F3F5] px-4 py-6 text-foreground">
+    <main className="auth-screen min-h-screen bg-background px-4 py-6 text-foreground">
       <section className="auth-panel mx-auto flex w-full max-w-[334px] flex-col items-center border border-border/70 bg-surface px-5 pb-5 pt-7">
         <button
           className="absolute right-3 top-3 grid size-7 place-items-center rounded-full text-muted transition hover:bg-surface-secondary hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
@@ -98,12 +98,12 @@ export function Auth() {
           <X className="size-5" strokeWidth={2.2} />
         </button>
 
-        <div className="mb-3 grid size-10 place-items-center rounded-full bg-[#F0F1F3] text-foreground">
+        <div className="mb-3 grid size-10 place-items-center rounded-full bg-surface-secondary text-foreground">
           <UserRound className="size-5" strokeWidth={1.9} />
         </div>
 
-        <h1 className="text-center text-[15px] font-semibold leading-5 tracking-normal text-[#111318]">{copy.title}</h1>
-        <p className="mt-4 max-w-[240px] text-center text-[15px] leading-5 text-[#5D6675]">{copy.subtitle}</p>
+        <h1 className="text-center text-[15px] font-semibold leading-5 tracking-normal text-foreground">{copy.title}</h1>
+        <p className="mt-4 max-w-[240px] text-center text-[15px] leading-5 text-muted">{copy.subtitle}</p>
 
         <form className="mt-4 flex w-full flex-col gap-2.5" onSubmit={handleSubmit}>
           {mode === "signup" ? (
@@ -120,7 +120,7 @@ export function Auth() {
           ) : null}
 
           <label className={hasError ? "auth-field auth-field--error" : "auth-field"}>
-            <Mail className={hasError ? "size-4 text-[#D92D20]" : "size-4 text-muted"} />
+            <Mail className={hasError ? "size-4 text-danger" : "size-4 text-muted"} />
             <input
               autoComplete="email"
               placeholder="Email"
@@ -132,7 +132,7 @@ export function Auth() {
           </label>
 
           <label className={hasError ? "auth-field auth-field--error" : "auth-field"}>
-            <LockKeyhole className={hasError ? "size-4 text-[#D92D20]" : "size-4 text-muted"} />
+            <LockKeyhole className={hasError ? "size-4 text-danger" : "size-4 text-muted"} />
             <input
               autoComplete={mode === "login" ? "current-password" : "new-password"}
               minLength={6}
@@ -156,7 +156,7 @@ export function Auth() {
           {mode === "login" ? (
             <div className="-mt-1 flex justify-end">
               <Link
-                className="text-[13px] font-semibold text-[#0A66CC] transition hover:text-[#004A99] focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                className="text-[13px] font-semibold text-accent transition hover:underline focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                 to="/forgot-password"
               >
                 Forgot password?
@@ -165,7 +165,7 @@ export function Auth() {
           ) : null}
 
           {notice && !error ? (
-            <p className="rounded-xl bg-[#FFF6E5] px-3 py-2 text-[13px] leading-5 text-[#8A5A00]" role="status">
+            <p className="rounded-xl bg-[#FFF6E5] dark:bg-warning/15 px-3 py-2 text-[13px] leading-5 text-[#8A5A00] dark:text-warning" role="status">
               {notice}
             </p>
           ) : null}
@@ -185,10 +185,10 @@ export function Auth() {
           </Button>
         </form>
 
-        <p className="mt-4 text-center text-[13px] leading-5 text-[#5D6675]">
+        <p className="mt-4 text-center text-[13px] leading-5 text-muted">
           {copy.toggleLead}{" "}
           <button
-            className="font-semibold text-[#0A66CC] transition hover:text-[#004A99] focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className="font-semibold text-accent transition hover:underline focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             type="button"
             onClick={switchMode}
           >
