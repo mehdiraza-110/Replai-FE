@@ -5,7 +5,7 @@ import { mailboxService } from "../../services/api";
 import type { Mailbox, MailboxInboxMessage } from "../../types";
 
 /**
- * App-native inbox for a single mailbox (SES receiving, not a real IMAP/SMTP mailbox —
+ * App-native inbox for a single mailbox (not a real IMAP/SMTP mailbox —
  * see PlusVibe-Plan.md 1B). Shows every outbound send and inbound reply for that address.
  */
 export function MailboxInboxDrawer({ mailbox, onClose }: { mailbox: Mailbox | null; onClose: () => void }) {

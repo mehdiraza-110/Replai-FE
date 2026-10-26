@@ -37,7 +37,6 @@ interface WizardDomain {
   id: number;
   domain: string;
   status: string;
-  configurationSetName: string | null;
   mailboxes: WizardMailbox[];
 }
 
@@ -131,7 +130,6 @@ export function MailerCampaignNew() {
             id: domain.id,
             domain: domain.domain,
             status: domain.status,
-            configurationSetName: domain.configurationSetName,
             mailboxes: mailboxesByDomainId.get(domain.id) ?? [],
           }))
         );
@@ -274,7 +272,7 @@ export function MailerCampaignNew() {
   const limitOverrideValue = Number(dailyLimitOverride);
   const limitExceedsCapacity = dailyLimitOverride !== "" && !Number.isNaN(limitOverrideValue) && limitOverrideValue > dailyCapacity;
 
-  const dnsReady = selectedDomains.length > 0 && selectedDomains.every((domain) => domain.status === "Verified" && domain.configurationSetName != null);
+  const dnsReady = selectedDomains.length > 0 && selectedDomains.every((domain) => domain.status === "Verified");
   const flaggedMailboxes = selectedMailboxes.filter((mailbox) => mailbox.reputationStatus !== "Healthy");
   const mailboxesHealthy = selectedMailboxes.length > 0 && flaggedMailboxes.length === 0;
   const limitsSane = selectedMailboxes.length > 0 && !limitExceedsCapacity;

@@ -20,11 +20,9 @@ import type {
   CampaignPage,
   ChangePasswordPayload,
   Domain,
-  DomainOnboardResult,
   DomainPage,
   EventLogPage,
   ForwardedLeadPage,
-  HostedZone,
   HumanReviewPage,
   KnowledgeItem,
   KnowledgePage,
@@ -46,8 +44,6 @@ import type {
   PlusVibeCampaign,
   ProfileUpdatePayload,
   ReputationTrendPoint,
-  SesAccountRequest,
-  SesAccountStatus,
   WarmupSafetyTier,
   WarmupPoolAddResult,
   WarmupPoolStats,
@@ -506,27 +502,6 @@ export const domainService = {
     return response.data;
   },
 
-  async listHostedZones() {
-    const response = await apiRequest<HostedZone[]>("/api/v1/domains/hosted-zones");
-    return response.data;
-  },
-
-  async onboard(domains: string[]) {
-    const response = await apiRequest<DomainOnboardResult[]>("/api/v1/domains/onboard", {
-      method: "POST",
-      body: JSON.stringify({ domains }),
-    });
-    return response.data;
-  },
-
-  async onboardExternal(domain: string) {
-    const response = await apiRequest<DomainOnboardResult>("/api/v1/domains/onboard-external", {
-      method: "POST",
-      body: JSON.stringify({ domain }),
-    });
-    return response.data;
-  },
-
   async refreshAll() {
     const response = await apiRequest<Domain[]>("/api/v1/domains/refresh", { method: "POST" });
     return response.data;
@@ -535,24 +510,6 @@ export const domainService = {
   async refreshOne(domain: string) {
     const response = await apiRequest<Domain>(`/api/v1/domains/${encodeURIComponent(domain)}/refresh`, {
       method: "POST",
-    });
-    return response.data;
-  },
-
-  async getAccountStatus() {
-    const response = await apiRequest<SesAccountStatus>("/api/v1/domains/account-status");
-    return response.data;
-  },
-
-  async requestProductionAccess(payload: {
-    mailType: "MARKETING" | "TRANSACTIONAL";
-    websiteUrl: string;
-    useCaseDescription?: string;
-    additionalContactEmailAddresses?: string[];
-  }) {
-    const response = await apiRequest<SesAccountRequest>("/api/v1/domains/account-status/request", {
-      method: "POST",
-      body: JSON.stringify(payload),
     });
     return response.data;
   },

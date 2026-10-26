@@ -23,7 +23,6 @@ export const mailerDomains: MailerDomain[] = [
     dmarcStatus: "Verified",
     mxStatus: "Verified",
     status: "Active",
-    configurationSetStatus: "Configured",
     mailboxes: [
       {
         id: 1, email: "sarah.connor@askkinvestowl.com", status: "Active", warmupStage: "Ramping", warmupEnabled: true,

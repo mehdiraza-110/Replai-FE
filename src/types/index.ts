@@ -30,7 +30,6 @@ export interface MailerDomain {
   dmarcStatus: "Verified" | "Pending" | "Failed";
   mxStatus: "Verified" | "Pending" | "Failed";
   status: "Active" | "Provisioning" | "Suspended";
-  configurationSetStatus: "Configured" | "Pending";
   mailboxes: MailerMailbox[];
 }
 
@@ -41,22 +40,16 @@ export interface Domain {
   domain: string;
   registrar: string;
   dnsProvider: string;
-  hostedZoneId: string | null;
-  awsRegion: string;
-  mailFromSubdomain: string | null;
   spfStatus: DnsCheckStatus;
   dkimStatus: DnsCheckStatus;
   dmarcStatus: DnsCheckStatus;
   mxStatus: DnsCheckStatus;
-  mailFromStatus: DnsCheckStatus;
   provider: string;
   status: "Provisioning" | "Pending Verification" | "Verified" | "Failed";
   reputation: string;
   lastCheckedAt: string | null;
   lastError: string | null;
-  dkimTokens: string[];
   mailboxCount: number | null;
-  configurationSetName: string | null;
   emailsSent14d: number | null;
   emailsDelivered14d: number | null;
   emailsBounced14d: number | null;
@@ -83,49 +76,6 @@ export interface DomainPage {
   total: number;
   totalPages: number;
   statusCounts: DomainStatusCounts;
-}
-
-export interface HostedZone {
-  domain: string;
-  hostedZoneId: string;
-}
-
-export interface DnsRecordInstruction {
-  purpose: string;
-  type: string;
-  host: string;
-  value: string;
-}
-
-export interface DomainOnboardResult {
-  domain: string;
-  status: string;
-  record?: Domain;
-  error?: string;
-  dnsRecords?: DnsRecordInstruction[];
-}
-
-export interface SesAccountRequest {
-  id: number;
-  awsRegion: string;
-  mailType: "MARKETING" | "TRANSACTIONAL";
-  websiteUrl: string;
-  useCaseDescription: string | null;
-  additionalContactEmails: string[];
-  status: string;
-  errorMessage: string | null;
-  requestedAt: string;
-}
-
-export interface SesAccountStatus {
-  awsRegion: string;
-  sendingEnabled: boolean | null;
-  productionAccessEnabled: boolean;
-  enforcementStatus: string | null;
-  max24HourSend: number | null;
-  maxSendRate: number | null;
-  sentLast24Hours: number | null;
-  latestRequest: SesAccountRequest | null;
 }
 
 export type MailboxStatus = "Active" | "Paused" | "Error";
@@ -210,7 +160,7 @@ export interface MailboxCreateResult {
   error?: string;
 }
 
-// The app-native per-mailbox inbox (SES receiving, not a real IMAP/SMTP mailbox) —
+// The app-native per-mailbox inbox (not a real IMAP/SMTP mailbox) —
 // see PlusVibe-Plan.md 1B and the `messages` table.
 export interface MailboxInboxMessage {
   id: number;
