@@ -1,16 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { Button, Chip, Dropdown, Modal, Spinner, Tooltip, useOverlayState } from "@heroui/react";
+import { Button, Chip, Modal, Spinner, Tooltip, useOverlayState } from "@heroui/react";
 import {
   AlertTriangle,
   ArrowUpDown,
   BarChart2,
-  Check,
   CheckCircle2,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Globe,
-  Hash,
   ListFilter,
   Plus,
   RefreshCw,
@@ -23,9 +20,10 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { SyncMaildosoButton } from "../components/mailer/SyncMaildosoButton";
 import { DomainAnalyticsDrawer } from "../components/mailer/DomainAnalyticsDrawer";
+import { FilterMenu } from "../components/mailer/FilterMenu";
 import { SkeletonRow } from "../components/ui/Skeleton";
 import { domainService } from "../services/api";
-import type { Domain, DnsCheckStatus, DomainStatusCounts, SesAccountStatus } from "../types";
+import type { Domain, DnsCheckStatus, DomainStatusCounts } from "../types";
 
 const PAGE_SIZE = 10;
 const FETCH_ALL_LIMIT = 100;
@@ -115,8 +113,6 @@ export function Mailer() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  // SES is no longer used for sending, so there is no account status to show.
-  const accountStatus: SesAccountStatus | null = null;
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -237,7 +233,7 @@ export function Mailer() {
   const selectedDomain = [...domains, ...allDomains].find((domain) => domain.id === analyticsDomainId) ?? null;
 
   // Auto-recheck whenever the drawer opens on a domain, but only if its data is stale —
-  // avoids re-hitting SES/CloudWatch every time the same domain's drawer is reopened.
+  // avoids re-checking the provider every time the same domain's drawer is reopened.
   useEffect(() => {
     if (!selectedDomain) return;
     const lastChecked = selectedDomain.reputationCheckedAt ?? selectedDomain.lastCheckedAt;
@@ -369,7 +365,7 @@ export function Mailer() {
                   <tr className="border-b border-border/60 last:border-0" key={domain.id}>
                     <td className="px-4 py-4 align-top">
                       <p className="max-w-[240px] truncate font-semibold text-foreground">{domain.domain}</p>
-                      <p className="text-[11px] text-muted">{domain.provider} · {domain.awsRegion}</p>
+                      <p className="text-[11px] text-muted">{domain.provider}</p>
                     </td>
                     <td className="px-2 py-4 align-top">
                       <DomainStatusChip status={domain.status} />
@@ -385,7 +381,6 @@ export function Mailer() {
                     <td className="px-2 py-4 align-top">
                       <div className="flex items-center gap-3 text-[12px] text-foreground">
                         <MetricIcon icon={Users} label={`${domain.mailboxCount ?? 0} mailbox${(domain.mailboxCount ?? 0) === 1 ? "" : "es"} on this domain`} value={`${domain.mailboxCount ?? 0} mailbox${(domain.mailboxCount ?? 0) === 1 ? "" : "es"}`} />
-                        <MetricIcon icon={Hash} label={`${domain.dkimTokens.length} DKIM CNAME records`} value={`${domain.dkimTokens.length} DKIM`} />
                       </div>
                     </td>
                     <td className="px-2 py-4 align-top">
@@ -465,7 +460,6 @@ export function Mailer() {
       </div>
 
       <DomainAnalyticsDrawer
-        accountStatus={accountStatus}
         domain={selectedDomain}
         isRefreshing={refreshingDomain === selectedDomain?.domain}
         onClose={() => setAnalyticsDomainId(null)}
@@ -489,62 +483,6 @@ function mergeDomains(current: Domain[], updates: Domain[]) {
     if ("domain" in update && update.domain) byDomain.set(update.domain, { ...byDomain.get(update.domain), ...update } as Domain);
   }
   return Array.from(byDomain.values());
-}
-
-interface FilterOption {
-  value: string;
-  label: string;
-}
-
-const ANY_KEY = "__any";
-
-/** Pill-style dropdown: shows "Label · current choice", tinted with the accent while a filter is set. */
-function FilterMenu({
-  icon: Icon,
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  icon?: React.ComponentType<{ className?: string }>;
-  label: string;
-  value: string;
-  options: FilterOption[];
-  onChange: (value: string) => void;
-}) {
-  const current = options.find((option) => option.value === value) ?? options[0];
-  const isSet = value !== "" && value !== "default";
-
-  return (
-    <Dropdown>
-      <Dropdown.Trigger
-        aria-label={`${label}: ${current.label}`}
-        className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[12px] font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-accent ${
-          isSet
-            ? "border-accent/40 bg-accent/10 text-accent"
-            : "border-border bg-surface text-foreground hover:bg-surface-secondary"
-        }`}
-      >
-        {Icon ? <Icon className="size-3.5 shrink-0" /> : null}
-        <span className={isSet ? "text-accent/80" : "text-muted"}>{label}</span>
-        {isSet ? <span className="max-w-[160px] truncate font-semibold">{current.label}</span> : null}
-        <ChevronDown className="size-3.5 shrink-0 opacity-70" />
-      </Dropdown.Trigger>
-      <Dropdown.Popover className="min-w-[200px]" placement="bottom start">
-        <Dropdown.Menu aria-label={label} onAction={(key) => onChange(key === ANY_KEY ? "" : String(key))}>
-          {options.map((option) => {
-            const selected = option.value === current.value;
-            return (
-              <Dropdown.Item id={option.value === "" ? ANY_KEY : option.value} key={option.value || ANY_KEY}>
-                <span className={`flex-1 text-[13px] ${selected ? "font-semibold text-foreground" : "text-foreground"}`}>{option.label}</span>
-                {selected ? <Check className="size-4 shrink-0 text-accent" /> : null}
-              </Dropdown.Item>
-            );
-          })}
-        </Dropdown.Menu>
-      </Dropdown.Popover>
-    </Dropdown>
-  );
 }
 
 function SummaryCard({
