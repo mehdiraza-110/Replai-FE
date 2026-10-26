@@ -31,6 +31,8 @@ const titles: Record<string, { title: string; subtitle: string }> = {
   "/mailer/warmup": { title: "Warmup", subtitle: "Ramp schedules, per-mailbox progress, and warmup strategies." },
   "/mailer/health": { title: "Health", subtitle: "Reputation monitoring and flagged mailboxes." },
   "/mailer/campaigns": { title: "Campaigns", subtitle: "Cold outbound campaigns and the sending pipeline." },
+  "/mailer/reports": { title: "Reports", subtitle: "Campaign, mailbox, domain and sending reports, with filters and exports." },
+  "/responder/reports": { title: "Reports", subtitle: "Reply, agent, review and lead reports, with filters and exports." },
   "/mailer/orders": { title: "Orders", subtitle: "Request domains or mailboxes and follow their progress." },
   "/mailer/campaigns/new": { title: "New Campaign", subtitle: "Audience, message, sending mailboxes, schedule, and the pre-flight safety check." },
   "/responder": { title: "AI Auto Responder", subtitle: "Reply automation loop, agent performance, and review queue." },

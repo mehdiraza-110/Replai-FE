@@ -9,6 +9,7 @@ import {
   Workflow,
   Cable,
   ClipboardCheck,
+  FileBarChart,
   Flame,
   FolderKanban,
   Globe,
@@ -72,6 +73,7 @@ export const mailerPrimaryNav: NavEntry[] = [
   { label: "Warmup", href: "/mailer/warmup", icon: Flame },
   { label: "Health", href: "/mailer/health", icon: HeartPulse },
   { label: "Campaigns", href: "/mailer/campaigns", icon: Send },
+  { label: "Reports", href: "/mailer/reports", icon: FileBarChart },
 ];
 
 export const mailerSecondaryNav: NavEntry[] = [
@@ -88,6 +90,7 @@ export const responderPrimaryNav: NavEntry[] = [
   { label: "Campaigns", href: "/campaigns", icon: FolderKanban },
   { label: "Knowledge Base", href: "/knowledge", icon: Boxes },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
+  { label: "Reports", href: "/responder/reports", icon: FileBarChart },
 ];
 
 export const responderSecondaryNav: NavEntry[] = [

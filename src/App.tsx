@@ -27,6 +27,8 @@ import { MailerCampaigns } from "./pages/MailerCampaigns";
 import { MailerDashboard } from "./pages/MailerDashboard";
 import { MailerHealth } from "./pages/MailerHealth";
 import { MailerWarmup } from "./pages/MailerWarmup";
+import { MailerReports } from "./pages/MailerReports";
+import { ResponderReports } from "./pages/ResponderReports";
 import { Messages } from "./pages/Messages";
 import { Notifications } from "./pages/Notifications";
 import { Overview } from "./pages/Overview";
@@ -155,6 +157,8 @@ export default function App() {
         <Route path="mailer/health" element={<MailerHealth />} />
         <Route path="mailer/campaigns" element={<MailerCampaigns />} />
         <Route path="mailer/campaigns/new" element={<MailerCampaignNew />} />
+        <Route path="mailer/reports" element={<MailerReports />} />
+        <Route path="responder/reports" element={<ResponderReports />} />
         <Route path="knowledge" element={<KnowledgeBase />} />
         <Route path="knowledge/new" element={<KnowledgeForm />} />
         <Route path="training" element={<Navigate replace to="/" />} />
