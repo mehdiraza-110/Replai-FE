@@ -107,7 +107,7 @@ export const NODE_DEFS: NodeDef[] = [
     group: "Actions",
     icon: BellRing,
     tone: "bg-warning/12 text-warning",
-    defaults: () => ({ to: [], notifyOwners: true, includeReply: true, subject: "New reply from {{lead_email}}", message: "{{lead_name}} ({{lead_email}}) replied to {{campaign}}.\n\nOpen ReplyOS to review: {{review_link}}" }),
+    defaults: () => ({ to: [], notifyOwners: true, includeReply: true, subject: "New reply from {{lead_email}}", message: "{{lead_name}} ({{lead_email}}) replied to {{campaign}}.\n\nOpen SendVybe to review: {{review_link}}" }),
   },
   {
     type: "action.offer_times",

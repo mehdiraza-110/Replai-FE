@@ -15,7 +15,7 @@ import { notificationService } from "../../services/api";
 import { formatRelativeTime } from "../../utils/formatRelativeTime";
 import type { NotificationItem } from "../../types";
 
-const LAST_SEEN_STORAGE_KEY = "replyos.notifications.lastSeenAt";
+const LAST_SEEN_STORAGE_KEY = "sendvybe.notifications.lastSeenAt";
 // Live socket events keep this fresh instantly; the poll is just a fallback
 // in case a socket reconnect is ever missed.
 const POLL_INTERVAL_MS = 120_000;
@@ -59,7 +59,7 @@ const titles: Record<string, { title: string; subtitle: string }> = {
   "/admin/domains": { title: "Domains", subtitle: "Every domain on the platform, who it is assigned to, and where it can move." },
   "/admin/orders": { title: "Orders", subtitle: "Domain and mailbox requests from every workspace." },
   "/admin/users": { title: "Users", subtitle: "Everyone with an account, and the workspaces they belong to." },
-  "/notifications": { title: "Notifications", subtitle: "Everything that needs your attention across ReplyOS." },
+  "/notifications": { title: "Notifications", subtitle: "Everything that needs your attention across SendVybe." },
 };
 
 function readLastSeenAt() {

@@ -102,7 +102,7 @@ export function Sidebar() {
   const [orderCount, setOrderCount] = useState<string | null>(null);
   const [switchingTo, setSwitchingTo] = useState<SystemDefinition | null>(null);
   const switchTimeoutRef = useRef<number | null>(null);
-  const displayName = [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.email || "ReplyOS user";
+  const displayName = [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.email || "SendVybe user";
   const initials = displayName
     .split(/\s+/)
     .map((part) => part[0])
@@ -205,7 +205,7 @@ export function Sidebar() {
       >
       <Link className="mb-3 flex min-w-0 items-center gap-2.5 px-1" title="Home" to="/">
         <div className="size-8 shrink-0 rounded-full bg-[radial-gradient(circle_at_30%_25%,oklch(0.94_0.07_205),oklch(0.79_0.16_254)_48%,oklch(0.78_0.17_310))]" />
-        <p className="truncate text-[14px] font-semibold leading-4 text-foreground">ReplyOS</p>
+        <p className="truncate text-[14px] font-semibold leading-4 text-foreground">SendVybe</p>
       </Link>
 
       <div className="mb-2">

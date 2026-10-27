@@ -3,8 +3,8 @@ import { useCallback, useSyncExternalStore } from "react";
 export type Theme = "light" | "dark";
 export type ThemePreference = Theme | "system";
 
-const STORAGE_KEY = "replyos.theme";
-const CHANGE_EVENT = "replyos:theme-change";
+const STORAGE_KEY = "sendvybe.theme";
+const CHANGE_EVENT = "sendvybe:theme-change";
 const TRANSITION_CLASS = "theme-transition";
 const TRANSITION_MS = 350;
 

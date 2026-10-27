@@ -119,7 +119,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}) {
       headers,
     });
   } catch {
-    throw new ApiRequestError("We could not reach the server. Please check that ReplyOS is running and try again.", 0);
+    throw new ApiRequestError("We could not reach the server. Please check that SendVybe is running and try again.", 0);
   }
 
   const payload = (await response.json().catch(() => null)) as ApiResponse<T> | null;
@@ -179,7 +179,7 @@ function uploadWithProgress<T>(path: string, file: File, fieldName: string, onPr
     };
 
     xhr.onerror = () => {
-      reject(new ApiRequestError("We could not reach the server. Please check that ReplyOS is running and try again.", 0));
+      reject(new ApiRequestError("We could not reach the server. Please check that SendVybe is running and try again.", 0));
     };
 
     xhr.send(formData);
@@ -209,7 +209,7 @@ function getFriendlyErrorMessage({
   // An intentional upstream failure that carries its own code and a clear message (e.g. an AI provider that can't be reached).
   if ((status === 502 || status === 503 || status === 504) && code && message && !isTechnicalErrorMessage(message)) return message;
 
-  if (status === 0) return "We could not reach the server. Please check that ReplyOS is running and try again.";
+  if (status === 0) return "We could not reach the server. Please check that SendVybe is running and try again.";
   if (status === 401 || status === 403) {
     // Login failures (wrong password, disabled account...) carry a specific, user-safe reason from the server.
     // Only the auth middleware's own token/route messages mean the session itself is the problem.

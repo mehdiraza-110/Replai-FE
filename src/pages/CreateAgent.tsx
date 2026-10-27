@@ -115,7 +115,7 @@ const initialForm: AgentForm = {
 const automationModeExplainers: Record<string, { title: string; body: string }> = {
   Manual: {
     title: "Manual mode",
-    body: "ReplyOS stores interested PlusVibe replies and keeps the conversation ready for a human-written response. The AI will not draft or send replies in this mode.",
+    body: "SendVybe stores interested PlusVibe replies and keeps the conversation ready for a human-written response. The AI will not draft or send replies in this mode.",
   },
   "AI Draft": {
     title: "AI draft mode",
@@ -133,7 +133,7 @@ const automationModeExplainers: Record<string, { title: string; body: string }> 
 
 function getConfidenceGateCopy(form: AgentForm) {
   if (form.automationMode === "AI Auto-Reply") {
-    return `The gate is the minimum AI confidence required before ReplyOS can send automatically. At ${form.confidenceThreshold || "0"}%, only drafts scored at or above that level are eligible to auto-send.`;
+    return `The gate is the minimum AI confidence required before SendVybe can send automatically. At ${form.confidenceThreshold || "0"}%, only drafts scored at or above that level are eligible to auto-send.`;
   }
 
   if (form.automationMode === "AI + Approval") {
