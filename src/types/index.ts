@@ -396,6 +396,9 @@ export interface ParsedLead {
   company: string | null;
   role: string | null;
   phone: string | null;
+  website?: string | null;
+  linkedinUrl?: string | null;
+  location?: string | null;
   raw: Record<string, unknown>;
 }
 
@@ -436,7 +439,11 @@ export interface CampaignCreatePayload {
   objective?: string;
   subject: string;
   body: string;
-  leads: ParsedLead[];
+  leads?: ParsedLead[];
+  /** Leads picked from the lead library: whole lists and/or individual leads (explicit ids or "everything matching this filter"). */
+  leadSource?: { listIds?: number[]; contacts?: LeadSelection | null };
+  /** File the uploaded leads into the library as part of creating the campaign. */
+  saveToLibrary?: { listId?: number; newListName?: string } | null;
   followUps: CampaignFollowUpPayload[];
   mailboxMode: "all" | "specific";
   mailboxIds?: number[];
@@ -1008,4 +1015,93 @@ export interface MaildosoSyncSummary {
   mailboxesUpdated: number;
   skipped: Array<{ email: string; reason: string }>;
   warmupAssigned?: number;
+}
+
+// ---- Cold Mailer lead library -------------------------------------------------------------------------------------
+
+export interface LeadList {
+  id: number;
+  name: string;
+  description: string | null;
+  contactCount: number;
+  createdAt: string;
+  updatedAt: string;
+  lastAddedAt: string | null;
+}
+
+export interface LibraryLead {
+  id: number;
+  listId: number;
+  listName: string;
+  email: string;
+  fullName: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  company: string | null;
+  role: string | null;
+  phone: string | null;
+  location: string | null;
+  website: string | null;
+  linkedinUrl: string | null;
+  raw: Record<string, unknown>;
+  status: "Active" | "Suppressed";
+  suppressionReason: string | null;
+  campaignCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LibraryLeadDetail extends LibraryLead {
+  campaigns: { id: number; name: string; campaignStatus: string; leadStatus: string; sentAt: string | null }[];
+  lists: { id: number; name: string }[];
+}
+
+export interface Paged<T> {
+  items: T[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export type LeadStatusFilter = "" | "active" | "suppressed";
+export type LeadSort = "newest" | "oldest" | "email" | "name" | "company";
+
+export interface LeadFilter {
+  search?: string;
+  listId?: number | null;
+  status?: LeadStatusFilter;
+}
+
+/** Either explicit lead ids, or "all leads matching `filter`" minus `excludeIds` (so selecting every result never sends every id). */
+export interface LeadSelection {
+  ids?: number[];
+  filter?: LeadFilter;
+  excludeIds?: number[];
+}
+
+export interface LeadLibraryStats {
+  totalLists: number;
+  totalLeads: number;
+  uniqueEmails: number;
+  addedLast7Days: number;
+  suppressed: number;
+}
+
+export interface LeadImportResult {
+  list: { id: number; name: string };
+  totalRows: number;
+  added: number;
+  alreadyInList: number;
+  invalid: number;
+  duplicatesInFile: number;
+  headers: string[];
+  fieldMap: Record<string, string>;
+}
+
+export interface LeadSelectionSummary {
+  leads: number;
+  uniqueEmails: number;
+  suppressed: number;
+  sendable: number;
 }

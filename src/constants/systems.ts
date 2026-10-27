@@ -9,6 +9,7 @@ import {
   Workflow,
   Cable,
   ClipboardCheck,
+  Contact,
   Flame,
   FolderKanban,
   Globe,
@@ -71,6 +72,7 @@ export const mailerPrimaryNav: NavEntry[] = [
   { label: "Inbox", href: "/mailer/inbox", icon: MessageSquareText },
   { label: "Warmup", href: "/mailer/warmup", icon: Flame },
   { label: "Health", href: "/mailer/health", icon: HeartPulse },
+  { label: "Leads", href: "/mailer/leads", icon: Contact },
   { label: "Campaigns", href: "/mailer/campaigns", icon: Send },
 ];
 
