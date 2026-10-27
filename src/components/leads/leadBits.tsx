@@ -10,6 +10,14 @@ export const toolbarFieldClass = `${fieldBase} h-9 w-full text-[13px]`;
 export const toolbarSelectClass = `${fieldBase} h-9 text-[13px]`;
 export const compactFieldClass = `${fieldBase} h-8 w-full text-[12.5px]`;
 
+/** Largest lead file the server accepts, in MB. Keep in step with the limits in Replai-BE (campaign.routes.js, lead-library.routes.js). */
+export const LEAD_IMPORT_MAX_MB = 50;
+export const CAMPAIGN_LEAD_FILE_MAX_MB = 25;
+
+export function formatFileSize(bytes: number) {
+  return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
 const SAMPLE_CSV = [
   "Email,First Name,Last Name,Company,Job Title,Phone,Location,Website,LinkedIn",
   "jane.doe@acme.com,Jane,Doe,Acme Staffing,Head of Sales,+1 555 0100,Austin TX,https://acme.com,https://linkedin.com/in/janedoe",

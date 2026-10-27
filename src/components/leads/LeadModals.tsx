@@ -4,7 +4,7 @@ import { AlertTriangle, CheckCircle2, Cloud, FileDown, FileSpreadsheet, Loader2,
 import { AdminModal, ConfirmDialog, ErrorBanner } from "../admin/AdminModal";
 import { leadLibraryService, type LeadInput } from "../../services/leadLibraryApi";
 import type { LeadImportResult, LeadList, LeadSelection, LibraryLeadDetail } from "../../types";
-import { downloadSampleCsv, formatDate, inputClass, ListSelect } from "./leadBits";
+import { downloadSampleCsv, formatDate, formatFileSize, inputClass, LEAD_IMPORT_MAX_MB, ListSelect } from "./leadBits";
 
 const FILE_EXTENSIONS = ["csv", "xlsx", "xls", "txt"];
 
@@ -119,6 +119,10 @@ export function ImportLeadsModal({
       setError(`Unsupported file type ".${extension}". Upload a .csv, .xlsx, .xls, or .txt file.`);
       return;
     }
+    if (next.size > LEAD_IMPORT_MAX_MB * 1024 * 1024) {
+      setError(`That file is ${formatFileSize(next.size)}, over the ${LEAD_IMPORT_MAX_MB} MB limit. Split it into smaller files and import them one at a time.`);
+      return;
+    }
     setError(null);
     setFile(next);
     if (!newListName) setNewListName(next.name.replace(/\.[^.]+$/, ""));
@@ -164,7 +168,7 @@ export function ImportLeadsModal({
       isOpen={isOpen}
       onClose={() => (busy ? undefined : onClose())}
       title="Import leads"
-      description="Upload a CSV, XLSX, or TXT file with a header row. Only Email is required; every other column is kept with each lead, and duplicates and invalid emails are skipped."
+      description="Upload a CSV, XLSX, or TXT file with a header row. Only Email is required; every other column is kept with each lead, and duplicates and invalid emails are skipped. Maximum file size: ${LEAD_IMPORT_MAX_MB} MB."
       width={520}
     >
       {stage === "done" && result ? (
@@ -213,7 +217,7 @@ export function ImportLeadsModal({
             >
               <span className="grid size-10 place-items-center rounded-full bg-accent/10 text-accent"><Cloud className="size-5" /></span>
               <p className="text-[13px] font-semibold text-foreground">Drag and drop your lead file here</p>
-              <p className="text-[12px] text-muted">or click to browse — .csv, .xlsx, .xls, or .txt</p>
+              <p className="text-[12px] text-muted">or click to browse — .csv, .xlsx, .xls, or .txt · max {LEAD_IMPORT_MAX_MB} MB</p>
             </div>
           ) : (
             <div className="rounded-2xl border border-border/70 p-3.5">

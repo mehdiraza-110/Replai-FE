@@ -23,7 +23,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { RichTextEditor, type MergeVariable } from "../components/ui/RichTextEditor";
 import { EMPTY_PICK, LibraryLeadPicker, pickHasLeads, pickToSource, type LibraryPick } from "../components/leads/LibraryLeadPicker";
-import { useDebouncedValue } from "../components/leads/leadBits";
+import { CAMPAIGN_LEAD_FILE_MAX_MB, formatFileSize, useDebouncedValue } from "../components/leads/leadBits";
 import { aiAgentService, campaignService, domainService, mailboxService } from "../services/api";
 import { leadLibraryService } from "../services/leadLibraryApi";
 import { isComposerEmpty } from "../utils/composerHtml";
@@ -232,6 +232,13 @@ export function MailerCampaignNew({ initial, onLeadsChanged }: { initial?: Campa
     const extension = file.name.toLowerCase().split(".").pop() || "";
     if (!ACCEPTED_LEAD_FILE_EXTENSIONS.includes(extension)) {
       setUploadErrorMessage(`Unsupported file type ".${extension}". Upload a .csv, .xlsx, .xls, or .txt file.`);
+      setUploadStage("error");
+      return;
+    }
+
+    if (file.size > CAMPAIGN_LEAD_FILE_MAX_MB * 1024 * 1024) {
+      setUploadFileName(file.name);
+      setUploadErrorMessage(`That file is ${formatFileSize(file.size)}, over the ${CAMPAIGN_LEAD_FILE_MAX_MB} MB limit for campaign uploads. Import it on the Leads page instead (up to 50 MB), then pick the list here, or split it into smaller files.`);
       setUploadStage("error");
       return;
     }
@@ -752,7 +759,7 @@ function StepAudience({
       <div>
         <h3 className="text-[13px] font-semibold text-foreground">Upload a new file</h3>
         <p className="mt-0.5 text-[12px] text-muted">
-          A CSV, XLSX, or TXT export. Every column — name, company, role, phone, and anything else — is kept with the lead, not just the email address.
+          A CSV, XLSX, or TXT export, up to {CAMPAIGN_LEAD_FILE_MAX_MB} MB (bigger files: import them on the Leads page, then pick the list above). Every column — name, company, role, phone, and anything else — is kept with the lead, not just the email address.
         </p>
       </div>
 
@@ -787,7 +794,7 @@ function StepAudience({
             <Cloud className="size-5" />
           </span>
           <p className="text-[13px] font-semibold text-foreground">Drag and drop your lead file here</p>
-          <p className="text-[12px] text-muted">or click to browse — .csv, .xlsx, .xls, or .txt</p>
+          <p className="text-[12px] text-muted">or click to browse — .csv, .xlsx, .xls, or .txt · max {CAMPAIGN_LEAD_FILE_MAX_MB} MB</p>
         </div>
       ) : null}
 
