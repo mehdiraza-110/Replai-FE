@@ -56,6 +56,7 @@ const titles: Record<string, { title: string; subtitle: string }> = {
   "/admin/workspaces": { title: "Workspaces", subtitle: "Every workspace on the platform, their products, and their owners." },
   "/admin/domains": { title: "Domains", subtitle: "Every domain on the platform, who it is assigned to, and where it can move." },
   "/admin/orders": { title: "Orders", subtitle: "Domain and mailbox requests from every workspace." },
+  "/admin/deliverability": { title: "Deliverability", subtitle: "Warm up new domains with seed inboxes before any prospect is emailed." },
   "/admin/users": { title: "Users", subtitle: "Everyone with an account, and the workspaces they belong to." },
   "/notifications": { title: "Notifications", subtitle: "Everything that needs your attention across ReplyOS." },
 };
