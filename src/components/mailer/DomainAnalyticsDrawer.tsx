@@ -1,29 +1,18 @@
-import { useState } from "react";
-import { Button, Chip, Drawer, Spinner, Tooltip } from "@heroui/react";
-import { Copy, Globe, RefreshCw, X } from "lucide-react";
-import type { Domain, DnsCheckStatus, SesAccountStatus } from "../../types";
+import { Button, Chip, Drawer, Spinner } from "@heroui/react";
+import { Globe, RefreshCw, X } from "lucide-react";
+import type { Domain, DnsCheckStatus } from "../../types";
 
 export function DomainAnalyticsDrawer({
   domain,
-  accountStatus,
   onClose,
   onRefresh,
   isRefreshing,
 }: {
   domain: Domain | null;
-  accountStatus: SesAccountStatus | null;
   onClose: () => void;
   onRefresh: (domain: string) => void;
   isRefreshing: boolean;
 }) {
-  const [copied, setCopied] = useState<string | null>(null);
-
-  function copy(value: string) {
-    navigator.clipboard?.writeText(value).catch(() => undefined);
-    setCopied(value);
-    window.setTimeout(() => setCopied((current) => (current === value ? null : current)), 1500);
-  }
-
   return (
     <Drawer.Root isOpen={Boolean(domain)} onOpenChange={(open) => { if (!open) onClose(); }}>
       <Drawer.Backdrop>
@@ -91,8 +80,7 @@ export function DomainAnalyticsDrawer({
                       <DnsStat label="SPF" status={domain.spfStatus} />
                       <DnsStat label="DKIM" status={domain.dkimStatus} />
                       <DnsStat label="DMARC" status={domain.dmarcStatus} />
-                      <DnsStat label="Custom MAIL FROM" status={domain.mailFromStatus} />
-                      <DnsStat label="MX (bounce routing)" status={domain.mxStatus} />
+                      <DnsStat label="MX" status={domain.mxStatus} />
                       <DnsStat label="Reputation" status={domain.status === "Failed" ? "Failed" : "Success"} value={domain.reputation} />
                     </div>
 
@@ -104,37 +92,6 @@ export function DomainAnalyticsDrawer({
                     {domain.lastError ? (
                       <div className="rounded-xl border border-danger/20 bg-danger/10 px-3 py-2 text-[12px] text-danger">{domain.lastError}</div>
                     ) : null}
-
-                    <div className="rounded-2xl border border-border/70 p-4">
-                      <p className="mb-3 text-[13px] font-semibold text-foreground">DKIM CNAME records</p>
-                      <div className="space-y-2">
-                        {domain.dkimTokens.map((token) => {
-                          const host = `${token}._domainkey.${domain.domain}`;
-                          const value = `${token}.dkim.amazonses.com`;
-                          return (
-                            <div className="flex items-center justify-between gap-2 rounded-xl bg-surface-secondary/60 px-3 py-2" key={token}>
-                              <div className="min-w-0">
-                                <p className="truncate text-[11px] font-medium text-foreground" title={host}>{host}</p>
-                                <p className="truncate text-[11px] text-muted" title={value}>{value}</p>
-                              </div>
-                              <Tooltip delay={200}>
-                                <Tooltip.Trigger>
-                                  <button
-                                    aria-label="Copy CNAME value"
-                                    className="grid size-7 shrink-0 place-items-center rounded-full text-muted transition hover:bg-surface hover:text-foreground"
-                                    onClick={() => copy(value)}
-                                    type="button"
-                                  >
-                                    <Copy className="size-3.5" />
-                                  </button>
-                                </Tooltip.Trigger>
-                                <Tooltip.Content>{copied === value ? "Copied" : "Copy value"}</Tooltip.Content>
-                              </Tooltip>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
 
                     <div className="grid grid-cols-2 gap-3">
                       <InfoRow label="Provider" value={domain.provider} />

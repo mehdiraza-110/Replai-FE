@@ -434,7 +434,7 @@ function ReviewTriggers({ analytics, isLoading }: { analytics: AnalyticsOverview
     <Card className="apple-shadow min-w-0 border border-border/70 bg-surface p-4">
       <Card.Header className="p-0">
         <Card.Title className="text-[15px] font-semibold">Review triggers</Card.Title>
-        <p className="mt-1 text-[12px] leading-5 text-muted">Why ReplyOS held or escalated drafts before sending.</p>
+        <p className="mt-1 text-[12px] leading-5 text-muted">Why SendVybe held or escalated drafts before sending.</p>
       </Card.Header>
       <Card.Content className="space-y-4 p-0 pt-5">
         {isLoading ? <ListSkeleton rows={4} /> : analytics.reviewTriggers.length === 0 ? <EmptyBlock>No review triggers have been recorded yet.</EmptyBlock> : (

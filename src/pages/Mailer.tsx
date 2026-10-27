@@ -1,13 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button, Chip, Modal, Spinner, Tooltip, useOverlayState } from "@heroui/react";
 import {
   AlertTriangle,
+  ArrowUpDown,
   BarChart2,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Globe,
-  Hash,
+  ListFilter,
   Plus,
   RefreshCw,
   Search,
@@ -19,12 +20,89 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { SyncMaildosoButton } from "../components/mailer/SyncMaildosoButton";
 import { DomainAnalyticsDrawer } from "../components/mailer/DomainAnalyticsDrawer";
+import { FilterMenu } from "../components/mailer/FilterMenu";
 import { SkeletonRow } from "../components/ui/Skeleton";
 import { domainService } from "../services/api";
-import type { Domain, DnsCheckStatus, DomainStatusCounts, SesAccountStatus } from "../types";
+import type { Domain, DnsCheckStatus, DomainStatusCounts } from "../types";
 
 const PAGE_SIZE = 10;
+const FETCH_ALL_LIMIT = 100;
+const FETCH_ALL_MAX_PAGES = 50;
 const emptyCounts: DomainStatusCounts = { total: 0, verified: 0, pending: 0, failed: 0 };
+
+type DnsFilter = "" | "ok" | "issues" | "not-started";
+type SortKey = "default" | "name-asc" | "name-desc" | "newest" | "mailboxes" | "bounce" | "checked";
+
+interface Filters {
+  status: "" | Domain["status"];
+  reputation: string;
+  dns: DnsFilter;
+  mailboxes: "" | "with" | "none";
+  sort: SortKey;
+}
+
+const noFilters: Filters = { status: "", reputation: "", dns: "", mailboxes: "", sort: "default" };
+const STATUS_OPTIONS: Domain["status"][] = ["Verified", "Pending Verification", "Provisioning", "Failed"];
+const REPUTATION_OPTIONS = ["Healthy", "Watch", "At Risk"];
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: "default", label: "Default order" },
+  { value: "name-asc", label: "Name A–Z" },
+  { value: "name-desc", label: "Name Z–A" },
+  { value: "newest", label: "Newest first" },
+  { value: "mailboxes", label: "Most mailboxes" },
+  { value: "bounce", label: "Highest bounce rate" },
+  { value: "checked", label: "Least recently checked" },
+];
+
+const STATUS_FILTER_OPTIONS = [{ value: "", label: "All statuses" }, ...STATUS_OPTIONS.map((value) => ({ value, label: value }))];
+const REPUTATION_FILTER_OPTIONS = [
+  { value: "", label: "All reputations" },
+  ...REPUTATION_OPTIONS.map((value) => ({ value, label: value })),
+  { value: "Other", label: "No data / other" },
+];
+const DNS_FILTER_OPTIONS = [
+  { value: "", label: "All DNS states" },
+  { value: "ok", label: "All records verified" },
+  { value: "issues", label: "Failed or pending records" },
+  { value: "not-started", label: "Records not started" },
+];
+const MAILBOX_FILTER_OPTIONS = [
+  { value: "", label: "Any mailbox count" },
+  { value: "with", label: "Has mailboxes" },
+  { value: "none", label: "No mailboxes" },
+];
+
+function matchesFilters(domain: Domain, filters: Filters) {
+  if (filters.status && domain.status !== filters.status) return false;
+  if (filters.reputation) {
+    // "Other" covers anything that is not one of the three named levels (e.g. no sending data yet).
+    const known = REPUTATION_OPTIONS.includes(domain.reputation);
+    if (filters.reputation === "Other" ? known : domain.reputation !== filters.reputation) return false;
+  }
+  if (filters.dns) {
+    const states = [domain.spfStatus, domain.dkimStatus, domain.dmarcStatus, domain.mxStatus];
+    if (filters.dns === "ok" && !states.every((state) => state === "Success")) return false;
+    if (filters.dns === "issues" && !states.some((state) => state === "Failed" || state === "Pending")) return false;
+    if (filters.dns === "not-started" && !states.some((state) => state === "Not started")) return false;
+  }
+  if (filters.mailboxes === "with" && (domain.mailboxCount ?? 0) === 0) return false;
+  if (filters.mailboxes === "none" && (domain.mailboxCount ?? 0) > 0) return false;
+  return true;
+}
+
+function sortDomains(domains: Domain[], sort: SortKey) {
+  const time = (value: string | null) => (value ? new Date(value).getTime() : 0);
+  const sorted = [...domains];
+  switch (sort) {
+    case "name-asc": return sorted.sort((a, b) => a.domain.localeCompare(b.domain));
+    case "name-desc": return sorted.sort((a, b) => b.domain.localeCompare(a.domain));
+    case "newest": return sorted.sort((a, b) => time(b.createdAt) - time(a.createdAt));
+    case "mailboxes": return sorted.sort((a, b) => (b.mailboxCount ?? 0) - (a.mailboxCount ?? 0));
+    case "bounce": return sorted.sort((a, b) => (b.bounceRate ?? 0) - (a.bounceRate ?? 0));
+    case "checked": return sorted.sort((a, b) => time(a.lastCheckedAt) - time(b.lastCheckedAt));
+    default: return sorted;
+  }
+}
 
 export function Mailer() {
   const navigate = useNavigate();
@@ -35,17 +113,33 @@ export function Mailer() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  // SES is no longer used for sending, so there is no account status to show.
-  const accountStatus: SesAccountStatus | null = null;
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<Filters>(noFilters);
+  // Filters and sorting are applied here, so while one is active the full list is loaded instead of a server page.
+  const [allDomains, setAllDomains] = useState<Domain[]>([]);
   const [analyticsDomainId, setAnalyticsDomainId] = useState<number | null>(null);
   const [refreshingAll, setRefreshingAll] = useState(false);
   const [refreshingDomain, setRefreshingDomain] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Domain | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const deleteModal = useOverlayState({});
+
+  const filtersActive = Object.values(filters).some((value) => value !== "" && value !== "default");
+  const filteredDomains = useMemo(
+    () => (filtersActive ? sortDomains(allDomains.filter((domain) => matchesFilters(domain, filters)), filters.sort) : []),
+    [allDomains, filters, filtersActive],
+  );
+  const shownDomains = filtersActive ? filteredDomains.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : domains;
+  const shownTotal = filtersActive ? filteredDomains.length : total;
+  const shownTotalPages = filtersActive ? Math.max(1, Math.ceil(filteredDomains.length / PAGE_SIZE)) : totalPages;
+  const activeFilterCount = [filters.status, filters.reputation, filters.dns, filters.mailboxes].filter(Boolean).length + (filters.sort !== "default" ? 1 : 0);
+
+  function setFilter<K extends keyof Filters>(key: K, value: Filters[K]) {
+    setFilters((current) => ({ ...current, [key]: value }));
+    setPage(1);
+  }
 
   useEffect(() => {
     load(1, search);
@@ -56,12 +150,25 @@ export function Mailer() {
     const timeout = window.setTimeout(() => load(1, search), 350);
     return () => window.clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search]);
+  }, [search, filtersActive]);
 
   async function load(nextPage: number, nextSearch: string) {
     setIsLoading(true);
     setError(null);
     try {
+      if (filtersActive) {
+        const first = await domainService.list({ page: 1, limit: FETCH_ALL_LIMIT, search: nextSearch });
+        const rest = await Promise.all(
+          Array.from({ length: Math.min(first.totalPages, FETCH_ALL_MAX_PAGES) - 1 }, (_, index) =>
+            domainService.list({ page: index + 2, limit: FETCH_ALL_LIMIT, search: nextSearch }),
+          ),
+        );
+        setAllDomains([first, ...rest].flatMap((result) => result.items));
+        setStatusCounts(first.statusCounts);
+        setTotal(first.total);
+        setPage(nextPage);
+        return;
+      }
       const domainsPage = await domainService.list({ page: nextPage, limit: PAGE_SIZE, search: nextSearch });
       setDomains(domainsPage.items);
       setStatusCounts(domainsPage.statusCounts);
@@ -71,6 +178,7 @@ export function Mailer() {
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to load domains");
       setDomains([]);
+      setAllDomains([]);
     } finally {
       setIsLoading(false);
     }
@@ -93,6 +201,7 @@ export function Mailer() {
     try {
       const updated = await domainService.refreshOne(domain);
       setDomains((current) => mergeDomains(current, [updated]));
+      setAllDomains((current) => mergeDomains(current, [updated]));
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : `Unable to refresh ${domain}`);
     } finally {
@@ -121,10 +230,10 @@ export function Mailer() {
     }
   }
 
-  const selectedDomain = domains.find((domain) => domain.id === analyticsDomainId) ?? null;
+  const selectedDomain = [...domains, ...allDomains].find((domain) => domain.id === analyticsDomainId) ?? null;
 
   // Auto-recheck whenever the drawer opens on a domain, but only if its data is stale —
-  // avoids re-hitting SES/CloudWatch every time the same domain's drawer is reopened.
+  // avoids re-checking the provider every time the same domain's drawer is reopened.
   useEffect(() => {
     if (!selectedDomain) return;
     const lastChecked = selectedDomain.reputationCheckedAt ?? selectedDomain.lastCheckedAt;
@@ -201,9 +310,32 @@ export function Mailer() {
                 Loading…
               </>
             ) : (
-              `Showing ${domains.length} of ${total} domains · Page ${page} of ${totalPages}`
+              `Showing ${shownDomains.length} of ${shownTotal} domains · Page ${page} of ${shownTotalPages}`
             )}
           </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 border-b border-border/70 px-4 py-3">
+          <FilterMenu icon={ListFilter} label="Status" options={STATUS_FILTER_OPTIONS} value={filters.status} onChange={(value) => setFilter("status", value as Filters["status"])} />
+          <FilterMenu label="Reputation" options={REPUTATION_FILTER_OPTIONS} value={filters.reputation} onChange={(value) => setFilter("reputation", value)} />
+          <FilterMenu label="DNS" options={DNS_FILTER_OPTIONS} value={filters.dns} onChange={(value) => setFilter("dns", value as DnsFilter)} />
+          <FilterMenu label="Mailboxes" options={MAILBOX_FILTER_OPTIONS} value={filters.mailboxes} onChange={(value) => setFilter("mailboxes", value as Filters["mailboxes"])} />
+          <span aria-hidden className="mx-1 hidden h-5 w-px bg-border sm:block" />
+          <FilterMenu icon={ArrowUpDown} label="Sort" options={SORT_OPTIONS} value={filters.sort} onChange={(value) => setFilter("sort", value as SortKey)} />
+          {activeFilterCount > 0 || search ? (
+            <button
+              className="inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-[12px] font-medium text-muted outline-none transition hover:bg-surface-secondary hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent"
+              type="button"
+              onClick={() => {
+                setFilters(noFilters);
+                setSearch("");
+                setPage(1);
+              }}
+            >
+              <X className="size-3.5" />
+              Clear{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+            </button>
+          ) : null}
         </div>
 
         <div className="overflow-x-auto">
@@ -222,18 +354,18 @@ export function Mailer() {
             <tbody>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, index) => <SkeletonRow columns={7} key={index} />)
-              ) : domains.length === 0 ? (
+              ) : shownDomains.length === 0 ? (
                 <tr>
                   <td className="px-4 py-10 text-center text-sm font-medium text-muted" colSpan={7}>
-                    {total === 0 && !search ? "No domains yet. Use “Request domains” and our team will add them to your workspace." : "No domains match your search."}
+                    {total === 0 && !search && !filtersActive ? "No domains yet. Use “Request domains” and our team will add them to your workspace." : "No domains match your search or filters."}
                   </td>
                 </tr>
               ) : (
-                domains.map((domain) => (
+                shownDomains.map((domain) => (
                   <tr className="border-b border-border/60 last:border-0" key={domain.id}>
                     <td className="px-4 py-4 align-top">
                       <p className="max-w-[240px] truncate font-semibold text-foreground">{domain.domain}</p>
-                      <p className="text-[11px] text-muted">{domain.provider} · {domain.awsRegion}</p>
+                      <p className="text-[11px] text-muted">{domain.provider}</p>
                     </td>
                     <td className="px-2 py-4 align-top">
                       <DomainStatusChip status={domain.status} />
@@ -249,7 +381,6 @@ export function Mailer() {
                     <td className="px-2 py-4 align-top">
                       <div className="flex items-center gap-3 text-[12px] text-foreground">
                         <MetricIcon icon={Users} label={`${domain.mailboxCount ?? 0} mailbox${(domain.mailboxCount ?? 0) === 1 ? "" : "es"} on this domain`} value={`${domain.mailboxCount ?? 0} mailbox${(domain.mailboxCount ?? 0) === 1 ? "" : "es"}`} />
-                        <MetricIcon icon={Hash} label={`${domain.dkimTokens.length} DKIM CNAME records`} value={`${domain.dkimTokens.length} DKIM`} />
                       </div>
                     </td>
                     <td className="px-2 py-4 align-top">
@@ -314,13 +445,13 @@ export function Mailer() {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/70 px-4 py-3 text-[12px] text-muted">
-          <span>Page {page} of {totalPages}</span>
+          <span>Page {page} of {shownTotalPages}</span>
           <div className="flex items-center gap-2">
-            <Button isDisabled={isLoading || page <= 1} onPress={() => load(page - 1, search)} size="sm" variant="secondary">
+            <Button isDisabled={isLoading || page <= 1} onPress={() => (filtersActive ? setPage(page - 1) : load(page - 1, search))} size="sm" variant="secondary">
               <ChevronLeft className="size-4" />
               Previous
             </Button>
-            <Button isDisabled={isLoading || page >= totalPages} onPress={() => load(page + 1, search)} size="sm" variant="secondary">
+            <Button isDisabled={isLoading || page >= shownTotalPages} onPress={() => (filtersActive ? setPage(page + 1) : load(page + 1, search))} size="sm" variant="secondary">
               Next
               <ChevronRight className="size-4" />
             </Button>
@@ -329,7 +460,6 @@ export function Mailer() {
       </div>
 
       <DomainAnalyticsDrawer
-        accountStatus={accountStatus}
         domain={selectedDomain}
         isRefreshing={refreshingDomain === selectedDomain?.domain}
         onClose={() => setAnalyticsDomainId(null)}

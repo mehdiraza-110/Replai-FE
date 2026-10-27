@@ -2,7 +2,7 @@
 @import "@heroui/styles";
 
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
   font-family:
     "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
   --font-sans:
@@ -16,10 +16,51 @@
   --border: color-mix(in oklch, var(--foreground) 10%, transparent);
   --separator: color-mix(in oklch, var(--foreground) 9%, transparent);
   --muted: oklch(0.5004 0.008 286.2);
+  --auth-field: #F0F1F3;
+  --auth-field-hover: #E9EAED;
+  --auth-error-bg: #FFF1F0;
+  --auth-error-bg-hover: #FFE7E5;
+  --auth-error-ring: #FDA29B;
+  --auth-error-text: #B42318;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Must stay after :root so its values win at equal specificity. */
+.dark,
+[data-theme="dark"] {
+  color-scheme: dark;
+  --background: oklch(0.15 0.005 285.8);
+  --surface: oklch(0.2103 0.0059 285.89);
+  --surface-secondary: oklch(0.257 0.0037 286.14);
+  --surface-tertiary: oklch(0.2721 0.0024 247.91);
+  --muted: oklch(0.72 0.015 286);
+  --auth-field: oklch(0.27 0.005 286);
+  --auth-field-hover: oklch(0.31 0.005 286);
+  --auth-error-bg: oklch(0.28 0.06 25);
+  --auth-error-bg-hover: oklch(0.31 0.07 25);
+  --auth-error-ring: oklch(0.5 0.15 25);
+  --auth-error-text: oklch(0.82 0.1 25);
+}
+
+/* Added by useTheme for ~350ms around a switch so colors fade instead of snapping. */
+.theme-transition,
+.theme-transition *,
+.theme-transition *::before,
+.theme-transition *::after {
+  transition:
+    background-color 300ms ease,
+    border-color 300ms ease,
+    color 300ms ease,
+    fill 300ms ease,
+    stroke 300ms ease,
+    box-shadow 300ms ease !important;
+}
+
+.dark .apple-shadow {
+  box-shadow: rgba(0, 0, 0, 0.5) 0px 1px 4px;
 }
 
 html,
@@ -78,7 +119,7 @@ select {
   gap: 8px;
   padding-inline: 13px;
   border-radius: 999px;
-  background: #F0F1F3;
+  background: var(--auth-field);
   box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--foreground) 6%, transparent);
   transition:
     background 180ms ease,
@@ -86,16 +127,16 @@ select {
 }
 
 .auth-field:hover {
-  background: #E9EAED;
+  background: var(--auth-field-hover);
 }
 
 .auth-field--error {
-  background: #FFF1F0;
-  box-shadow: inset 0 0 0 1px #FDA29B;
+  background: var(--auth-error-bg);
+  box-shadow: inset 0 0 0 1px var(--auth-error-ring);
 }
 
 .auth-field--error:hover {
-  background: #FFE7E5;
+  background: var(--auth-error-bg-hover);
 }
 
 .auth-field input {
@@ -111,7 +152,7 @@ select {
 }
 
 .auth-field input::placeholder {
-  color: #5D6675;
+  color: var(--muted);
   opacity: 1;
 }
 
@@ -124,7 +165,7 @@ select {
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: #667085;
+  color: var(--muted);
   cursor: pointer;
   transition:
     background 160ms ease,
@@ -133,7 +174,7 @@ select {
 
 .auth-password-toggle:hover {
   background: color-mix(in oklch, var(--foreground) 8%, transparent);
-  color: #111318;
+  color: var(--foreground);
 }
 
 .auth-password-toggle:focus-visible {
@@ -149,7 +190,7 @@ select {
 .auth-field input:-webkit-autofill:hover,
 .auth-field input:-webkit-autofill:focus {
   -webkit-text-fill-color: var(--foreground);
-  box-shadow: 0 0 0 1000px #F0F1F3 inset;
+  box-shadow: 0 0 0 1000px var(--auth-field) inset;
   transition: background-color 9999s ease-in-out 0s;
 }
 
@@ -161,29 +202,29 @@ select {
 }
 
 .auth-field--error:focus-within {
-  background: #FFF8F7;
+  background: var(--auth-error-bg);
   box-shadow:
     inset 0 0 0 1px #D92D20,
     0 0 0 3px color-mix(in oklch, #D92D20 16%, transparent);
 }
 
 .auth-field:focus-within input:-webkit-autofill {
-  box-shadow: 0 0 0 1000px white inset;
+  box-shadow: 0 0 0 1000px var(--surface) inset;
 }
 
 .auth-field--error input:-webkit-autofill,
 .auth-field--error input:-webkit-autofill:hover,
 .auth-field--error input:-webkit-autofill:focus {
   -webkit-text-fill-color: var(--foreground);
-  box-shadow: 0 0 0 1000px #FFF1F0 inset;
+  box-shadow: 0 0 0 1000px var(--auth-error-bg) inset;
 }
 
 .auth-error {
   margin-top: 2px;
   border-radius: 10px;
-  background: #FFF1F0;
+  background: var(--auth-error-bg);
   padding: 8px 10px;
-  color: #B42318;
+  color: var(--auth-error-text);
   font-size: 12px;
   font-weight: 600;
   line-height: 16px;
@@ -199,8 +240,8 @@ select {
   gap: 9px;
   border: 0;
   border-radius: 999px;
-  background: #E9EAED;
-  color: #111318;
+  background: var(--auth-field-hover);
+  color: var(--foreground);
   font-size: 14px;
   font-weight: 500;
   line-height: 1;
@@ -211,7 +252,7 @@ select {
 }
 
 .auth-social-button:hover {
-  background: #DFE1E5;
+  background: color-mix(in oklch, var(--foreground) 6%, var(--auth-field-hover));
 }
 
 .auth-social-button:active {

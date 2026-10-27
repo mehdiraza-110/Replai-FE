@@ -89,16 +89,16 @@ export function CreateWorkspace() {
   }
 
   return (
-    <main className="auth-screen min-h-screen bg-[#F2F3F5] px-4 py-6 text-foreground">
+    <main className="auth-screen min-h-screen bg-background px-4 py-6 text-foreground">
       <section className="auth-panel mx-auto flex w-full max-w-[460px] flex-col border border-border/70 bg-surface px-5 pb-5 pt-7 sm:px-7">
-        <div className="mb-3 grid size-10 place-items-center self-center rounded-full bg-[#F0F1F3] text-foreground">
+        <div className="mb-3 grid size-10 place-items-center self-center rounded-full bg-surface-secondary text-foreground">
           <Building2 className="size-5" strokeWidth={1.9} />
         </div>
 
-        <h1 className="text-center text-[17px] font-semibold leading-6 text-[#111318]">
+        <h1 className="text-center text-[17px] font-semibold leading-6 text-foreground">
           {isFirstWorkspace ? `Welcome, ${firstName}. Let's set up your workspace` : "Create a new workspace"}
         </h1>
-        <p className="mx-auto mt-2 max-w-[340px] text-center text-[14px] leading-5 text-[#5D6675]">
+        <p className="mx-auto mt-2 max-w-[340px] text-center text-[14px] leading-5 text-muted">
           A workspace keeps your domains, mailboxes, agents, and conversations together, separate from everyone else's.
         </p>
 
@@ -108,7 +108,7 @@ export function CreateWorkspace() {
               Workspace name
             </label>
             <label className={nameError ? "auth-field auth-field--error" : "auth-field"}>
-              <Building2 className={nameError ? "size-4 text-[#D92D20]" : "size-4 text-muted"} />
+              <Building2 className={nameError ? "size-4 text-danger" : "size-4 text-muted"} />
               <input
                 aria-describedby={nameError ? "workspace-name-error" : undefined}
                 aria-invalid={Boolean(nameError)}
@@ -126,7 +126,7 @@ export function CreateWorkspace() {
               />
             </label>
             {nameError ? (
-              <p className="text-[12px] font-medium leading-4 text-[#D92D20]" id="workspace-name-error" role="alert">
+              <p className="text-[12px] font-medium leading-4 text-danger" id="workspace-name-error" role="alert">
                 {nameError}
               </p>
             ) : null}
@@ -204,10 +204,10 @@ export function CreateWorkspace() {
           </div>
         ) : null}
 
-        <p className="mt-4 text-center text-[13px] leading-5 text-[#5D6675]">
+        <p className="mt-4 text-center text-[13px] leading-5 text-muted">
           {existingWorkspaces.length > 0 && activeWorkspace ? (
             <button
-              className="font-semibold text-[#0A66CC] transition hover:text-[#004A99] focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              className="font-semibold text-accent transition hover:underline focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               type="button"
               onClick={() => navigate("/")}
             >
@@ -217,7 +217,7 @@ export function CreateWorkspace() {
             <>
               Signed in as {user?.email}.{" "}
               <button
-                className="font-semibold text-[#0A66CC] transition hover:text-[#004A99] focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                className="font-semibold text-accent transition hover:underline focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                 type="button"
                 onClick={() => void logout()}
               >

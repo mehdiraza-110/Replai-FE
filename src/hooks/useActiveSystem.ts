@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { getSystemForPath, type SystemId } from "../constants/systems";
 
-const STORAGE_KEY = "replyos.activeSystem";
+const STORAGE_KEY = "sendvybe.activeSystem";
 const DEFAULT_SYSTEM: SystemId = "responder";
 
 function readStoredSystem(): SystemId {

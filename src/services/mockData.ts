@@ -23,7 +23,6 @@ export const mailerDomains: MailerDomain[] = [
     dmarcStatus: "Verified",
     mxStatus: "Verified",
     status: "Active",
-    configurationSetStatus: "Configured",
     mailboxes: [
       {
         id: 1, email: "sarah.connor@askkinvestowl.com", status: "Active", warmupStage: "Ramping", warmupEnabled: true,
@@ -111,7 +110,7 @@ export const conversations: Conversation[] = [
         from: "human",
         sender: "Kate Moore",
         time: "9:14 AM",
-        body: "Hi Sarah, noticed Acme has been expanding its outbound team. ReplyOS helps teams respond to interested prospects faster without losing control of the message.",
+        body: "Hi Sarah, noticed Acme has been expanding its outbound team. SendVybe helps teams respond to interested prospects faster without losing control of the message.",
       },
       {
         from: "prospect",
@@ -167,7 +166,7 @@ export const conversations: Conversation[] = [
     stage: "Objection",
     interest: "Medium",
     confidence: 94,
-    recommendation: "Acknowledge the agency and position ReplyOS as response operations, not a replacement.",
+    recommendation: "Acknowledge the agency and position SendVybe as response operations, not a replacement.",
     messages: [
       {
         from: "prospect",
@@ -292,7 +291,7 @@ export const reviewQueue: ReviewItem[] = [
     status: "Needs Review",
     agent: "Outbound Sales Agent",
     age: "28 min",
-    draft: "I can clarify how ReplyOS supports controlled review workflows, but I do not want to overstate compliance coverage without your requirements.",
+    draft: "I can clarify how SendVybe supports controlled review workflows, but I do not want to overstate compliance coverage without your requirements.",
   },
   {
     id: "review-3",

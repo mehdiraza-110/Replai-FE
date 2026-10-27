@@ -10,7 +10,7 @@ const POINTS = [
   {
     icon: KeyRound,
     title: "Scoped, revocable access",
-    body: "Calendar access is limited to the scopes ReplyOS actually needs, and any connected account can be disconnected in one click.",
+    body: "Calendar access is limited to the scopes SendVybe actually needs, and any connected account can be disconnected in one click.",
   },
   {
     icon: ScrollText,
@@ -31,7 +31,7 @@ export function TrustSection() {
         >
           <h2 className="mkt-h2 text-[var(--mkt-ink)]">Built like infrastructure, not a demo.</h2>
           <p className="mkt-body mt-4 text-[15px]">
-            ReplyOS handles real prospect conversations and calendar access. It's treated with the same
+            SendVybe handles real prospect conversations and calendar access. It's treated with the same
             seriousness as the rest of your stack.
           </p>
         </motion.div>

@@ -4,6 +4,7 @@ import { Bell, Menu, Sidebar as SidebarIcon } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { TrialChip } from "../trial/TrialChip";
 import { WorkspaceMenu } from "./WorkspaceMenu";
+import { ThemeToggle } from "./ThemeToggle";
 import { OPEN_NAV_EVENT } from "./Sidebar";
 import { LoadingState } from "../ui/LoadingState";
 import { StatusPill } from "../ui/StatusPill";
@@ -14,7 +15,7 @@ import { notificationService } from "../../services/api";
 import { formatRelativeTime } from "../../utils/formatRelativeTime";
 import type { NotificationItem } from "../../types";
 
-const LAST_SEEN_STORAGE_KEY = "replyos.notifications.lastSeenAt";
+const LAST_SEEN_STORAGE_KEY = "sendvybe.notifications.lastSeenAt";
 // Live socket events keep this fresh instantly; the poll is just a fallback
 // in case a socket reconnect is ever missed.
 const POLL_INTERVAL_MS = 120_000;
@@ -31,6 +32,8 @@ const titles: Record<string, { title: string; subtitle: string }> = {
   "/mailer/health": { title: "Health", subtitle: "Reputation monitoring and flagged mailboxes." },
   "/mailer/leads": { title: "Leads", subtitle: "Upload leads once, organise them into lists, and reuse them in any campaign." },
   "/mailer/campaigns": { title: "Campaigns", subtitle: "Cold outbound campaigns and the sending pipeline." },
+  "/mailer/reports": { title: "Reports", subtitle: "Campaign, mailbox, domain and sending reports, with filters and exports." },
+  "/responder/reports": { title: "Reports", subtitle: "Reply, agent, review and lead reports, with filters and exports." },
   "/mailer/orders": { title: "Orders", subtitle: "Request domains or mailboxes and follow their progress." },
   "/mailer/campaigns/new": { title: "New Campaign", subtitle: "Audience, message, sending mailboxes, schedule, and the pre-flight safety check." },
   "/responder": { title: "AI Auto Responder", subtitle: "Reply automation loop, agent performance, and review queue." },
@@ -58,7 +61,7 @@ const titles: Record<string, { title: string; subtitle: string }> = {
   "/admin/orders": { title: "Orders", subtitle: "Domain and mailbox requests from every workspace." },
   "/admin/deliverability": { title: "Deliverability", subtitle: "Warm up new domains with seed inboxes before any prospect is emailed." },
   "/admin/users": { title: "Users", subtitle: "Everyone with an account, and the workspaces they belong to." },
-  "/notifications": { title: "Notifications", subtitle: "Everything that needs your attention across ReplyOS." },
+  "/notifications": { title: "Notifications", subtitle: "Everything that needs your attention across SendVybe." },
 };
 
 function readLastSeenAt() {
@@ -159,6 +162,7 @@ export function TopBar() {
           <div className="min-w-0 lg:hidden">
             <WorkspaceMenu compact />
           </div>
+          <ThemeToggle />
           <Dropdown onOpenChange={handleOpenChange}>
             <Dropdown.Trigger aria-label="Notifications" className="relative grid size-[34px] min-w-[34px] place-items-center rounded-full bg-surface-secondary text-foreground transition hover:bg-surface-tertiary">
               <Bell className="size-[17px]" strokeWidth={2} />

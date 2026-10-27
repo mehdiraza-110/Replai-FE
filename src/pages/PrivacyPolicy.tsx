@@ -8,7 +8,7 @@ export function PrivacyPolicy() {
         <p className="mt-2 text-sm text-[#5D6675]">Effective date: {EFFECTIVE_DATE}</p>
 
         <p className="mt-6 text-sm text-[#5D6675]">
-          [COMPANY LEGAL NAME] ("we," "us," "our") operates ReplyOS (the "Service"). This Privacy Policy explains
+          [COMPANY LEGAL NAME] ("we," "us," "our") operates SendVybe (the "Service"). This Privacy Policy explains
           what information we collect, how we use it, and the choices you have. By using the Service, you agree to
           the collection and use of information described here.
         </p>

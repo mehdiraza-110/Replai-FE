@@ -8,7 +8,7 @@ export function TermsOfService() {
         <p className="mt-2 text-sm text-[#5D6675]">Effective date: {EFFECTIVE_DATE}</p>
 
         <p className="mt-6 text-sm text-[#5D6675]">
-          These Terms of Service ("Terms") govern your access to and use of ReplyOS (the "Service"), operated by
+          These Terms of Service ("Terms") govern your access to and use of SendVybe (the "Service"), operated by
           [COMPANY LEGAL NAME] ("we," "us," "our"). By creating an account or using the Service, you agree to these
           Terms.
         </p>

@@ -30,27 +30,27 @@ export function ForgotPassword() {
   }
 
   return (
-    <main className="auth-screen min-h-screen bg-[#F2F3F5] px-4 py-6 text-foreground">
+    <main className="auth-screen min-h-screen bg-background px-4 py-6 text-foreground">
       <section className="auth-panel mx-auto flex w-full max-w-[334px] flex-col items-center border border-border/70 bg-surface px-5 pb-5 pt-7">
-        <div className="mb-3 grid size-10 place-items-center rounded-full bg-[#F0F1F3] text-foreground">
+        <div className="mb-3 grid size-10 place-items-center rounded-full bg-surface-secondary text-foreground">
           {sentMessage ? <MailCheck className="size-5" strokeWidth={1.9} /> : <UserRound className="size-5" strokeWidth={1.9} />}
         </div>
 
-        <h1 className="text-center text-[15px] font-semibold leading-5 tracking-normal text-[#111318]">
+        <h1 className="text-center text-[15px] font-semibold leading-5 tracking-normal text-foreground">
           {sentMessage ? "Check your email" : "Forgot your password?"}
         </h1>
-        <p className="mt-4 max-w-[260px] text-center text-[15px] leading-5 text-[#5D6675]" role={sentMessage ? "status" : undefined}>
+        <p className="mt-4 max-w-[260px] text-center text-[15px] leading-5 text-muted" role={sentMessage ? "status" : undefined}>
           {sentMessage || "Enter your work email and we'll send you a link to reset your password."}
         </p>
 
         {sentMessage ? (
-          <p className="mt-3 max-w-[260px] text-center text-[13px] leading-5 text-[#5D6675]">
+          <p className="mt-3 max-w-[260px] text-center text-[13px] leading-5 text-muted">
             The link is valid for 60 minutes. Check your spam folder if you don't see it.
           </p>
         ) : (
           <form className="mt-4 flex w-full flex-col gap-2.5" onSubmit={handleSubmit}>
             <label className={error ? "auth-field auth-field--error" : "auth-field"}>
-              <Mail className={error ? "size-4 text-[#D92D20]" : "size-4 text-muted"} />
+              <Mail className={error ? "size-4 text-danger" : "size-4 text-muted"} />
               <input
                 aria-label="Email"
                 autoComplete="email"
@@ -78,9 +78,9 @@ export function ForgotPassword() {
           </form>
         )}
 
-        <p className="mt-4 text-center text-[13px] leading-5 text-[#5D6675]">
+        <p className="mt-4 text-center text-[13px] leading-5 text-muted">
           <Link
-            className="font-semibold text-[#0A66CC] transition hover:text-[#004A99] focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className="font-semibold text-accent transition hover:underline focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             to="/login"
           >
             Back to log in

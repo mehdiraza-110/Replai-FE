@@ -6,8 +6,8 @@ import type { InboxThread, InboxThreadDetail } from "../types";
 
 /**
  * The unified inbox: every reply across every mailbox, one screen, newest activity
- * first — no clicking into each mailbox individually. App-native (SES receiving under
- * the hood), not a real IMAP/SMTP mailbox. See PlusVibe-Plan.md section 7 / 1D.
+ * first — no clicking into each mailbox individually. App-native, not a real
+ * IMAP/SMTP mailbox. See PlusVibe-Plan.md section 7 / 1D.
  */
 export function MailerInbox() {
   const [threads, setThreads] = useState<InboxThread[]>([]);

@@ -54,7 +54,7 @@ export function Overview() {
             ? "No products are enabled for you in this workspace yet."
             : enabled.length === 1
               ? "Jump in below. Other products appear here when they are enabled for your workspace."
-              : "ReplyOS is split into two systems. Jump into either one, or switch anytime from the sidebar."}
+              : "SendVybe is split into two systems. Jump into either one, or switch anytime from the sidebar."}
         </p>
       </div>
 

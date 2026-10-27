@@ -39,10 +39,7 @@ export function MarketingNav() {
         }}
       >
         <a className="mkt-focusable flex items-center gap-2 text-[15px] font-semibold tracking-[-0.02em] text-[var(--mkt-ink)]" href="#top">
-          <span aria-hidden="true" className="grid size-6 place-items-center rounded-full bg-[var(--mkt-accent)] text-[11px] font-bold text-white">
-            R
-          </span>
-          ReplyOS
+          SendVybe
         </a>
 
         <nav aria-label="Primary" className="hidden items-center gap-7 md:flex">
