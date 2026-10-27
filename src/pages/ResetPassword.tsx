@@ -72,7 +72,7 @@ export function ResetPassword() {
   }
 
   const linkClass =
-    "font-semibold text-[#0A66CC] transition hover:text-[#004A99] focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+    "font-semibold text-accent transition hover:underline focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
   const primaryButton = "mt-1 h-9 w-full rounded-full bg-[#0A84FF] text-[14px] font-semibold text-white shadow-none transition hover:bg-[#0077ED]";
 
   let icon = <UserRound className="size-5" strokeWidth={1.9} />;
@@ -108,7 +108,7 @@ export function ResetPassword() {
     body = (
       <form className="mt-4 flex w-full flex-col gap-2.5" onSubmit={handleSubmit}>
         <label className={error ? "auth-field auth-field--error" : "auth-field"}>
-          <LockKeyhole className={error ? "size-4 text-[#D92D20]" : "size-4 text-muted"} />
+          <LockKeyhole className={error ? "size-4 text-danger" : "size-4 text-muted"} />
           <input
             aria-label="New password"
             autoComplete="new-password"
@@ -136,16 +136,16 @@ export function ResetPassword() {
               {[1, 2, 3, 4].map((step) => (
                 <span
                   key={step}
-                  className={`h-1 flex-1 rounded-full ${step <= strength.score ? (strength.ok ? "bg-[#12B76A]" : "bg-[#F79009]") : "bg-[#E4E7EC]"}`}
+                  className={`h-1 flex-1 rounded-full ${step <= strength.score ? (strength.ok ? "bg-success" : "bg-warning") : "bg-surface-tertiary"}`}
                 />
               ))}
             </div>
-            <p className={`mt-1 text-[12px] leading-4 ${strength.ok ? "text-[#067647]" : "text-[#5D6675]"}`}>{strength.label}</p>
+            <p className={`mt-1 text-[12px] leading-4 ${strength.ok ? "text-success" : "text-muted"}`}>{strength.label}</p>
           </div>
         ) : null}
 
         <label className={mismatch ? "auth-field auth-field--error" : "auth-field"}>
-          <LockKeyhole className={mismatch ? "size-4 text-[#D92D20]" : "size-4 text-muted"} />
+          <LockKeyhole className={mismatch ? "size-4 text-danger" : "size-4 text-muted"} />
           <input
             aria-label="Confirm new password"
             autoComplete="new-password"
@@ -157,7 +157,7 @@ export function ResetPassword() {
             onChange={(event) => setConfirm(event.target.value)}
           />
         </label>
-        {mismatch ? <p className="text-[12px] leading-4 text-[#D92D20]">Passwords do not match.</p> : null}
+        {mismatch ? <p className="text-[12px] leading-4 text-danger">Passwords do not match.</p> : null}
 
         {error ? (
           <p className="auth-error" role="alert">
@@ -173,16 +173,16 @@ export function ResetPassword() {
   }
 
   return (
-    <main className="auth-screen min-h-screen bg-[#F2F3F5] px-4 py-6 text-foreground">
+    <main className="auth-screen min-h-screen bg-background px-4 py-6 text-foreground">
       <section className="auth-panel mx-auto flex w-full max-w-[334px] flex-col items-center border border-border/70 bg-surface px-5 pb-5 pt-7">
-        <div className="mb-3 grid size-10 place-items-center rounded-full bg-[#F0F1F3] text-foreground">{icon}</div>
-        <h1 className="text-center text-[15px] font-semibold leading-5 tracking-normal text-[#111318]">{title}</h1>
-        <p className="mt-4 max-w-[260px] text-center text-[15px] leading-5 text-[#5D6675]" role={linkState === "checking" ? "status" : undefined}>
+        <div className="mb-3 grid size-10 place-items-center rounded-full bg-surface-secondary text-foreground">{icon}</div>
+        <h1 className="text-center text-[15px] font-semibold leading-5 tracking-normal text-foreground">{title}</h1>
+        <p className="mt-4 max-w-[260px] text-center text-[15px] leading-5 text-muted" role={linkState === "checking" ? "status" : undefined}>
           {subtitle}
         </p>
         {body}
         {!successMessage ? (
-          <p className="mt-4 text-center text-[13px] leading-5 text-[#5D6675]">
+          <p className="mt-4 text-center text-[13px] leading-5 text-muted">
             <Link className={linkClass} to="/login">
               Back to log in
             </Link>

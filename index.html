@@ -3,16 +3,29 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ReplyOS — AI that works your inbox</title>
+    <title>SendVybe — AI that works your inbox</title>
     <meta
       name="description"
-      content="ReplyOS reads every reply, drafts the response, books the meeting, and hands you only the calls that need a human. Built for teams running outbound at volume."
+      content="SendVybe reads every reply, drafts the response, books the meeting, and hands you only the calls that need a human. Built for teams running outbound at volume."
     />
     <link crossorigin href="https://cdn.fontshare.com" rel="preconnect" />
     <link
       href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap"
       rel="stylesheet"
     />
+    <script>
+      // Set the theme before first paint so dark mode does not flash light. App routes only.
+      (function () {
+        try {
+          var p = location.pathname;
+          if (p !== "/app" && p.indexOf("/app/") !== 0) return;
+          var t = localStorage.getItem("sendvybe.theme");
+          if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          document.documentElement.classList.toggle("dark", t === "dark");
+          document.documentElement.setAttribute("data-theme", t);
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

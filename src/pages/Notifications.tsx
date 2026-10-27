@@ -54,7 +54,7 @@ export function Notifications() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-[18px] font-semibold leading-6 text-foreground">Notifications</h1>
-          <p className="mt-1 text-[13px] leading-5 text-muted">Everything that needs your attention across ReplyOS.</p>
+          <p className="mt-1 text-[13px] leading-5 text-muted">Everything that needs your attention across SendVybe.</p>
         </div>
         <StatusPill tone="default">{total} total</StatusPill>
       </div>

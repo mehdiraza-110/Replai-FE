@@ -6,7 +6,7 @@ const STEPS = [
     number: "01",
     icon: MessagesSquare,
     title: "A reply lands",
-    body: "A prospect responds through your outbound — PlusVibe, cold mailer, or your inbox. ReplyOS matches it to the lead and the full conversation history instantly.",
+    body: "A prospect responds through your outbound — PlusVibe, cold mailer, or your inbox. SendVybe matches it to the lead and the full conversation history instantly.",
   },
   {
     number: "02",

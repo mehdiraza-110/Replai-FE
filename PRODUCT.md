@@ -6,7 +6,7 @@ product
 
 ## Users
 
-Operators running cold-outbound email at a company using ReplyOS: managing sending domains/mailboxes (AI Cold Mailer) and reviewing/steering AI-drafted replies to inbound leads (AI Auto Responder). They live in this dashboard for extended sessions, scanning tables, charts, and status chips to catch problems (bounces, flagged mailboxes, stalled campaigns) quickly.
+Operators running cold-outbound email at a company using SendVybe: managing sending domains/mailboxes (AI Cold Mailer) and reviewing/steering AI-drafted replies to inbound leads (AI Auto Responder). They live in this dashboard for extended sessions, scanning tables, charts, and status chips to catch problems (bounces, flagged mailboxes, stalled campaigns) quickly.
 
 ## Product Purpose
 

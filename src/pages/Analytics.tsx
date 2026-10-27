@@ -218,7 +218,7 @@ export function Analytics() {
         <Card className="apple-shadow border border-border/70 bg-surface p-4">
           <Card.Header className="p-0">
             <Card.Title className="text-[15px] font-semibold">Review triggers</Card.Title>
-            <Card.Description>Why ReplyOS held or escalated drafts before sending.</Card.Description>
+            <Card.Description>Why SendVybe held or escalated drafts before sending.</Card.Description>
           </Card.Header>
           <Card.Content className="space-y-4 p-0 pt-5">
             {isLoading ? (

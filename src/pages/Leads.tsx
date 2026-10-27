@@ -63,7 +63,7 @@ export function Leads() {
         <Card.Header className="flex-row items-center justify-between gap-4">
           <div>
             <Card.Title>Leads</Card.Title>
-            <Card.Description>Positive PlusVibe prospects that ReplyOS has answered by AI approval or manual reply.</Card.Description>
+            <Card.Description>Positive PlusVibe prospects that SendVybe has answered by AI approval or manual reply.</Card.Description>
           </div>
           <Button size="sm" variant="secondary" onPress={loadLeads} isDisabled={isLoading}>
             {isLoading ? <Spinner color="accent" size="sm" /> : <RefreshCw className="size-4" />}

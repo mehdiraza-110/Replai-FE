@@ -20,11 +20,9 @@ import type {
   CampaignPage,
   ChangePasswordPayload,
   Domain,
-  DomainOnboardResult,
   DomainPage,
   EventLogPage,
   ForwardedLeadPage,
-  HostedZone,
   HumanReviewPage,
   KnowledgeItem,
   KnowledgePage,
@@ -46,8 +44,6 @@ import type {
   PlusVibeCampaign,
   ProfileUpdatePayload,
   ReputationTrendPoint,
-  SesAccountRequest,
-  SesAccountStatus,
   WarmupSafetyTier,
   WarmupPoolAddResult,
   WarmupPoolStats,
@@ -123,7 +119,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}) {
       headers,
     });
   } catch {
-    throw new ApiRequestError("We could not reach the server. Please check that ReplyOS is running and try again.", 0);
+    throw new ApiRequestError("We could not reach the server. Please check that SendVybe is running and try again.", 0);
   }
 
   const payload = (await response.json().catch(() => null)) as ApiResponse<T> | null;
@@ -184,7 +180,7 @@ export function uploadWithProgress<T>(path: string, file: File, fieldName: strin
     };
 
     xhr.onerror = () => {
-      reject(new ApiRequestError("We could not reach the server. Please check that ReplyOS is running and try again.", 0));
+      reject(new ApiRequestError("We could not reach the server. Please check that SendVybe is running and try again.", 0));
     };
 
     xhr.send(formData);
@@ -241,7 +237,7 @@ function getFriendlyErrorMessage({
   // An intentional upstream failure that carries its own code and a clear message (e.g. an AI provider that can't be reached).
   if ((status === 502 || status === 503 || status === 504) && code && message && !isTechnicalErrorMessage(message)) return message;
 
-  if (status === 0) return "We could not reach the server. Please check that ReplyOS is running and try again.";
+  if (status === 0) return "We could not reach the server. Please check that SendVybe is running and try again.";
   if (status === 401 || status === 403) {
     // Login failures (wrong password, disabled account...) carry a specific, user-safe reason from the server.
     // Only the auth middleware's own token/route messages mean the session itself is the problem.
@@ -534,27 +530,6 @@ export const domainService = {
     return response.data;
   },
 
-  async listHostedZones() {
-    const response = await apiRequest<HostedZone[]>("/api/v1/domains/hosted-zones");
-    return response.data;
-  },
-
-  async onboard(domains: string[]) {
-    const response = await apiRequest<DomainOnboardResult[]>("/api/v1/domains/onboard", {
-      method: "POST",
-      body: JSON.stringify({ domains }),
-    });
-    return response.data;
-  },
-
-  async onboardExternal(domain: string) {
-    const response = await apiRequest<DomainOnboardResult>("/api/v1/domains/onboard-external", {
-      method: "POST",
-      body: JSON.stringify({ domain }),
-    });
-    return response.data;
-  },
-
   async refreshAll() {
     const response = await apiRequest<Domain[]>("/api/v1/domains/refresh", { method: "POST" });
     return response.data;
@@ -563,24 +538,6 @@ export const domainService = {
   async refreshOne(domain: string) {
     const response = await apiRequest<Domain>(`/api/v1/domains/${encodeURIComponent(domain)}/refresh`, {
       method: "POST",
-    });
-    return response.data;
-  },
-
-  async getAccountStatus() {
-    const response = await apiRequest<SesAccountStatus>("/api/v1/domains/account-status");
-    return response.data;
-  },
-
-  async requestProductionAccess(payload: {
-    mailType: "MARKETING" | "TRANSACTIONAL";
-    websiteUrl: string;
-    useCaseDescription?: string;
-    additionalContactEmailAddresses?: string[];
-  }) {
-    const response = await apiRequest<SesAccountRequest>("/api/v1/domains/account-status/request", {
-      method: "POST",
-      body: JSON.stringify(payload),
     });
     return response.data;
   },

@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button, Chip, Modal, Spinner, Tooltip, useOverlayState } from "@heroui/react";
 import {
   AlertTriangle,
+  ArrowUpDown,
   BarChart2,
   CheckCircle2,
   ChevronLeft,
@@ -10,6 +11,7 @@ import {
   CornerUpLeft,
   Gem,
   Inbox,
+  ListFilter,
   Megaphone,
   PauseCircle,
   Plus,
@@ -25,12 +27,87 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { MailboxAnalyticsDrawer } from "../components/mailer/MailboxAnalyticsDrawer";
 import { MailboxInboxDrawer } from "../components/mailer/MailboxInboxDrawer";
+import { FilterMenu } from "../components/mailer/FilterMenu";
 import { SkeletonRow } from "../components/ui/Skeleton";
 import { mailboxService } from "../services/api";
-import type { Mailbox, MailboxStatusCounts } from "../types";
+import type { Mailbox, MailboxReputationStatus, MailboxStatus, MailboxStatusCounts, MailboxWarmupStage } from "../types";
 
 const PAGE_SIZE = 10;
+const FETCH_ALL_LIMIT = 100;
+const FETCH_ALL_MAX_PAGES = 50;
 const emptyCounts: MailboxStatusCounts = { total: 0, active: 0, paused: 0, error: 0 };
+
+type SortKey = "default" | "email-asc" | "email-desc" | "newest" | "last-sent" | "sent-today" | "bounce" | "deliverability";
+
+interface Filters {
+  status: "" | MailboxStatus;
+  warmup: "" | MailboxWarmupStage;
+  reputation: "" | MailboxReputationStatus;
+  campaign: "" | "in" | "none";
+  sort: SortKey;
+}
+
+const noFilters: Filters = { status: "", warmup: "", reputation: "", campaign: "", sort: "default" };
+
+const STATUS_FILTER_OPTIONS = [
+  { value: "", label: "All statuses" },
+  { value: "Active", label: "Active" },
+  { value: "Paused", label: "Paused" },
+  { value: "Error", label: "Error" },
+];
+const WARMUP_FILTER_OPTIONS = [
+  { value: "", label: "All stages" },
+  { value: "New", label: "New" },
+  { value: "Ramping", label: "Ramping" },
+  { value: "Steady State", label: "Steady State" },
+  { value: "Paused", label: "Paused" },
+];
+const REPUTATION_FILTER_OPTIONS = [
+  { value: "", label: "All reputations" },
+  { value: "Healthy", label: "Healthy" },
+  { value: "Watch", label: "Watch" },
+  { value: "At Risk", label: "At Risk" },
+];
+const CAMPAIGN_FILTER_OPTIONS = [
+  { value: "", label: "Any campaign state" },
+  { value: "in", label: "In a campaign" },
+  { value: "none", label: "Not in a campaign" },
+];
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: "default", label: "Default order" },
+  { value: "email-asc", label: "Email A–Z" },
+  { value: "email-desc", label: "Email Z–A" },
+  { value: "newest", label: "Newest first" },
+  { value: "last-sent", label: "Most recently sent" },
+  { value: "sent-today", label: "Most sent today" },
+  { value: "bounce", label: "Highest bounce rate" },
+  { value: "deliverability", label: "Lowest deliverability" },
+];
+
+function matchesFilters(mailbox: Mailbox, filters: Filters) {
+  if (filters.status && mailbox.status !== filters.status) return false;
+  if (filters.warmup && mailbox.warmupStage !== filters.warmup) return false;
+  if (filters.reputation && mailbox.reputationStatus !== filters.reputation) return false;
+  if (filters.campaign === "in" && mailbox.activeCampaigns.length === 0) return false;
+  if (filters.campaign === "none" && mailbox.activeCampaigns.length > 0) return false;
+  return true;
+}
+
+function sortMailboxes(mailboxes: Mailbox[], sort: SortKey) {
+  const time = (value: string | null) => (value ? new Date(value).getTime() : 0);
+  const sorted = [...mailboxes];
+  switch (sort) {
+    case "email-asc": return sorted.sort((a, b) => a.email.localeCompare(b.email));
+    case "email-desc": return sorted.sort((a, b) => b.email.localeCompare(a.email));
+    case "newest": return sorted.sort((a, b) => time(b.createdAt) - time(a.createdAt));
+    case "last-sent": return sorted.sort((a, b) => time(b.lastSentAt) - time(a.lastSentAt));
+    case "sent-today": return sorted.sort((a, b) => b.sentToday + b.campaignSentToday - (a.sentToday + a.campaignSentToday));
+    case "bounce": return sorted.sort((a, b) => (b.bounceRate3d ?? -1) - (a.bounceRate3d ?? -1));
+    // Mailboxes with no deliverability data yet sink to the bottom rather than reading as 0%.
+    case "deliverability": return sorted.sort((a, b) => (a.warmupDeliverability7d ?? 101) - (b.warmupDeliverability7d ?? 101));
+    default: return sorted;
+  }
+}
 
 export function Mailboxes() {
   const navigate = useNavigate();
@@ -43,6 +120,9 @@ export function Mailboxes() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<Filters>(noFilters);
+  // Filters and sorting are applied here, so while one is active the full list is loaded instead of a server page.
+  const [allMailboxes, setAllMailboxes] = useState<Mailbox[]>([]);
   const [analyticsMailboxId, setAnalyticsMailboxId] = useState<number | null>(null);
   const [drawerTab, setDrawerTab] = useState<"analytics" | "settings">("analytics");
   const [inboxMailboxId, setInboxMailboxId] = useState<number | null>(null);
@@ -52,6 +132,21 @@ export function Mailboxes() {
   const [isDeleting, setIsDeleting] = useState(false);
   const deleteModal = useOverlayState({});
 
+  const filtersActive = Object.values(filters).some((value) => value !== "" && value !== "default");
+  const filteredMailboxes = useMemo(
+    () => (filtersActive ? sortMailboxes(allMailboxes.filter((mailbox) => matchesFilters(mailbox, filters)), filters.sort) : []),
+    [allMailboxes, filters, filtersActive],
+  );
+  const shownMailboxes = filtersActive ? filteredMailboxes.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : mailboxes;
+  const shownTotal = filtersActive ? filteredMailboxes.length : total;
+  const shownTotalPages = filtersActive ? Math.max(1, Math.ceil(filteredMailboxes.length / PAGE_SIZE)) : totalPages;
+  const activeFilterCount = [filters.status, filters.warmup, filters.reputation, filters.campaign].filter(Boolean).length + (filters.sort !== "default" ? 1 : 0);
+
+  function setFilter<K extends keyof Filters>(key: K, value: Filters[K]) {
+    setFilters((current) => ({ ...current, [key]: value }));
+    setPage(1);
+  }
+
   useEffect(() => {
     load(1, search);
   }, []);
@@ -60,12 +155,25 @@ export function Mailboxes() {
     const timeout = window.setTimeout(() => load(1, search), 350);
     return () => window.clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search]);
+  }, [search, filtersActive]);
 
   async function load(nextPage: number, nextSearch: string) {
     setIsLoading(true);
     setError(null);
     try {
+      if (filtersActive) {
+        const first = await mailboxService.list({ page: 1, limit: FETCH_ALL_LIMIT, search: nextSearch });
+        const rest = await Promise.all(
+          Array.from({ length: Math.min(first.totalPages, FETCH_ALL_MAX_PAGES) - 1 }, (_, index) =>
+            mailboxService.list({ page: index + 2, limit: FETCH_ALL_LIMIT, search: nextSearch }),
+          ),
+        );
+        setAllMailboxes([first, ...rest].flatMap((result) => result.items));
+        setStatusCounts(first.statusCounts);
+        setTotal(first.total);
+        setPage(nextPage);
+        return;
+      }
       const mailboxPage = await mailboxService.list({ page: nextPage, limit: PAGE_SIZE, search: nextSearch });
       setMailboxes(mailboxPage.items);
       setStatusCounts(mailboxPage.statusCounts);
@@ -75,6 +183,7 @@ export function Mailboxes() {
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to load mailboxes");
       setMailboxes([]);
+      setAllMailboxes([]);
     } finally {
       setIsLoading(false);
     }
@@ -97,6 +206,7 @@ export function Mailboxes() {
     try {
       const updated = await mailboxService.refreshOne(id);
       setMailboxes((current) => current.map((mailbox) => (mailbox.id === id ? updated : mailbox)));
+      setAllMailboxes((current) => current.map((mailbox) => (mailbox.id === id ? updated : mailbox)));
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to refresh mailbox status");
     } finally {
@@ -125,16 +235,17 @@ export function Mailboxes() {
     }
   }
 
-  const selectedIndex = mailboxes.findIndex((mailbox) => mailbox.id === analyticsMailboxId);
-  const selectedMailbox = selectedIndex >= 0 ? mailboxes[selectedIndex] : null;
-  const inboxMailbox = mailboxes.find((mailbox) => mailbox.id === inboxMailboxId) ?? null;
+  // Prev/next in the drawer walks whatever the table is currently showing.
+  const selectedIndex = shownMailboxes.findIndex((mailbox) => mailbox.id === analyticsMailboxId);
+  const selectedMailbox = selectedIndex >= 0 ? shownMailboxes[selectedIndex] : null;
+  const inboxMailbox = shownMailboxes.find((mailbox) => mailbox.id === inboxMailboxId) ?? null;
 
   function navigateAnalytics(direction: "prev" | "next") {
-    if (mailboxes.length === 0 || selectedIndex < 0) return;
+    if (shownMailboxes.length === 0 || selectedIndex < 0) return;
     const nextIndex = direction === "prev"
-      ? (selectedIndex - 1 + mailboxes.length) % mailboxes.length
-      : (selectedIndex + 1) % mailboxes.length;
-    setAnalyticsMailboxId(mailboxes[nextIndex].id);
+      ? (selectedIndex - 1 + shownMailboxes.length) % shownMailboxes.length
+      : (selectedIndex + 1) % shownMailboxes.length;
+    setAnalyticsMailboxId(shownMailboxes[nextIndex].id);
   }
 
   return (
@@ -192,9 +303,32 @@ export function Mailboxes() {
                 Loading…
               </>
             ) : (
-              `Showing ${mailboxes.length} of ${total} mailboxes · Page ${page} of ${totalPages}`
+              `Showing ${shownMailboxes.length} of ${shownTotal} mailboxes · Page ${page} of ${shownTotalPages}`
             )}
           </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 border-b border-border/70 px-4 py-3">
+          <FilterMenu icon={ListFilter} label="Status" options={STATUS_FILTER_OPTIONS} value={filters.status} onChange={(value) => setFilter("status", value as Filters["status"])} />
+          <FilterMenu label="Warmup" options={WARMUP_FILTER_OPTIONS} value={filters.warmup} onChange={(value) => setFilter("warmup", value as Filters["warmup"])} />
+          <FilterMenu label="Reputation" options={REPUTATION_FILTER_OPTIONS} value={filters.reputation} onChange={(value) => setFilter("reputation", value as Filters["reputation"])} />
+          <FilterMenu label="Campaign" options={CAMPAIGN_FILTER_OPTIONS} value={filters.campaign} onChange={(value) => setFilter("campaign", value as Filters["campaign"])} />
+          <span aria-hidden className="mx-1 hidden h-5 w-px bg-border sm:block" />
+          <FilterMenu icon={ArrowUpDown} label="Sort" options={SORT_OPTIONS} value={filters.sort} onChange={(value) => setFilter("sort", value as SortKey)} />
+          {activeFilterCount > 0 || search ? (
+            <button
+              className="inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-[12px] font-medium text-muted outline-none transition hover:bg-surface-secondary hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent"
+              type="button"
+              onClick={() => {
+                setFilters(noFilters);
+                setSearch("");
+                setPage(1);
+              }}
+            >
+              <X className="size-3.5" />
+              Clear{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+            </button>
+          ) : null}
         </div>
 
         <div className="overflow-x-auto">
@@ -218,14 +352,14 @@ export function Mailboxes() {
             <tbody>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, index) => <SkeletonRow columns={12} key={index} />)
-              ) : mailboxes.length === 0 ? (
+              ) : shownMailboxes.length === 0 ? (
                 <tr>
                   <td className="px-4 py-10 text-center text-sm font-medium text-muted" colSpan={12}>
-                    {total === 0 && !search ? (isSuperAdmin ? "No mailboxes yet. Click “Add Mailboxes” to create sender identities under a verified domain." : "No mailboxes yet. Click “Request mailboxes” to order some.") : "No mailboxes match your search."}
+                    {total === 0 && !search && !filtersActive ? (isSuperAdmin ? "No mailboxes yet. Click “Add Mailboxes” to create sender identities under a verified domain." : "No mailboxes yet. Click “Request mailboxes” to order some.") : "No mailboxes match your search or filters."}
                   </td>
                 </tr>
               ) : (
-                mailboxes.map((mailbox) => (
+                shownMailboxes.map((mailbox) => (
                   <tr className="border-b border-border/60 last:border-0" key={mailbox.id}>
                     <td className="px-4 py-4 align-top">
                       <p className="max-w-[240px] truncate font-semibold text-foreground">{mailbox.email}</p>
@@ -388,13 +522,13 @@ export function Mailboxes() {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/70 px-4 py-3 text-[12px] text-muted">
-          <span>Page {page} of {totalPages}</span>
+          <span>Page {page} of {shownTotalPages}</span>
           <div className="flex items-center gap-2">
-            <Button isDisabled={isLoading || page <= 1} onPress={() => load(page - 1, search)} size="sm" variant="secondary">
+            <Button isDisabled={isLoading || page <= 1} onPress={() => (filtersActive ? setPage(page - 1) : load(page - 1, search))} size="sm" variant="secondary">
               <ChevronLeft className="size-4" />
               Previous
             </Button>
-            <Button isDisabled={isLoading || page >= totalPages} onPress={() => load(page + 1, search)} size="sm" variant="secondary">
+            <Button isDisabled={isLoading || page >= shownTotalPages} onPress={() => (filtersActive ? setPage(page + 1) : load(page + 1, search))} size="sm" variant="secondary">
               Next
               <ChevronRight className="size-4" />
             </Button>

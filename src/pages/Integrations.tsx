@@ -739,7 +739,7 @@ function GhlModal({
 
                 <div className="rounded-xl bg-surface-secondary p-3 md:col-span-2">
                   <p className="text-sm font-semibold text-foreground">What this connects</p>
-                  <p className="mt-2 text-[12px] leading-5 text-muted">Once a lead's AI reply is approved or auto-sent, ReplyOS upserts the lead as a contact in this location and logs the reply into GHL Conversations.</p>
+                  <p className="mt-2 text-[12px] leading-5 text-muted">Once a lead's AI reply is approved or auto-sent, SendVybe upserts the lead as a contact in this location and logs the reply into GHL Conversations.</p>
                 </div>
 
                 {localError ? <p className="text-sm font-medium text-danger md:col-span-2">{localError}</p> : null}

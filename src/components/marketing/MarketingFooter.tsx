@@ -6,10 +6,7 @@ export function MarketingFooter() {
       <div className="mkt-shell flex flex-col items-center gap-6 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <a className="mkt-focusable flex items-center gap-2 text-[15px] font-semibold tracking-[-0.02em] text-[var(--mkt-ink)]" href="#top">
-            <span aria-hidden="true" className="grid size-6 place-items-center rounded-md bg-[var(--mkt-accent)] text-[11px] font-bold text-white">
-              R
-            </span>
-            ReplyOS
+            SendVybe
           </a>
           <p className="mkt-body mt-2.5 max-w-[280px] text-[13px]">AI that reads, drafts, and books the meeting — with a human always in the loop.</p>
         </div>

@@ -75,7 +75,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 12 }}
           transition={{ duration: 0.6, delay: 0.55 }}
         >
-          ReplyOS reads every prospect reply, drafts the response in your agent's voice, and books the
+          SendVybe reads every prospect reply, drafts the response in your agent's voice, and books the
           meeting straight onto your calendar. Anything outside its confidence routes to a human before it
           ever sends.
         </motion.p>
