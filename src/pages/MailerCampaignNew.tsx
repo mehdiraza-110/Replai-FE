@@ -27,7 +27,8 @@ import { useDebouncedValue } from "../components/leads/leadBits";
 import { aiAgentService, campaignService, domainService, mailboxService } from "../services/api";
 import { leadLibraryService } from "../services/leadLibraryApi";
 import { isComposerEmpty } from "../utils/composerHtml";
-import type { Agent, LeadFileParseResult, LeadSelectionSummary, ParsedLead } from "../types";
+import { CampaignLeadsManager } from "../components/leads/CampaignLeadsManager";
+import type { Agent, CampaignDetail, LeadFileParseResult, LeadSelectionSummary, ParsedLead } from "../types";
 
 interface WizardMailbox {
   id: number;
@@ -101,8 +102,12 @@ const FIELD_LABELS: Record<string, string> = {
   phone: "Phone",
 };
 
-export function MailerCampaignNew() {
+/** The same five-step flow serves both creating a campaign and editing one (pass `initial` to edit). */
+export function MailerCampaignNew({ initial, onLeadsChanged }: { initial?: CampaignDetail; onLeadsChanged?: () => void } = {}) {
   const navigate = useNavigate();
+  const isEditing = Boolean(initial);
+  // A saved campaign may use a timezone that isn't in the quick-pick list; keep it selectable.
+  if (initial?.timezone && !TIMEZONES.includes(initial.timezone)) TIMEZONES.push(initial.timezone);
   const [domains, setDomains] = useState<WizardDomain[]>([]);
   const [domainsLoading, setDomainsLoading] = useState(true);
   const [domainsError, setDomainsError] = useState<string | null>(null);
@@ -156,8 +161,8 @@ export function MailerCampaignNew() {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Step 1 — Campaign
-  const [name, setName] = useState("");
-  const [objective, setObjective] = useState("");
+  const [name, setName] = useState(initial?.name ?? "");
+  const [objective, setObjective] = useState(initial?.objective ?? "");
 
   // Step 2 — Audience
   const [uploadStage, setUploadStage] = useState<UploadStage>("idle");
@@ -260,25 +265,27 @@ export function MailerCampaignNew() {
   }
 
   // Step 3 — Message
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
-  const [followUps, setFollowUps] = useState<FollowUp[]>([]);
+  const [subject, setSubject] = useState(initial?.subject ?? "");
+  const [body, setBody] = useState(initial?.body ?? "");
+  const [followUps, setFollowUps] = useState<FollowUp[]>(
+    () => initial?.followUps.map((followUp, index) => ({ id: index + 1, delayDays: followUp.delayDays, body: followUp.body })) ?? []
+  );
 
   // Step 4 — Sending & schedule
-  const [mailboxMode, setMailboxMode] = useState<"all" | "specific">("all");
-  const [selectedMailboxIds, setSelectedMailboxIds] = useState<Set<number>>(new Set());
+  const [mailboxMode, setMailboxMode] = useState<"all" | "specific">(initial?.mailboxMode ?? "all");
+  const [selectedMailboxIds, setSelectedMailboxIds] = useState<Set<number>>(new Set(initial?.mailboxIds ?? []));
   const [mailboxSearch, setMailboxSearch] = useState("");
-  const [dailyLimitOverride, setDailyLimitOverride] = useState<string>("");
-  const [sendingDays, setSendingDays] = useState<Set<string>>(new Set(["Mon", "Tue", "Wed", "Thu", "Fri"]));
-  const [windowStart, setWindowStart] = useState("09:00");
-  const [windowEnd, setWindowEnd] = useState("17:00");
-  const [timezone, setTimezone] = useState(TIMEZONES[0]);
+  const [dailyLimitOverride, setDailyLimitOverride] = useState<string>(initial?.dailyLimitOverride ? String(initial.dailyLimitOverride) : "");
+  const [sendingDays, setSendingDays] = useState<Set<string>>(new Set(initial?.sendingDays ?? ["Mon", "Tue", "Wed", "Thu", "Fri"]));
+  const [windowStart, setWindowStart] = useState(initial?.windowStart?.slice(0, 5) ?? "09:00");
+  const [windowEnd, setWindowEnd] = useState(initial?.windowEnd?.slice(0, 5) ?? "17:00");
+  const [timezone, setTimezone] = useState(initial?.timezone ?? TIMEZONES[0]);
 
   // Step 5 — Review & launch
   const [agents, setAgents] = useState<Agent[]>([]);
   const [agentsLoading, setAgentsLoading] = useState(true);
-  const [aiAgentId, setAiAgentId] = useState<string>("");
-  const [humanReviewRequired, setHumanReviewRequired] = useState(true);
+  const [aiAgentId, setAiAgentId] = useState<string>(initial?.aiAgentId ? String(initial.aiAgentId) : "");
+  const [humanReviewRequired, setHumanReviewRequired] = useState(initial?.humanReviewRequired ?? true);
 
   useEffect(() => {
     let cancelled = false;
@@ -315,7 +322,9 @@ export function MailerCampaignNew() {
 
   const canProceed = {
     1: name.trim().length > 2,
-    2: librarySettled && totalLeadCount > 0 && (!saveUploadsToLibrary || leads.length === 0 || saveListName.trim().length > 0),
+    2: isEditing
+      ? librarySettled
+      : librarySettled && totalLeadCount > 0 && (!saveUploadsToLibrary || leads.length === 0 || saveListName.trim().length > 0),
     3: subject.trim().length > 0 && !isComposerEmpty(body),
     4: selectedMailboxes.length > 0 && sendingDays.size > 0 && !limitExceedsCapacity,
     5: true,
@@ -357,6 +366,42 @@ export function MailerCampaignNew() {
 
   function removeFollowUp(id: number) {
     setFollowUps((current) => current.filter((item) => item.id !== id));
+  }
+
+  async function handleSave() {
+    if (!initial) return;
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      const parsedAgentId = Number(aiAgentId);
+      await campaignService.update(initial.id, {
+        name,
+        objective,
+        subject,
+        body,
+        followUps: followUps.map((followUp) => ({ delayDays: followUp.delayDays, body: followUp.body })),
+        mailboxMode,
+        mailboxIds: mailboxMode === "specific" ? Array.from(selectedMailboxIds) : undefined,
+        dailyLimitOverride: dailyLimitOverride ? Number(dailyLimitOverride) : null,
+        sendingDays: Array.from(sendingDays),
+        windowStart,
+        windowEnd,
+        timezone,
+        aiAgentId: aiAgentId && Number.isFinite(parsedAgentId) ? parsedAgentId : null,
+        humanReviewRequired,
+      });
+      if (leads.length > 0 || pickHasSelection) {
+        await campaignService.addLeads(initial.id, {
+          leads: leads.length > 0 ? leads : undefined,
+          leadSource: pickHasSelection ? pickToSource(libraryPick) : undefined,
+        });
+      }
+      navigate("/mailer/campaigns", { state: { updatedCampaign: name } });
+    } catch (requestError) {
+      setSubmitError(requestError instanceof Error ? requestError.message : "Unable to save the campaign");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
 async function handleLaunch() {
@@ -403,6 +448,13 @@ async function handleLaunch() {
         Back to Campaigns
       </button>
 
+      {isEditing ? (
+        <div>
+          <h2 className="text-[18px] font-semibold text-foreground">Edit “{initial?.name}”</h2>
+          <p className="mt-0.5 text-[12.5px] text-muted">Changes apply from the next send cycle. Emails already sent are not changed.</p>
+        </div>
+      ) : null}
+
       {domainsError ? (
         <div className="rounded-2xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger">{domainsError}</div>
       ) : null}
@@ -410,13 +462,16 @@ async function handleLaunch() {
         <div className="rounded-2xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger">{submitError}</div>
       ) : null}
 
-      <Stepper currentStep={step} />
+      <Stepper currentStep={step} finalLabel={isEditing ? "Review & Save" : undefined} />
 
       <div className="apple-shadow rounded-2xl border border-border/70 bg-surface p-6">
         {step === 1 ? (
           <StepCampaign name={name} objective={objective} setName={setName} setObjective={setObjective} />
         ) : step === 2 ? (
-          <StepAudience
+          <div className="space-y-6">
+            {initial ? <CampaignLeadsManager campaignId={initial.id} counts={initial.leadCounts} onChanged={() => onLeadsChanged?.()} /> : null}
+            <StepAudience
+            isEditing={isEditing}
             libraryPick={libraryPick}
             onLibraryPickChange={setLibraryPick}
             librarySummary={pickHasSelection ? librarySummary : null}
@@ -439,6 +494,7 @@ async function handleLaunch() {
             uploadProgress={uploadProgress}
             uploadStage={uploadStage}
           />
+          </div>
         ) : step === 3 ? (
           <StepMessage
             body={body}
@@ -484,7 +540,7 @@ async function handleLaunch() {
             dnsReady={dnsReady}
             flaggedMailboxes={flaggedMailboxes}
             humanReviewRequired={humanReviewRequired}
-            leadsCount={totalLeadCount}
+            leadsCount={isEditing ? (initial?.leadCounts.total ?? 0) + totalLeadCount : totalLeadCount}
             limitsSane={limitsSane}
             mailboxMode={mailboxMode}
             mailboxesHealthy={mailboxesHealthy}
@@ -512,9 +568,9 @@ async function handleLaunch() {
             <ArrowRight className="size-4" />
           </Button>
         ) : (
-          <Button isDisabled={isSubmitting || selectedMailboxes.length === 0} onPress={handleLaunch}>
-            {isSubmitting ? <Spinner color="current" size="sm" /> : <Rocket className="size-4" />}
-            {isSubmitting ? "Launching…" : "Launch Campaign"}
+          <Button isDisabled={isSubmitting || selectedMailboxes.length === 0} onPress={isEditing ? handleSave : handleLaunch}>
+            {isSubmitting ? <Spinner color="current" size="sm" /> : isEditing ? <Check className="size-4" /> : <Rocket className="size-4" />}
+            {isSubmitting ? (isEditing ? "Saving…" : "Launching…") : isEditing ? "Save changes" : "Launch Campaign"}
           </Button>
         )}
       </div>
@@ -522,7 +578,7 @@ async function handleLaunch() {
   );
 }
 
-function Stepper({ currentStep }: { currentStep: number }) {
+function Stepper({ currentStep, finalLabel }: { currentStep: number; finalLabel?: string }) {
   return (
     <div className="flex items-center">
       {STEPS.map((step, index) => {
@@ -540,7 +596,7 @@ function Stepper({ currentStep }: { currentStep: number }) {
               >
                 {isComplete ? <Check className="size-4" /> : step.id}
               </div>
-              <span className={`whitespace-nowrap text-[11px] font-medium ${isCurrent ? "text-foreground" : "text-muted"}`}>{step.label}</span>
+              <span className={`whitespace-nowrap text-[11px] font-medium ${isCurrent ? "text-foreground" : "text-muted"}`}>{step.id === STEPS.length && finalLabel ? finalLabel : step.label}</span>
             </div>
             {index < STEPS.length - 1 ? (
               <div className={`mx-2 h-0.5 flex-1 rounded-full ${isComplete ? "bg-accent" : "bg-default-100"}`} />
@@ -594,6 +650,7 @@ function StepCampaign({
 }
 
 function StepAudience({
+  isEditing = false,
   leads,
   fileInputRef,
   onUploadFile,
@@ -616,6 +673,7 @@ function StepAudience({
   setSaveUploadsToLibrary,
   totalLeadCount,
 }: {
+  isEditing?: boolean;
   libraryPick: LibraryPick;
   onLibraryPickChange: (pick: LibraryPick) => void;
   librarySummary: LeadSelectionSummary | null;
@@ -667,7 +725,7 @@ function StepAudience({
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-[15px] font-semibold text-foreground">Audience</h2>
+        <h2 className="text-[15px] font-semibold text-foreground">{isEditing ? "Add more leads" : "Audience"}</h2>
         <p className="mt-0.5 text-[12px] text-muted">
           Choose leads you already saved in the Leads module, upload a new file, or combine both. Duplicates and suppressed addresses are removed automatically.
         </p>
@@ -850,7 +908,7 @@ function StepAudience({
         />
       </label>
 
-      {leads.length > 0 ? (
+      {leads.length > 0 && !isEditing ? (
         <div className="space-y-2 rounded-xl border border-border/70 p-3.5">
           <label className="flex items-center gap-2 text-[13px] font-medium text-foreground">
             <input checked={saveUploadsToLibrary} className="size-4 accent-[var(--accent)]" onChange={(event) => setSaveUploadsToLibrary(event.target.checked)} type="checkbox" />
@@ -871,7 +929,7 @@ function StepAudience({
       <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-surface-secondary/60 px-3.5 py-2.5">
         <CheckCircle2 className="size-4 shrink-0 text-success" />
         <p className="text-[12.5px] font-medium text-foreground">
-          {totalLeadCount.toLocaleString()} total lead{totalLeadCount === 1 ? "" : "s"} ready for this campaign
+          {totalLeadCount.toLocaleString()} {isEditing ? "new " : "total "}lead{totalLeadCount === 1 ? "" : "s"} {isEditing ? "to add when you save" : "ready for this campaign"}
           {leads.length > 0 && librarySummary ? <span className="font-normal text-muted"> · overlap between sources is removed when you launch</span> : null}
         </p>
       </div>

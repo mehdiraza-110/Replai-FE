@@ -16,8 +16,12 @@ import type {
   AuthUser,
   CalendarConnection,
   CampaignCreatePayload,
+  CampaignDetail,
   CampaignLeadsPage,
   CampaignPage,
+  CampaignUpdatePayload,
+  LeadSelection,
+  ParsedLead,
   ChangePasswordPayload,
   Domain,
   DomainPage,
@@ -456,9 +460,30 @@ export const campaignService = {
     return uploadWithProgress<LeadFileParseResult>("/api/v1/campaigns/parse-leads", file, "file", onProgress);
   },
 
-  async listLeads(campaignId: number, { page = 1, limit = 20, search = "" }: { page?: number; limit?: number; search?: string } = {}) {
+  async get(campaignId: number) {
+    const response = await apiRequest<CampaignDetail>(`/api/v1/campaigns/${campaignId}`);
+    return response.data;
+  },
+
+  async update(campaignId: number, payload: CampaignUpdatePayload) {
+    const response = await apiRequest<CampaignDetail>(`/api/v1/campaigns/${campaignId}`, { method: "PATCH", body: JSON.stringify(payload) });
+    return response.data;
+  },
+
+  async addLeads(campaignId: number, payload: { leads?: ParsedLead[]; leadSource?: { listIds?: number[]; contacts?: LeadSelection | null } }) {
+    const response = await apiRequest<{ added: number; suppressed: number }>(`/api/v1/campaigns/${campaignId}/leads`, { method: "POST", body: JSON.stringify(payload) });
+    return response.data;
+  },
+
+  async removeLeads(campaignId: number, selection: LeadSelection) {
+    const response = await apiRequest<{ removed: number }>(`/api/v1/campaigns/${campaignId}/leads/remove`, { method: "POST", body: JSON.stringify({ selection }) });
+    return response.data;
+  },
+
+  async listLeads(campaignId: number, { page = 1, limit = 20, search = "", status = "" }: { page?: number; limit?: number; search?: string; status?: string } = {}) {
     const params = new URLSearchParams({ page: String(page), limit: String(limit) });
     if (search) params.set("search", search);
+    if (status) params.set("status", status);
     const response = await apiRequest<CampaignLeadsPage>(`/api/v1/campaigns/${campaignId}/leads?${params.toString()}`);
     return response.data;
   },

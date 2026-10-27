@@ -22,6 +22,7 @@ import { Mailer } from "./pages/Mailer";
 import { MailboxOnboarding } from "./pages/MailboxOnboarding";
 import { Mailboxes } from "./pages/Mailboxes";
 import { MailerInbox } from "./pages/MailerInbox";
+import { MailerCampaignEdit } from "./pages/MailerCampaignEdit";
 import { MailerCampaignNew } from "./pages/MailerCampaignNew";
 import { MailerCampaigns } from "./pages/MailerCampaigns";
 import { MailerLeads } from "./pages/MailerLeads";
@@ -161,6 +162,7 @@ export default function App() {
         <Route path="mailer/leads" element={<MailerLeads />} />
         <Route path="mailer/campaigns" element={<MailerCampaigns />} />
         <Route path="mailer/campaigns/new" element={<MailerCampaignNew />} />
+        <Route path="mailer/campaigns/:id/edit" element={<MailerCampaignEdit />} />
         <Route path="mailer/reports" element={<MailerReports />} />
         <Route path="responder/reports" element={<ResponderReports />} />
         <Route path="knowledge" element={<KnowledgeBase />} />

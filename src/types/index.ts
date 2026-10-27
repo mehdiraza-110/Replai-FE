@@ -384,6 +384,30 @@ export interface CampaignLeadsPage {
   totalPages: number;
 }
 
+/** A saved campaign as the edit screen sees it. */
+export interface CampaignDetail {
+  id: number;
+  name: string;
+  objective: string;
+  status: "Active" | "Paused" | "Draft" | "Completed";
+  subject: string;
+  body: string;
+  followUps: CampaignFollowUpPayload[];
+  mailboxMode: "all" | "specific";
+  mailboxIds: number[];
+  dailyLimitOverride: number | null;
+  sendingDays: string[];
+  windowStart: string;
+  windowEnd: string;
+  timezone: string;
+  aiAgentId: number | null;
+  humanReviewRequired: boolean;
+  sentTotal: number;
+  leadCounts: { total: number; Pending: number; Sent: number; Replied: number; Bounced: number; Suppressed: number; Failed: number };
+}
+
+export type CampaignUpdatePayload = Partial<Omit<CampaignCreatePayload, "leads" | "leadSource" | "saveToLibrary">> & { status?: "Active" | "Paused" };
+
 export interface CampaignCreatePayload {
   name: string;
   objective?: string;
