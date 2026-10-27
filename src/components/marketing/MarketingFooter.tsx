@@ -1,43 +1,64 @@
 const YEAR = new Date().getFullYear();
 
+const COLUMNS = [
+  {
+    title: "Product",
+    links: [
+      { label: "Overview", href: "#product" },
+      { label: "Examples", href: "#examples" },
+      { label: "How it works", href: "#how-it-works" },
+      { label: "Security", href: "#security" },
+    ],
+  },
+  {
+    title: "Account",
+    links: [
+      { label: "Start free", href: "/app/login" },
+      { label: "Sign in", href: "/app/login" },
+    ],
+  },
+  {
+    title: "Legal",
+    links: [
+      { label: "Privacy", href: "/privacy" },
+      { label: "Terms", href: "/terms" },
+    ],
+  },
+];
+
 export function MarketingFooter() {
   return (
-    <footer className="border-t border-[var(--mkt-line)] py-12">
-      <div className="mkt-shell flex flex-col items-center gap-6 sm:flex-row sm:items-start sm:justify-between">
+    <footer className="py-16">
+      <div className="mkt-shell grid gap-12 md:grid-cols-[1.4fr_2fr]">
         <div>
-          <a className="mkt-focusable flex items-center gap-2 text-[15px] font-semibold tracking-[-0.02em] text-[var(--mkt-ink)]" href="#top">
+          <a className="mkt-focusable text-[18px] font-semibold tracking-[-0.02em] text-[var(--mkt-ink)]" href="#top">
             SendVybe
           </a>
-          <p className="mkt-body mt-2.5 max-w-[280px] text-[13px]">AI that reads, drafts, and books the meeting — with a human always in the loop.</p>
+          <p className="mkt-body mt-3 max-w-[300px] text-[14px]">
+            Reads replies, drafts answers, and books meetings. A person reviews anything uncertain.
+          </p>
         </div>
 
-        <nav aria-label="Footer" className="grid grid-cols-2 gap-x-12 gap-y-2 text-[13px] text-[var(--mkt-ink-dim)] sm:flex sm:flex-wrap sm:justify-end sm:gap-8">
-          <a className="mkt-focusable whitespace-nowrap transition-colors hover:text-[var(--mkt-ink)]" href="#product">
-            Product
-          </a>
-          <a className="mkt-focusable whitespace-nowrap transition-colors hover:text-[var(--mkt-ink)]" href="#how-it-works">
-            How it works
-          </a>
-          <a className="mkt-focusable whitespace-nowrap transition-colors hover:text-[var(--mkt-ink)]" href="#setup">
-            Setup
-          </a>
-          <a className="mkt-focusable whitespace-nowrap transition-colors hover:text-[var(--mkt-ink)]" href="#security">
-            Security
-          </a>
-          <a className="mkt-focusable whitespace-nowrap transition-colors hover:text-[var(--mkt-ink)]" href="/privacy">
-            Privacy
-          </a>
-          <a className="mkt-focusable whitespace-nowrap transition-colors hover:text-[var(--mkt-ink)]" href="/terms">
-            Terms
-          </a>
-          <a className="mkt-focusable whitespace-nowrap transition-colors hover:text-[var(--mkt-ink)]" href="/app/login">
-            Sign in
-          </a>
+        <nav aria-label="Footer" className="grid grid-cols-2 gap-8 sm:grid-cols-3">
+          {COLUMNS.map((column) => (
+            <div key={column.title}>
+              <p className="text-[12px] uppercase tracking-[0.06em] text-[var(--mkt-ink-faint)]">{column.title}</p>
+              <ul className="mt-3">
+                {column.links.map((link) => (
+                  <li key={link.label}>
+                    <a className="mkt-focusable mkt-link flex min-h-[44px] items-center text-[14px]" href={link.href}>
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </nav>
       </div>
 
-      <div className="mkt-shell mt-10 border-t border-[var(--mkt-line-soft)] pt-6">
-        <p className="mkt-mono text-[11px] text-[var(--mkt-ink-faint)]">© {YEAR} Koval AI. All rights reserved.</p>
+      <div className="mkt-shell mt-12 border-t border-[var(--mkt-line)] pt-6">
+        <p className="mkt-mono text-[12px] text-[var(--mkt-ink-faint)]">© {YEAR} Koval AI. All rights reserved.</p>
       </div>
     </footer>
   );
