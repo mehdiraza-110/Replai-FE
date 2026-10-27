@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@heroui/react";
-import { AlertTriangle, CheckCircle2, Cloud, FileSpreadsheet, Loader2, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Cloud, FileDown, FileSpreadsheet, Loader2, X } from "lucide-react";
 import { AdminModal, ConfirmDialog, ErrorBanner } from "../admin/AdminModal";
 import { leadLibraryService, type LeadInput } from "../../services/leadLibraryApi";
 import type { LeadImportResult, LeadList, LeadSelection, LibraryLeadDetail } from "../../types";
-import { formatDate, inputClass, ListSelect } from "./leadBits";
+import { downloadSampleCsv, formatDate, inputClass, ListSelect } from "./leadBits";
 
 const FILE_EXTENSIONS = ["csv", "xlsx", "xls", "txt"];
 
@@ -164,7 +164,7 @@ export function ImportLeadsModal({
       isOpen={isOpen}
       onClose={() => (busy ? undefined : onClose())}
       title="Import leads"
-      description="Upload a CSV, XLSX, or TXT file. Every column is kept with each lead; duplicates and invalid emails are skipped."
+      description="Upload a CSV, XLSX, or TXT file with a header row. Only Email is required; every other column is kept with each lead, and duplicates and invalid emails are skipped."
       width={520}
     >
       {stage === "done" && result ? (
@@ -183,6 +183,14 @@ export function ImportLeadsModal({
       ) : (
         <div className="grid gap-4">
           <input accept=".csv,.xlsx,.xls,.txt" className="hidden" onChange={(event) => pickFile(event.target.files?.[0])} ref={inputRef} type="file" />
+          <div className="rounded-xl border border-border/70 bg-surface-secondary/60 px-3.5 py-2.5 text-[12px] text-muted">
+            <p>
+              Columns we recognise: <span className="text-foreground">Email, First Name, Last Name, Name, Company, Job Title, Phone, Location, Website, LinkedIn</span>.
+            </p>
+            <button className="mt-1 inline-flex items-center gap-1 font-medium text-accent hover:underline" onClick={downloadSampleCsv} type="button">
+              <FileDown className="size-3.5" /> Download CSV format
+            </button>
+          </div>
           {!file ? (
             <div
               className={[

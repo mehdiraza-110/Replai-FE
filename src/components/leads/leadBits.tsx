@@ -10,6 +10,24 @@ export const toolbarFieldClass = `${fieldBase} h-9 w-full text-[13px]`;
 export const toolbarSelectClass = `${fieldBase} h-9 text-[13px]`;
 export const compactFieldClass = `${fieldBase} h-8 w-full text-[12.5px]`;
 
+const SAMPLE_CSV = [
+  "Email,First Name,Last Name,Company,Job Title,Phone,Location,Website,LinkedIn",
+  "jane.doe@acme.com,Jane,Doe,Acme Staffing,Head of Sales,+1 555 0100,Austin TX,https://acme.com,https://linkedin.com/in/janedoe",
+  "john.smith@globex.io,John,Smith,Globex,Founder,+1 555 0101,Denver CO,https://globex.io,https://linkedin.com/in/johnsmith",
+].join("\n");
+
+/** Downloads a ready-to-fill example of the lead file format. Only Email is required; extra columns are kept with each lead. */
+export function downloadSampleCsv() {
+  const url = URL.createObjectURL(new Blob([`${SAMPLE_CSV}\n`], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "lead-format-sample.csv";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 export function useDebouncedValue<T>(value: T, delay = 300) {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Chip, Spinner } from "@heroui/react";
-import { Download, FolderOpen, ListPlus, Mail, Pencil, Plus, Search, ShieldOff, Trash2, Upload, UserPlus, Users, X } from "lucide-react";
+import { Download, FileDown, FolderOpen, ListPlus, Mail, Pencil, Plus, Search, ShieldOff, Trash2, Upload, UserPlus, Users, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { SkeletonRow } from "../components/ui/Skeleton";
 import { Pagination } from "../components/ui/Pagination";
@@ -14,7 +14,7 @@ import {
   ListFormModal,
   MoveLeadsModal,
 } from "../components/leads/LeadModals";
-import { formatDate, leadDisplayName, ListSelect, toolbarFieldClass, toolbarSelectClass, useDebouncedValue } from "../components/leads/leadBits";
+import { downloadSampleCsv, formatDate, leadDisplayName, ListSelect, toolbarFieldClass, toolbarSelectClass, useDebouncedValue } from "../components/leads/leadBits";
 import { leadLibraryService } from "../services/leadLibraryApi";
 import type { LeadFilter, LeadList, LeadLibraryStats, LeadSelection, LeadSort, LeadStatusFilter, LibraryLead, Paged } from "../types";
 
@@ -238,6 +238,9 @@ export function MailerLeads() {
           <p className="mt-0.5 text-[12.5px] text-muted">Upload leads once, organise them into lists, and reuse them in any campaign.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button onPress={downloadSampleCsv} size="sm" variant="ghost">
+            <FileDown className="size-4" /> CSV Format
+          </Button>
           <Button onPress={() => { setAddTarget(listFilter); setAddOpen(true); }} size="sm" variant="secondary">
             <UserPlus className="size-4" /> Add leads
           </Button>
