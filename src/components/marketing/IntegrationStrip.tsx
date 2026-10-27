@@ -1,37 +1,41 @@
-import { CalendarDays, Mail, Send, Workflow } from "lucide-react";
-import { motion } from "motion/react";
+import { CalendarDays, Globe, Inbox, Mail, MessagesSquare, Send, ShieldCheck, Workflow, type LucideIcon } from "lucide-react";
 
-const INTEGRATIONS = [
+const ITEMS: { icon: LucideIcon; label: string }[] = [
   { icon: Workflow, label: "PlusVibe" },
   { icon: CalendarDays, label: "Google Calendar" },
   { icon: Mail, label: "Gmail" },
   { icon: Send, label: "Outlook" },
+  { icon: Inbox, label: "Unified inbox" },
+  { icon: MessagesSquare, label: "Reply automation" },
+  { icon: ShieldCheck, label: "Human review" },
+  { icon: Globe, label: "Domain warmup" },
 ];
 
 export function IntegrationStrip() {
-  return (
-    <section className="py-16">
-      <div className="mkt-shell">
-        <p className="mkt-mono text-center text-[12px] text-[var(--mkt-ink-faint)]">
-          Connects to what you already run outbound on
-        </p>
+  const loop = [...ITEMS, ...ITEMS];
 
-        <div className="mt-7 flex flex-wrap items-center justify-center gap-x-10 gap-y-5">
-          {INTEGRATIONS.map((integration, index) => (
-            <motion.div
-              className="flex items-center gap-2 text-[var(--mkt-ink-dim)]"
-              initial={{ y: 8 }}
-              key={integration.label}
-              transition={{ duration: 0.4, delay: index * 0.06 }}
-              viewport={{ once: true }}
-              whileInView={{ y: 0 }}
-            >
-              <integration.icon className="size-[18px]" />
-              <span className="text-[13px] font-medium">{integration.label}</span>
-            </motion.div>
-          ))}
-        </div>
+  return (
+    <section className="border-y border-[var(--mkt-line)] bg-[var(--mkt-bg-raised)] py-14">
+      <div className="mkt-shell text-center">
+        <p className="text-[16px] font-semibold tracking-[-0.01em] text-[var(--mkt-ink)]">Plugs into the stack you already run outbound on.</p>
+        <p className="mkt-body mx-auto mt-1.5 text-[13px]">Connect once. Replies, calendars, and mailboxes stay in sync.</p>
       </div>
+
+      {[false, true].map((reverse) => (
+        <div className="mkt-marquee mt-5 first:mt-9" key={String(reverse)}>
+          <div className={`mkt-marquee-track ${reverse ? "mkt-marquee-track--reverse" : ""}`}>
+            {(reverse ? [...loop].reverse() : loop).map((item, index) => (
+              <div
+                className="flex shrink-0 items-center gap-2.5 rounded-xl border border-[var(--mkt-line)] bg-[var(--mkt-bg)] px-5 py-3 text-[var(--mkt-ink-dim)]"
+                key={`${item.label}-${index}`}
+              >
+                <item.icon className="size-4 text-[var(--mkt-accent)]" />
+                <span className="whitespace-nowrap text-[13px] font-medium">{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </section>
   );
 }

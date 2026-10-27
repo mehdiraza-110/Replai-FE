@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
+import type { Theme } from "../../hooks/useTheme";
+import { MarketingThemeToggle } from "./ThemeToggle";
 
 const LINKS = [
   { label: "Product", href: "#product" },
   { label: "How it works", href: "#how-it-works" },
+  { label: "Setup", href: "#setup" },
   { label: "Security", href: "#security" },
 ];
 
-export function MarketingNav() {
+export function MarketingNav({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: () => void }) {
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
@@ -55,6 +58,7 @@ export function MarketingNav() {
         </nav>
 
         <div className="flex items-center gap-3">
+          <MarketingThemeToggle onToggle={onToggleTheme} theme={theme} />
           <a className="mkt-focusable hidden text-[13px] font-medium text-[var(--mkt-ink-dim)] transition-colors hover:text-[var(--mkt-ink)] sm:inline" href="/app/login">
             Sign in
           </a>

@@ -18,6 +18,9 @@ export function MarketingFooter() {
           <a className="mkt-focusable whitespace-nowrap transition-colors hover:text-[var(--mkt-ink)]" href="#how-it-works">
             How it works
           </a>
+          <a className="mkt-focusable whitespace-nowrap transition-colors hover:text-[var(--mkt-ink)]" href="#setup">
+            Setup
+          </a>
           <a className="mkt-focusable whitespace-nowrap transition-colors hover:text-[var(--mkt-ink)]" href="#security">
             Security
           </a>
