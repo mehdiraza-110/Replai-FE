@@ -4,6 +4,9 @@ import {
   ChevronLeft,
   ChevronRight,
   CornerUpLeft,
+  Pause,
+  Pencil,
+  Play,
   Eye,
   Gauge,
   Handshake,
@@ -23,7 +26,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ConfirmDialog } from "../components/admin/AdminModal";
 import { SkeletonRow } from "../components/ui/Skeleton";
 import { useAuth } from "../context/AuthContext";
@@ -51,6 +54,7 @@ const statusTone: Record<MailerCampaign["status"], StatusTone> = {
 
 export function MailerCampaigns() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { activeWorkspace, isSuperAdmin } = useAuth();
   const role = activeWorkspace?.role as string | undefined;
   const canDelete = isSuperAdmin || role === "owner" || role === "admin";
@@ -68,6 +72,12 @@ export function MailerCampaigns() {
   const leadsModal = useOverlayState({});
 
   useEffect(() => {
+    const updated = (location.state as { updatedCampaign?: string } | null)?.updatedCampaign;
+    if (updated) {
+      setNotice(`Campaign "${updated}" saved. Changes apply from the next send cycle.`);
+      window.setTimeout(() => setNotice(null), 6000);
+      navigate(location.pathname, { replace: true, state: null });
+    }
     load(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -86,6 +96,19 @@ export function MailerCampaigns() {
       setCampaigns([]);
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function toggleStatus(campaign: MailerCampaign) {
+    const next = campaign.status === "Active" ? "Paused" : "Active";
+    setError(null);
+    try {
+      await campaignService.update(campaign.id, { status: next });
+      setNotice(next === "Paused" ? `Campaign "${campaign.name}" paused. No more emails will be sent until you resume it.` : `Campaign "${campaign.name}" resumed.`);
+      window.setTimeout(() => setNotice(null), 6000);
+      await load(page);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Unable to change the campaign status");
     }
   }
 
@@ -214,7 +237,7 @@ export function MailerCampaigns() {
           </p>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1260px] text-left text-sm">
+          <table className="w-full min-w-[1320px] text-left text-sm">
             <thead className="border-b border-border/70 text-[11px] uppercase tracking-wide text-muted">
               <tr>
                 <th className="px-5 py-3 font-medium">Campaign</th>
@@ -226,15 +249,15 @@ export function MailerCampaigns() {
                 <th className="px-2 py-3 font-medium"><Smile className="size-3.5" /></th>
                 <th className="px-2 py-3 font-medium"><Mail className="size-3.5" /></th>
                 <th className="px-2 py-3 font-medium">Progress</th>
-                {canDelete ? <th className="px-3 py-3 font-medium"><span className="sr-only">Actions</span></th> : null}
+                <th className="px-3 py-3 font-medium"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                Array.from({ length: 5 }).map((_, index) => <SkeletonRow columns={canDelete ? 10 : 9} key={index} />)
+                Array.from({ length: 5 }).map((_, index) => <SkeletonRow columns={10} key={index} />)
               ) : campaigns.length === 0 ? (
                 <tr>
-                  <td className="px-5 py-10 text-center text-sm font-medium text-muted" colSpan={canDelete ? 10 : 9}>
+                  <td className="px-5 py-10 text-center text-sm font-medium text-muted" colSpan={10}>
                     You have no campaigns yet. Click "New Campaign" to launch your first cold outbound sequence.
                   </td>
                 </tr>
@@ -301,22 +324,38 @@ export function MailerCampaigns() {
                         </Tooltip.Content>
                       </Tooltip>
                     </td>
-                    {canDelete ? (
-                      <td className="px-3 py-4">
-                        <Button
-                          aria-label={`Delete campaign ${campaign.name}`}
-                          isIconOnly
-                          onPress={() => {
-                            setDeleteError(null);
-                            setDeleteTarget(campaign);
-                          }}
-                          size="sm"
-                          variant="ghost"
-                        >
-                          <Trash2 className="size-4 text-danger" />
+                    <td className="px-3 py-4">
+                      <div className="flex items-center gap-0.5">
+                        {campaign.status === "Active" || campaign.status === "Paused" ? (
+                          <Button
+                            aria-label={`${campaign.status === "Active" ? "Pause" : "Resume"} campaign ${campaign.name}`}
+                            isIconOnly
+                            onPress={() => toggleStatus(campaign)}
+                            size="sm"
+                            variant="ghost"
+                          >
+                            {campaign.status === "Active" ? <Pause className="size-4" /> : <Play className="size-4" />}
+                          </Button>
+                        ) : null}
+                        <Button aria-label={`Edit campaign ${campaign.name}`} isIconOnly onPress={() => navigate(`/mailer/campaigns/${campaign.id}/edit`)} size="sm" variant="ghost">
+                          <Pencil className="size-4" />
                         </Button>
-                      </td>
-                    ) : null}
+                        {canDelete ? (
+                          <Button
+                            aria-label={`Delete campaign ${campaign.name}`}
+                            isIconOnly
+                            onPress={() => {
+                              setDeleteError(null);
+                              setDeleteTarget(campaign);
+                            }}
+                            size="sm"
+                            variant="ghost"
+                          >
+                            <Trash2 className="size-4 text-danger" />
+                          </Button>
+                        ) : null}
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
