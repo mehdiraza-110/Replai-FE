@@ -1,4 +1,5 @@
 import {
+  MailCheck,
   BarChart3,
   Bot,
   Boxes,
@@ -9,6 +10,7 @@ import {
   Workflow,
   Cable,
   ClipboardCheck,
+  Contact,
   Flame,
   FolderKanban,
   Globe,
@@ -71,6 +73,7 @@ export const mailerPrimaryNav: NavEntry[] = [
   { label: "Inbox", href: "/mailer/inbox", icon: MessageSquareText },
   { label: "Warmup", href: "/mailer/warmup", icon: Flame },
   { label: "Health", href: "/mailer/health", icon: HeartPulse },
+  { label: "Leads", href: "/mailer/leads", icon: Contact },
   { label: "Campaigns", href: "/mailer/campaigns", icon: Send },
 ];
 
@@ -110,6 +113,7 @@ export const adminNav: NavEntry[] = [
   { label: "Users", href: "/admin/users", icon: UsersRound },
   { label: "Domains", href: "/admin/domains", icon: Globe },
   { label: "Orders", href: "/admin/orders", icon: PackageCheck },
+  { label: "Deliverability", href: "/admin/deliverability", icon: MailCheck },
 ];
 
 const PATH_SYSTEM_MAP: Record<string, SystemId> = {};

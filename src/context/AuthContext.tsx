@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ApiRequestError, authService, SESSION_EXPIRED_EVENT, TRIAL_ENDED_EVENT, workspaceService, type LoginPayload, type RegisterPayload } from "../services/api";
 import { reconnectRealtime } from "../services/realtime";
+
 import type { AuthUser, WorkspacePlan, WorkspaceSummary, WorkspaceType } from "../types";
 import { clearViewAs, getViewAs } from "../utils/viewAs";
 import { useViewAs } from "../hooks/useViewAs";

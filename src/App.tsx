@@ -24,6 +24,7 @@ import { Mailboxes } from "./pages/Mailboxes";
 import { MailerInbox } from "./pages/MailerInbox";
 import { MailerCampaignNew } from "./pages/MailerCampaignNew";
 import { MailerCampaigns } from "./pages/MailerCampaigns";
+import { MailerLeads } from "./pages/MailerLeads";
 import { MailerDashboard } from "./pages/MailerDashboard";
 import { MailerHealth } from "./pages/MailerHealth";
 import { MailerWarmup } from "./pages/MailerWarmup";
@@ -41,6 +42,7 @@ import { CreateWorkspace } from "./pages/CreateWorkspace";
 import { Orders } from "./pages/Orders";
 import { AdminDomains } from "./pages/admin/AdminDomains";
 import { AdminOrders } from "./pages/admin/AdminOrders";
+import { AdminDeliverability } from "./pages/admin/AdminDeliverability";
 import { Team } from "./pages/Team";
 import { WorkflowEditor } from "./pages/workflows/WorkflowEditor";
 import { Workflows } from "./pages/workflows/Workflows";
@@ -126,6 +128,7 @@ export default function App() {
         <Route path="mailer/orders" element={<Orders />} />
         <Route path="admin/domains" element={<AdminDomains />} />
         <Route path="admin/orders" element={<AdminOrders />} />
+        <Route path="admin/deliverability" element={<AdminDeliverability />} />
         <Route path="team" element={<Team />} />
         <Route path="ai-keys" element={<AIKeys />} />
         <Route path="admin" element={<AdminDashboard />} />
@@ -153,6 +156,7 @@ export default function App() {
         <Route path="mailer/inbox" element={<MailerInbox />} />
         <Route path="mailer/warmup" element={<MailerWarmup />} />
         <Route path="mailer/health" element={<MailerHealth />} />
+        <Route path="mailer/leads" element={<MailerLeads />} />
         <Route path="mailer/campaigns" element={<MailerCampaigns />} />
         <Route path="mailer/campaigns/new" element={<MailerCampaignNew />} />
         <Route path="knowledge" element={<KnowledgeBase />} />

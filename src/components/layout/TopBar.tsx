@@ -29,6 +29,7 @@ const titles: Record<string, { title: string; subtitle: string }> = {
   "/mailer/inbox": { title: "Inbox", subtitle: "Every reply across every mailbox, in one place." },
   "/mailer/warmup": { title: "Warmup", subtitle: "Ramp schedules, per-mailbox progress, and warmup strategies." },
   "/mailer/health": { title: "Health", subtitle: "Reputation monitoring and flagged mailboxes." },
+  "/mailer/leads": { title: "Leads", subtitle: "Upload leads once, organise them into lists, and reuse them in any campaign." },
   "/mailer/campaigns": { title: "Campaigns", subtitle: "Cold outbound campaigns and the sending pipeline." },
   "/mailer/orders": { title: "Orders", subtitle: "Request domains or mailboxes and follow their progress." },
   "/mailer/campaigns/new": { title: "New Campaign", subtitle: "Audience, message, sending mailboxes, schedule, and the pre-flight safety check." },
@@ -55,6 +56,7 @@ const titles: Record<string, { title: string; subtitle: string }> = {
   "/admin/workspaces": { title: "Workspaces", subtitle: "Every workspace on the platform, their products, and their owners." },
   "/admin/domains": { title: "Domains", subtitle: "Every domain on the platform, who it is assigned to, and where it can move." },
   "/admin/orders": { title: "Orders", subtitle: "Domain and mailbox requests from every workspace." },
+  "/admin/deliverability": { title: "Deliverability", subtitle: "Warm up new domains with seed inboxes before any prospect is emailed." },
   "/admin/users": { title: "Users", subtitle: "Everyone with an account, and the workspaces they belong to." },
   "/notifications": { title: "Notifications", subtitle: "Everything that needs your attention across ReplyOS." },
 };

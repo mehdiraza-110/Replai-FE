@@ -145,10 +145,11 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}) {
   return payload;
 }
 
-function uploadWithProgress<T>(path: string, file: File, fieldName: string, onProgress?: (percent: number) => void) {
+export function uploadWithProgress<T>(path: string, file: File, fieldName: string, onProgress?: (percent: number) => void, fields: Record<string, string> = {}) {
   return new Promise<T>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     const formData = new FormData();
+    for (const [name, value] of Object.entries(fields)) formData.append(name, value);
     formData.append(fieldName, file);
 
     xhr.open("POST", `${API_BASE_URL}${path}`);
@@ -188,6 +189,33 @@ function uploadWithProgress<T>(path: string, file: File, fieldName: string, onPr
 
     xhr.send(formData);
   });
+}
+
+/** Downloads an authenticated file response (e.g. a CSV export) through the browser. */
+export async function downloadFile(path: string, fallbackName: string) {
+  const headers = new Headers();
+  applyViewAsHeader((name, value) => headers.set(name, value));
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, { credentials: "include", headers });
+  } catch {
+    throw new ApiRequestError("We could not reach the server. Please try again.", 0);
+  }
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as ApiResponse<unknown> | null;
+    notifyForSpecialCodes({ code: payload?.code, status: response.status, message: payload?.message });
+    throw new ApiRequestError(payload?.message || "The export failed. Please try again.", response.status, payload?.code);
+  }
+  const disposition = response.headers.get("Content-Disposition") || "";
+  const filename = /filename="?([^";]+)"?/.exec(disposition)?.[1] || fallbackName;
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 const SURFACED_ERROR_CODES = new Set(["WORKSPACE_REQUIRED", "TRIAL_LIMIT_REACHED", "TRIAL_ENDED", "AI_PROVIDER_KEY_MISSING", "AI_KEY_REJECTED", "AI_KEY_INVALID", "AI_KEY_REQUIRED", "AI_PROVIDER_UNSUPPORTED", "CALENDAR_CONFIG_MISSING", "CALENDAR_ENCRYPTION_KEY_MISSING", "CALENDAR_STATE_INVALID", "CALENDAR_CONNECTION_REVOKED"]);

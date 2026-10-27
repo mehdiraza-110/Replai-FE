@@ -22,9 +22,12 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { RichTextEditor, type MergeVariable } from "../components/ui/RichTextEditor";
+import { EMPTY_PICK, LibraryLeadPicker, pickHasLeads, pickToSource, type LibraryPick } from "../components/leads/LibraryLeadPicker";
+import { useDebouncedValue } from "../components/leads/leadBits";
 import { aiAgentService, campaignService, domainService, mailboxService } from "../services/api";
+import { leadLibraryService } from "../services/leadLibraryApi";
 import { isComposerEmpty } from "../utils/composerHtml";
-import type { Agent, LeadFileParseResult, ParsedLead } from "../types";
+import type { Agent, LeadFileParseResult, LeadSelectionSummary, ParsedLead } from "../types";
 
 interface WizardMailbox {
   id: number;
@@ -165,6 +168,14 @@ export function MailerCampaignNew() {
   const [uploadErrorMessage, setUploadErrorMessage] = useState<string | null>(null);
   const [parseResult, setParseResult] = useState<LeadFileParseResult | null>(null);
   const [manualEmailsRaw, setManualEmailsRaw] = useState("");
+  // Leads picked from the Leads module (lists and/or individual leads). Counting and de-duplication happen on the server.
+  const [libraryPick, setLibraryPick] = useState<LibraryPick>(EMPTY_PICK);
+  const [librarySummary, setLibrarySummary] = useState<LeadSelectionSummary | null>(null);
+  const [librarySummaryLoading, setLibrarySummaryLoading] = useState(false);
+  const [librarySummaryError, setLibrarySummaryError] = useState<string | null>(null);
+  const [saveUploadsToLibrary, setSaveUploadsToLibrary] = useState(false);
+  const [saveListName, setSaveListName] = useState("");
+  const debouncedPick = useDebouncedValue(libraryPick, 400);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const manualLeads = useMemo<ParsedLead[]>(
@@ -188,6 +199,31 @@ export function MailerCampaignNew() {
     for (const lead of manualLeads) if (!byEmail.has(lead.email)) byEmail.set(lead.email, lead);
     return Array.from(byEmail.values());
   }, [parseResult, manualLeads]);
+
+  useEffect(() => {
+    if (!pickHasLeads(debouncedPick)) {
+      setLibrarySummary(null);
+      setLibrarySummaryLoading(false);
+      setLibrarySummaryError(null);
+      return;
+    }
+    let cancelled = false;
+    setLibrarySummaryLoading(true);
+    setLibrarySummaryError(null);
+    leadLibraryService
+      .summarize(pickToSource(debouncedPick))
+      .then((summary) => !cancelled && setLibrarySummary(summary))
+      .catch((requestError) => !cancelled && setLibrarySummaryError(requestError instanceof Error ? requestError.message : "Unable to count the selected leads"))
+      .finally(() => !cancelled && setLibrarySummaryLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedPick]);
+
+  const pickHasSelection = pickHasLeads(libraryPick);
+  const librarySendable = pickHasSelection ? librarySummary?.sendable ?? 0 : 0;
+  const librarySettled = !pickHasSelection || (!librarySummaryLoading && libraryPick === debouncedPick && librarySummary !== null);
+  const totalLeadCount = leads.length + librarySendable;
 
   async function handleLeadsFile(file: File) {
     const extension = file.name.toLowerCase().split(".").pop() || "";
@@ -281,7 +317,7 @@ export function MailerCampaignNew() {
 
   const canProceed = {
     1: name.trim().length > 2,
-    2: leads.length > 0,
+    2: librarySettled && totalLeadCount > 0 && (!saveUploadsToLibrary || leads.length === 0 || saveListName.trim().length > 0),
     3: subject.trim().length > 0 && !isComposerEmpty(body),
     4: selectedMailboxes.length > 0 && sendingDays.size > 0 && !limitExceedsCapacity,
     5: true,
@@ -335,7 +371,9 @@ async function handleLaunch() {
         objective: objective || undefined,
         subject,
         body,
-        leads,
+        leads: leads.length > 0 ? leads : undefined,
+        leadSource: pickHasSelection ? pickToSource(libraryPick) : undefined,
+        saveToLibrary: saveUploadsToLibrary && leads.length > 0 ? { newListName: saveListName.trim() } : null,
         followUps: followUps.map((followUp) => ({ delayDays: followUp.delayDays, body: followUp.body })),
         mailboxMode,
         mailboxIds: mailboxMode === "specific" ? Array.from(selectedMailboxIds) : undefined,
@@ -381,6 +419,16 @@ async function handleLaunch() {
           <StepCampaign name={name} objective={objective} setName={setName} setObjective={setObjective} />
         ) : step === 2 ? (
           <StepAudience
+            libraryPick={libraryPick}
+            onLibraryPickChange={setLibraryPick}
+            librarySummary={pickHasSelection ? librarySummary : null}
+            librarySummaryError={librarySummaryError}
+            librarySummaryLoading={librarySummaryLoading || (pickHasSelection && libraryPick !== debouncedPick)}
+            saveListName={saveListName}
+            saveUploadsToLibrary={saveUploadsToLibrary}
+            setSaveListName={setSaveListName}
+            setSaveUploadsToLibrary={setSaveUploadsToLibrary}
+            totalLeadCount={totalLeadCount}
             fileInputRef={fileInputRef}
             leads={leads}
             manualEmailsRaw={manualEmailsRaw}
@@ -438,7 +486,7 @@ async function handleLaunch() {
             dnsReady={dnsReady}
             flaggedMailboxes={flaggedMailboxes}
             humanReviewRequired={humanReviewRequired}
-            leadsCount={leads.length}
+            leadsCount={totalLeadCount}
             limitsSane={limitsSane}
             mailboxMode={mailboxMode}
             mailboxesHealthy={mailboxesHealthy}
@@ -559,7 +607,27 @@ function StepAudience({
   onClearUpload,
   manualEmailsRaw,
   setManualEmailsRaw,
+  libraryPick,
+  onLibraryPickChange,
+  librarySummary,
+  librarySummaryError,
+  librarySummaryLoading,
+  saveListName,
+  saveUploadsToLibrary,
+  setSaveListName,
+  setSaveUploadsToLibrary,
+  totalLeadCount,
 }: {
+  libraryPick: LibraryPick;
+  onLibraryPickChange: (pick: LibraryPick) => void;
+  librarySummary: LeadSelectionSummary | null;
+  librarySummaryError: string | null;
+  librarySummaryLoading: boolean;
+  saveListName: string;
+  saveUploadsToLibrary: boolean;
+  setSaveListName: (value: string) => void;
+  setSaveUploadsToLibrary: (value: boolean) => void;
+  totalLeadCount: number;
   leads: ParsedLead[];
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   onUploadFile: (file: File) => void;
@@ -603,7 +671,32 @@ function StepAudience({
       <div>
         <h2 className="text-[15px] font-semibold text-foreground">Audience</h2>
         <p className="mt-0.5 text-[12px] text-muted">
-          Upload a CSV, XLSX, or TXT export of your leads. Every column in the file — name, company, role, phone, and anything else — is imported and kept with the lead, not just the email address.
+          Choose leads you already saved in the Leads module, upload a new file, or combine both. Duplicates and suppressed addresses are removed automatically.
+        </p>
+      </div>
+
+      <div className="space-y-2.5 rounded-2xl border border-border/70 p-4">
+        <div>
+          <h3 className="text-[13px] font-semibold text-foreground">From your Leads</h3>
+          <p className="text-[12px] text-muted">Pick whole lists, or search and pick individual leads you’ve already uploaded.</p>
+        </div>
+        <LibraryLeadPicker onChange={onLibraryPickChange} pick={libraryPick} />
+        {librarySummaryError ? (
+          <p className="flex items-center gap-1.5 text-[12px] font-medium text-danger"><AlertTriangle className="size-3.5" />{librarySummaryError}</p>
+        ) : librarySummary || librarySummaryLoading ? (
+          <p className="flex items-center gap-1.5 text-[12.5px] font-medium text-foreground">
+            {librarySummaryLoading ? <Loader2 className="size-3.5 animate-spin text-accent" /> : <CheckCircle2 className="size-4 text-success" />}
+            {librarySummary
+              ? `${librarySummary.sendable.toLocaleString()} lead${librarySummary.sendable === 1 ? "" : "s"} from your library${librarySummary.suppressed ? ` (${librarySummary.suppressed.toLocaleString()} suppressed and skipped)` : ""}`
+              : "Counting leads…"}
+          </p>
+        ) : null}
+      </div>
+
+      <div>
+        <h3 className="text-[13px] font-semibold text-foreground">Upload a new file</h3>
+        <p className="mt-0.5 text-[12px] text-muted">
+          A CSV, XLSX, or TXT export. Every column — name, company, role, phone, and anything else — is kept with the lead, not just the email address.
         </p>
       </div>
 
@@ -759,9 +852,30 @@ function StepAudience({
         />
       </label>
 
+      {leads.length > 0 ? (
+        <div className="space-y-2 rounded-xl border border-border/70 p-3.5">
+          <label className="flex items-center gap-2 text-[13px] font-medium text-foreground">
+            <input checked={saveUploadsToLibrary} className="size-4 accent-[var(--accent)]" onChange={(event) => setSaveUploadsToLibrary(event.target.checked)} type="checkbox" />
+            Also save these {leads.length.toLocaleString()} uploaded leads to my Leads
+          </label>
+          {saveUploadsToLibrary ? (
+            <input
+              className="h-9 w-full rounded-xl border border-border bg-surface-secondary px-3 text-[13px] outline-none transition focus:border-accent"
+              maxLength={160}
+              onChange={(event) => setSaveListName(event.target.value)}
+              placeholder="New list name, e.g. Staffing agencies — US"
+              value={saveListName}
+            />
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-surface-secondary/60 px-3.5 py-2.5">
         <CheckCircle2 className="size-4 shrink-0 text-success" />
-        <p className="text-[12.5px] font-medium text-foreground">{leads.length} total lead{leads.length === 1 ? "" : "s"} ready for this campaign</p>
+        <p className="text-[12.5px] font-medium text-foreground">
+          {totalLeadCount.toLocaleString()} total lead{totalLeadCount === 1 ? "" : "s"} ready for this campaign
+          {leads.length > 0 && librarySummary ? <span className="font-normal text-muted"> · overlap between sources is removed when you launch</span> : null}
+        </p>
       </div>
     </div>
   );
