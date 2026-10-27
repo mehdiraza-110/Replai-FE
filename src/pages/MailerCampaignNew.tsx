@@ -24,7 +24,7 @@ import { useNavigate } from "react-router-dom";
 import { RichTextEditor, type MergeVariable } from "../components/ui/RichTextEditor";
 import { EMPTY_PICK, LibraryLeadPicker, pickHasLeads, pickToSource, type LibraryPick } from "../components/leads/LibraryLeadPicker";
 import { useDebouncedValue } from "../components/leads/leadBits";
-import { aiAgentService, campaignService, domainService, mailboxService } from "../services/api";
+import { aiAgentService, calendarService, campaignService, domainService, mailboxService } from "../services/api";
 import { leadLibraryService } from "../services/leadLibraryApi";
 import { isComposerEmpty } from "../utils/composerHtml";
 import { CampaignLeadsManager } from "../components/leads/CampaignLeadsManager";
@@ -287,6 +287,9 @@ export function MailerCampaignNew({ initial, onLeadsChanged }: { initial?: Campa
   const [aiAgentId, setAiAgentId] = useState<string>(initial?.aiAgentId ? String(initial.aiAgentId) : "");
   const [humanReviewRequired, setHumanReviewRequired] = useState(initial?.humanReviewRequired ?? true);
 
+  const [calendarConnecting, setCalendarConnecting] = useState(false);
+  const [calendarError, setCalendarError] = useState<string | null>(null);
+
   useEffect(() => {
     let cancelled = false;
     aiAgentService
@@ -301,6 +304,21 @@ export function MailerCampaignNew({ initial, onLeadsChanged }: { initial?: Campa
       cancelled = true;
     };
   }, []);
+
+  async function handleConnectCalendar() {
+    const agentId = Number(aiAgentId);
+    if (!Number.isFinite(agentId) || agentId <= 0) return;
+    setCalendarError(null);
+    setCalendarConnecting(true);
+    try {
+      const outcome = await calendarService.connectGoogle(agentId);
+      if (outcome === "connected") setAgents(await aiAgentService.list());
+    } catch (error) {
+      setCalendarError(error instanceof Error ? error.message : "Unable to connect Google Calendar");
+    } finally {
+      setCalendarConnecting(false);
+    }
+  }
 
   const selectedMailboxes = useMemo(
     () => (mailboxMode === "all" ? mailboxes : mailboxes.filter((mailbox) => selectedMailboxIds.has(mailbox.id))),
@@ -536,6 +554,8 @@ async function handleLaunch() {
             agentsLoading={agentsLoading}
             aiAgentId={aiAgentId}
             aiAgents={agents}
+            calendarConnecting={calendarConnecting}
+            calendarError={calendarError}
             dailyCapacity={dailyCapacity}
             dnsReady={dnsReady}
             flaggedMailboxes={flaggedMailboxes}
@@ -545,6 +565,7 @@ async function handleLaunch() {
             mailboxMode={mailboxMode}
             mailboxesHealthy={mailboxesHealthy}
             name={name}
+            onConnectCalendar={handleConnectCalendar}
             selectedMailboxes={selectedMailboxes}
             sendingDays={sendingDays}
             setAiAgentId={setAiAgentId}
@@ -1415,6 +1436,9 @@ function StepReview({
   agentsLoading,
   aiAgentId,
   setAiAgentId,
+  calendarConnecting,
+  calendarError,
+  onConnectCalendar,
   humanReviewRequired,
   setHumanReviewRequired,
   dnsReady,
@@ -1436,6 +1460,9 @@ function StepReview({
   agentsLoading: boolean;
   aiAgentId: string;
   setAiAgentId: (value: string) => void;
+  calendarConnecting: boolean;
+  calendarError: string | null;
+  onConnectCalendar: () => void;
   humanReviewRequired: boolean;
   setHumanReviewRequired: (value: boolean) => void;
   dnsReady: boolean;
@@ -1444,11 +1471,17 @@ function StepReview({
   dailyCapacity: number;
   flaggedMailboxes: WizardMailbox[];
 }) {
+  const selectedAgent = aiAgents.find((agent) => String(agent.id) === aiAgentId);
+  const needsCalendar = selectedAgent?.objective === "Schedule a Meeting";
+  const calendarOk = selectedAgent?.calendarStatus === "connected";
   const checklist = [
     { label: "Domain DNS verification", pass: dnsReady, detail: dnsReady ? "All sending domains verified and configured." : "One or more sending domains aren't fully verified yet." },
     { label: "Mailbox reputation", pass: mailboxesHealthy, detail: mailboxesHealthy ? "Every selected mailbox is Healthy." : `${flaggedMailboxes.length} selected mailbox(es) flagged Watch/At Risk.` },
     { label: "Daily-limit sanity check", pass: limitsSane, detail: `Combined capacity: ${dailyCapacity} emails/day across selected mailboxes.` },
     { label: "Blacklist / health flags", pass: true, detail: "No blacklist or health-engine flags on selected sending domains." },
+    ...(needsCalendar
+      ? [{ label: "Meeting booking", pass: calendarOk, detail: calendarOk ? `Interested replies get real free times from ${selectedAgent?.calendarEmail || "the connected Google Calendar"}.` : selectedAgent?.fallbackMeetingUrl ? "No calendar connected. Replies will send the agent's fallback meeting link instead of booking a time." : "No calendar connected and no fallback meeting link. Interested replies won't get a time offered." }]
+      : []),
   ];
 
   return (
@@ -1481,6 +1514,35 @@ function StepReview({
             value={aiAgentId}
           />
         </div>
+
+        {selectedAgent ? (
+          <div className="mt-3 rounded-xl border border-border/70 p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[13px] font-semibold text-foreground">Google Calendar</p>
+                <p className="mt-0.5 text-[11px] leading-4 text-muted">
+                  {!needsCalendar
+                    ? `${selectedAgent.name} isn't set to schedule meetings, so it won't use a calendar. Change its objective to "Schedule a Meeting" to enable booking.`
+                    : calendarOk
+                      ? `Connected as ${selectedAgent.calendarEmail || "your Google account"}. When a lead wants to talk, ${selectedAgent.name} offers real free times and books the call with a Meet link.`
+                      : selectedAgent.calendarStatus
+                        ? "The Google connection expired or was revoked. Reconnect so meetings can be booked again."
+                        : `Connect a calendar so ${selectedAgent.name} can offer free times and book calls on its own.`}
+                </p>
+              </div>
+              {needsCalendar ? (
+                calendarOk ? (
+                  <CheckCircle2 className="size-4 shrink-0 text-success" />
+                ) : (
+                  <Button isDisabled={calendarConnecting} size="sm" onClick={onConnectCalendar}>
+                    {calendarConnecting ? "Connecting…" : selectedAgent.calendarStatus ? "Reconnect" : "Connect Google Calendar"}
+                  </Button>
+                )
+              ) : null}
+            </div>
+            {calendarError ? <p className="mt-2 rounded-lg bg-danger/10 p-2 text-[12px] font-medium text-danger">{calendarError}</p> : null}
+          </div>
+        ) : null}
 
         <div className="mt-3 flex items-start justify-between gap-3 rounded-xl border border-border/70 p-3">
           <div>

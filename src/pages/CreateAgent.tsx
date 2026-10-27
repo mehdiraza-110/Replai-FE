@@ -309,22 +309,6 @@ export function CreateAgent() {
     void refreshCalendarConnections();
   }, [currentStep, isEditMode, refreshCalendarConnections]);
 
-  useEffect(() => {
-    function handleOAuthMessage(event: MessageEvent) {
-      if (event.data?.type !== "google-calendar-connected") return;
-
-      setCalendarNotice(null);
-      setCalendarConnecting(false);
-      void refreshCalendarConnections();
-    }
-
-    window.addEventListener("message", handleOAuthMessage);
-
-    return () => {
-      window.removeEventListener("message", handleOAuthMessage);
-    };
-  }, [refreshCalendarConnections]);
-
   async function handleConnectGoogleCalendar() {
     setCalendarError(null);
     setCalendarNotice(null);
@@ -336,10 +320,11 @@ export function CreateAgent() {
 
     try {
       setCalendarConnecting(true);
-      const { url } = await calendarService.startGoogleAuth(agentId);
-      window.open(url, "google-calendar-oauth", "width=520,height=650");
+      const outcome = await calendarService.connectGoogle(agentId);
+      if (outcome === "connected") await refreshCalendarConnections();
     } catch (error) {
       setCalendarError(error instanceof Error ? error.message : "Unable to start Google Calendar connection");
+    } finally {
       setCalendarConnecting(false);
     }
   }
