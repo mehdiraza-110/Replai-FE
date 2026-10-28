@@ -3,6 +3,8 @@ import { Button } from "@heroui/react";
 import { Eye, EyeOff, LockKeyhole, Mail, UserRound, X } from "lucide-react";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import { SESSION_EXPIRED_NOTICE_KEY, useAuth } from "../context/AuthContext";
+import type { LoginOtpChallenge } from "../services/api";
+import { LoginOtpForm } from "./LoginOtpForm";
 
 type AuthMode = "login" | "signup";
 
@@ -25,6 +27,8 @@ export function Auth() {
     }
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Held in memory only, and only while the emailed code is outstanding; never persisted or treated as a session.
+  const [otpChallenge, setOtpChallenge] = useState<LoginOtpChallenge | null>(null);
   const hasError = Boolean(error);
 
   const copy = useMemo(
@@ -62,10 +66,15 @@ export function Auth() {
     setIsSubmitting(true);
 
     try {
-      if (mode === "login") {
-        await login({ email: email.trim(), password });
-      } else {
-        await register({ fullName, email: email.trim(), password });
+      const challenge =
+        mode === "login"
+          ? await login({ email: email.trim(), password })
+          : await register({ fullName, email: email.trim(), password });
+
+      if (challenge) {
+        setPassword("");
+        setShowPassword(false);
+        setOtpChallenge(challenge);
       }
     } catch (authError) {
       setError(authError instanceof Error ? authError.message : "Authentication failed");
@@ -79,11 +88,21 @@ export function Auth() {
     setError("");
   }
 
+  function restartSignIn(message?: string) {
+    setOtpChallenge(null);
+    setPassword("");
+    setError(message ?? "");
+  }
+
   function resetForm() {
     setFullName("");
     setEmail("");
     setPassword("");
     setError("");
+  }
+
+  if (otpChallenge) {
+    return <LoginOtpForm challenge={otpChallenge} onRestart={restartSignIn} />;
   }
 
   return (
