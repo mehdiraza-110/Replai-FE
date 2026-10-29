@@ -1159,6 +1159,43 @@ export const calendarService = {
       method: "DELETE",
     });
   },
+
+  /**
+   * Runs the whole Google consent popup. The window is opened synchronously inside the click
+   * (opening it after the auth-URL request is awaited gets it blocked by popup blockers), then
+   * pointed at Google. Resolves "connected" or "closed" (user dismissed it); rejects with the
+   * message the callback page reported, or if the popup was blocked.
+   */
+  async connectGoogle(agentId: number): Promise<"connected" | "closed"> {
+    const popup = window.open("", "google-calendar-oauth", "width=520,height=650");
+    if (!popup) throw new Error("Your browser blocked the Google sign-in window. Allow popups for this site and try again.");
+
+    let url: string;
+    try {
+      ({ url } = await this.startGoogleAuth(agentId));
+    } catch (error) {
+      popup.close();
+      throw error;
+    }
+    popup.location.href = url;
+
+    return new Promise((resolve, reject) => {
+      const finish = (action: () => void) => {
+        window.removeEventListener("message", onMessage);
+        window.clearInterval(timer);
+        action();
+      };
+      const onMessage = (event: MessageEvent) => {
+        if (event.source !== popup) return;
+        if (event.data?.type === "google-calendar-connected") finish(() => resolve("connected"));
+        else if (event.data?.type === "google-calendar-error") finish(() => reject(new Error(event.data.message || "Google Calendar connection failed")));
+      };
+      const timer = window.setInterval(() => {
+        if (popup.closed) finish(() => resolve("closed"));
+      }, 500);
+      window.addEventListener("message", onMessage);
+    });
+  },
 };
 
 export const messageService = {

@@ -2,7 +2,6 @@ import { Button } from "@heroui/react";
 import { Gauge, OctagonAlert } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { isSystemEnabled } from "../../constants/systems";
 import { useAuth } from "../../context/AuthContext";
 import { TRIAL_LIMIT_REACHED_EVENT } from "../../services/api";
 import { getViewAs } from "../../utils/viewAs";
@@ -55,7 +54,7 @@ export function LimitReachedAlert() {
   const reached = reachedLimits(plan);
   if (reached.length === 0 || !activeWorkspace || getViewAs()) return null;
 
-  const canRequest = activeWorkspace.role !== "member" && isSystemEnabled("mailer", activeWorkspace);
+  const canRequest = activeWorkspace.role !== "member" && activeWorkspace.cold_mailer_enabled;
   const critical = reached.some((item) => item.key === "emails");
   const sending = reached.find((item) => item.key === "emails");
   const allowance = reached.filter((item) => item.key !== "emails");

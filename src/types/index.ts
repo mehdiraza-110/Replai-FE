@@ -739,6 +739,8 @@ export interface Agent {
   workingHoursStart?: string;
   workingHoursEnd?: string;
   timezone?: string;
+  calendarStatus?: "connected" | "revoked" | "error" | null;
+  calendarEmail?: string | null;
   salesRules?: string | null;
   safetyRules?: string | null;
   knowledgeSources?: string | null;
