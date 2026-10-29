@@ -14,6 +14,8 @@ import { DAYS, errorText, MERGE_VARIABLES } from "./shared";
 
 interface StepDraft { key: number; delayDays: number; body: string }
 
+/** Must match the server (routes/v1/campaign.routes.js) and the proxy in front of it. */
+const LEAD_FILE_MAX_MB = 25;
 const STEPS = ["Name", "Leads", "Sequence", "Email accounts"];
 
 function OptionCard({ selected, icon: Icon, title, body, onClick, disabled }: { selected: boolean; icon: typeof Sparkles; title: string; body: string; onClick: () => void; disabled?: boolean }) {
@@ -90,6 +92,8 @@ export function NewCampaign() {
   }, [step, requested, setParams]);
 
   async function upload(file: File) {
+    // Same cap as the server's, so an oversized file is refused right away instead of after a long upload.
+    if (file.size > LEAD_FILE_MAX_MB * 1024 * 1024) { setError(`That file is larger than the ${LEAD_FILE_MAX_MB} MB limit. Split it into smaller files and upload them one at a time.`); return; }
     setUploading(true);
     setError("");
     try {
@@ -192,7 +196,7 @@ export function NewCampaign() {
                 <button type="button" className="sv-drop" onClick={() => fileRef.current?.click()} disabled={uploading}>
                   <FileUp className="sv-icon" style={{ width: 24, height: 24 }} aria-hidden />
                   <strong>{uploading ? "Reading your file…" : parsed ? "Choose a different CSV" : "Choose a .CSV file"}</strong>
-                  <span>Needs an email column. Name, company and role are used to personalize. Up to 20,000 leads.</span>
+                  <span>Needs an email column. Name, company and role are used to personalize. Up to 20,000 leads and {LEAD_FILE_MAX_MB} MB per file.</span>
                 </button>
                 <input ref={fileRef} type="file" accept=".csv,text/csv" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) void upload(file); event.target.value = ""; }} />
                 {parsed ? (
