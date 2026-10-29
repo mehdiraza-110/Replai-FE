@@ -1,6 +1,4 @@
-import { useEffect } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { getSystem, getSystemForPath, isSystemEnabled, SYSTEMS } from "../../constants/systems";
+import { Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
@@ -14,7 +12,6 @@ import { usePlanFreshness } from "../trial/LimitReachedAlert";
 export function AppShell() {
   const { activeWorkspace, workspaceEpoch, isSuperAdmin, isTrialEnded } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
   const viewAs = useViewAs();
   const onAdminPage = isSuperAdmin && (location.pathname === "/admin" || location.pathname.startsWith("/admin/"));
   // Members of a suspended workspace get one clear screen instead of a wall of failing pages.
@@ -25,15 +22,6 @@ export function AppShell() {
 
   // Keep the plan fresh so the red limit notice appears (and clears) without a reload.
   usePlanFreshness(!viewAs && !isSuspended);
-
-  // If the current page belongs to a system this workspace (or member) can't use, send them to one they can.
-  useEffect(() => {
-    const pathSystem = getSystemForPath(location.pathname);
-    if (!pathSystem || isSystemEnabled(pathSystem, activeWorkspace)) return;
-
-    const fallback = SYSTEMS.find((system) => isSystemEnabled(system.id, activeWorkspace));
-    navigate(fallback ? getSystem(fallback.id).homePath : "/", { replace: true });
-  }, [activeWorkspace, location.pathname, navigate]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">

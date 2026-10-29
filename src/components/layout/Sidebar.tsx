@@ -1,30 +1,16 @@
-import { Avatar, Chip, Dropdown, ScrollShadow, Spinner } from "@heroui/react";
-import { useEffect, useRef, useState } from "react";
-import { Check, ChevronsUpDown, ChevronUp, LogOut } from "lucide-react";
-import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { Avatar, Chip, Dropdown, ScrollShadow } from "@heroui/react";
+import { useEffect, useState } from "react";
+import { ArrowLeft, ChevronUp, LogOut } from "lucide-react";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { adminNav, getNavForSystem, getSystem, isSystemEnabled, SYSTEMS, workspaceNav, type SystemDefinition, type NavEntry } from "../../constants/systems";
-import { WorkspaceMenu } from "./WorkspaceMenu";
-import { useActiveSystem } from "../../hooks/useActiveSystem";
+import { adminNav, toolsNav, type NavEntry } from "../../constants/systems";
 import { useRealtimeConnected } from "../../hooks/useRealtimeConnected";
-import { messageService, reviewService } from "../../services/api";
 import { adminOrderService } from "../../services/orderApi";
 
-const WORKSPACE_SWITCH_DELAY_MS = 700;
 /** Fired by the top bar's menu button; below the lg breakpoint the sidebar is a slide-over opened by it. */
 export const OPEN_NAV_EVENT = "replai:open-nav";
 
-function NavItem({
-  item,
-  messageCount,
-  reviewCount,
-  orderCount = null,
-}: {
-  item: NavEntry;
-  messageCount: string | null;
-  reviewCount: string | null;
-  orderCount?: string | null;
-}) {
+function NavItem({ item, orderCount = null }: { item: NavEntry; orderCount?: string | null }) {
   const Icon = item.icon;
 
   return (
@@ -38,70 +24,38 @@ function NavItem({
         ].join(" ")
       }
       to={item.href}
-      end={item.href === "/responder" || item.href === "/mailer" || item.href === "/admin"}
+      end={item.href === "/admin"}
     >
       <Icon className="size-4 shrink-0" />
       <span className="truncate">{item.label}</span>
-      {item.label === "Human Review" ? (
-        reviewCount ? (
-          <Chip className="ml-auto px-1.5 text-[10px]" color="warning" size="sm" variant="soft">
-            {reviewCount}
-          </Chip>
-        ) : null
-      ) : item.label === "Messages" ? (
-        messageCount ? (
-          <Chip className="ml-auto px-1.5 text-[10px]" color="accent" size="sm" variant="soft">
-            {messageCount}
-          </Chip>
-        ) : null
-      ) : item.href === "/admin/orders" ? (
-        orderCount ? (
-          <Chip aria-label={`${orderCount} requests awaiting review`} className="ml-auto px-1.5 text-[10px]" color="warning" size="sm" variant="soft">
-            {orderCount}
-          </Chip>
-        ) : null
+      {item.href === "/admin/orders" && orderCount ? (
+        <Chip aria-label={`${orderCount} requests awaiting review`} className="ml-auto px-1.5 text-[10px]" color="warning" size="sm" variant="soft">
+          {orderCount}
+        </Chip>
       ) : null}
     </NavLink>
   );
 }
 
-function NavSection({
-  items,
-  label,
-  messageCount,
-  reviewCount,
-  orderCount = null,
-}: {
-  items: NavEntry[];
-  label: string;
-  messageCount: string | null;
-  reviewCount: string | null;
-  orderCount?: string | null;
-}) {
+function NavSection({ items, label, orderCount = null }: { items: NavEntry[]; label: string; orderCount?: string | null }) {
   return (
     <>
       <div className="my-4 h-px bg-border/70" />
       <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wide text-muted">{label}</p>
       <nav aria-label={label} className="space-y-1">
         {items.map((item) => (
-          <NavItem item={item} key={item.href} messageCount={messageCount} orderCount={orderCount} reviewCount={reviewCount} />
+          <NavItem item={item} key={item.href} orderCount={orderCount} />
         ))}
       </nav>
     </>
   );
 }
 
+/** The few pages that still have no screen in the main app (workflows, AI keys, integrations, logs, platform admin). */
 export function Sidebar() {
-  const { activeWorkspace, isSuperAdmin, logout, user } = useAuth();
-  const navigate = useNavigate();
+  const { isSuperAdmin, logout, user } = useAuth();
   const isLiveConnected = useRealtimeConnected();
-  const activeSystem = useActiveSystem();
-  const { primary, secondary } = getNavForSystem(activeSystem);
-  const [messageCount, setMessageCount] = useState<string | null>(null);
-  const [reviewCount, setReviewCount] = useState<string | null>(null);
   const [orderCount, setOrderCount] = useState<string | null>(null);
-  const [switchingTo, setSwitchingTo] = useState<SystemDefinition | null>(null);
-  const switchTimeoutRef = useRef<number | null>(null);
   const displayName = [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.email || "SendVybe user";
   const initials = displayName
     .split(/\s+/)
@@ -109,9 +63,6 @@ export function Sidebar() {
     .join("")
     .slice(0, 2)
     .toUpperCase();
-  const enabledSystems = SYSTEMS.filter((system) => isSystemEnabled(system.id, activeWorkspace));
-
-  const workspaceId = activeWorkspace?.id ?? null;
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -133,37 +84,6 @@ export function Sidebar() {
   }, [location.pathname]);
 
   useEffect(() => {
-    let isActive = true;
-    // Counters belong to one workspace: clear them when it changes so another tenant's numbers never linger.
-    setMessageCount(null);
-    setReviewCount(null);
-
-    messageService
-      .countConversations({ cap: 100 })
-      .then(({ count, hasMore }) => {
-        if (!isActive) return;
-        setMessageCount(hasMore ? "100+" : String(count));
-      })
-      .catch(() => {
-        if (isActive) setMessageCount(null);
-      });
-
-    reviewService
-      .count({ cap: 100 })
-      .then(({ count, hasMore }) => {
-        if (!isActive) return;
-        setReviewCount(count > 0 ? (hasMore ? "100+" : String(count)) : null);
-      })
-      .catch(() => {
-        if (isActive) setReviewCount(null);
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, [workspaceId]);
-
-  useEffect(() => {
     if (!isSuperAdmin) return;
     let isActive = true;
     adminOrderService
@@ -177,25 +97,6 @@ export function Sidebar() {
     };
   }, [isSuperAdmin]);
 
-  useEffect(() => {
-    return () => {
-      if (switchTimeoutRef.current) window.clearTimeout(switchTimeoutRef.current);
-    };
-  }, []);
-
-  function handleSelectSystem(system: SystemDefinition) {
-    if (system.id === activeSystem) return;
-
-    setSwitchingTo(system);
-    switchTimeoutRef.current = window.setTimeout(() => {
-      navigate(system.homePath);
-      setSwitchingTo(null);
-    }, WORKSPACE_SWITCH_DELAY_MS);
-  }
-
-  const currentSystem = getSystem(activeSystem);
-  const CurrentSystemIcon = currentSystem.icon;
-
   return (
     <>
       {mobileOpen ? <div aria-hidden className="fixed inset-0 z-40 bg-foreground/30 lg:hidden" onClick={() => setMobileOpen(false)} /> : null}
@@ -203,73 +104,25 @@ export function Sidebar() {
         aria-label="Navigation"
         className={`fixed inset-y-0 left-0 w-[212px] flex-col border-r border-border/70 bg-background px-3 py-4 lg:z-auto lg:flex ${mobileOpen ? "z-50 flex shadow-2xl" : "hidden"}`}
       >
-      <Link className="mb-3 flex min-w-0 items-center gap-2.5 px-1" title="Home" to="/">
+      <Link className="mb-3 flex min-w-0 items-center gap-2.5 px-1" title="Home" to="/dashboard">
         <div className="size-8 shrink-0 rounded-full bg-[radial-gradient(circle_at_30%_25%,oklch(0.94_0.07_205),oklch(0.79_0.16_254)_48%,oklch(0.78_0.17_310))]" />
         <p className="truncate text-[14px] font-semibold leading-4 text-foreground">SendVybe</p>
       </Link>
 
-      <div className="mb-2">
-        <WorkspaceMenu />
-      </div>
-
-      <div className="mb-3">
-        <Dropdown>
-          <Dropdown.Trigger className="block w-full">
-            <div className="flex w-full items-center gap-2.5 rounded-[13px] border border-border/70 bg-surface px-2.5 py-2 text-left transition hover:bg-surface-secondary/70">
-              <span className="grid size-7 shrink-0 place-items-center rounded-full bg-default-100 text-foreground">
-                <CurrentSystemIcon className="size-4" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[12px] font-semibold leading-4 text-foreground">{currentSystem.shortLabel}</span>
-                <span className="block truncate text-[10px] leading-3 text-muted">Current system</span>
-              </span>
-              <ChevronsUpDown className="size-3.5 shrink-0 text-muted" />
-            </div>
-          </Dropdown.Trigger>
-          <Dropdown.Popover className="w-[236px]" placement="bottom start">
-            <Dropdown.Menu aria-label="Switch system">
-              {enabledSystems.map((system) => {
-                const Icon = system.icon;
-                const isActive = system.id === activeSystem;
-
-                return (
-                  <Dropdown.Item id={system.id} key={system.id} onAction={() => handleSelectSystem(system)}>
-                    <span className="grid size-8 shrink-0 place-items-center rounded-full bg-default-100 text-foreground">
-                      <Icon className="size-4" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[13px] font-semibold leading-4 text-foreground">{system.label}</span>
-                      <span className="block truncate text-[11px] leading-4 text-muted">{system.description}</span>
-                    </span>
-                    {isActive ? <Check className="size-4 shrink-0 text-accent" /> : null}
-                  </Dropdown.Item>
-                );
-              })}
-            </Dropdown.Menu>
-          </Dropdown.Popover>
-        </Dropdown>
-      </div>
+      <Link className="mb-3 flex h-[32px] items-center gap-3 rounded-[13px] border border-border/70 px-3 text-[12px] font-medium text-foreground hover:bg-surface-tertiary/60" to="/dashboard">
+        <ArrowLeft className="size-4 shrink-0" />
+        Back to SendVybe
+      </Link>
 
       <ScrollShadow className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1">
-        <nav className="space-y-1">
-          {primary.map((item) => (
-            <NavItem item={item} key={item.href} messageCount={messageCount} reviewCount={reviewCount} />
+        <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wide text-muted">Tools</p>
+        <nav aria-label="Tools" className="space-y-1">
+          {toolsNav.map((item) => (
+            <NavItem item={item} key={item.href} />
           ))}
         </nav>
 
-        <div className="my-4 h-px bg-border/70" />
-
-        <nav className="space-y-1">
-          {secondary.map((item) => (
-            <NavItem item={item} key={item.href} messageCount={messageCount} reviewCount={reviewCount} />
-          ))}
-        </nav>
-
-        <NavSection label="Workspace" items={workspaceNav} messageCount={messageCount} reviewCount={reviewCount} />
-
-        {isSuperAdmin ? (
-          <NavSection label="Admin" items={adminNav} messageCount={messageCount} orderCount={orderCount} reviewCount={reviewCount} />
-        ) : null}
+        {isSuperAdmin ? <NavSection label="Admin" items={adminNav} orderCount={orderCount} /> : null}
       </ScrollShadow>
 
       <div className="mt-auto min-w-0">
@@ -308,12 +161,6 @@ export function Sidebar() {
       </div>
     </aside>
 
-    {switchingTo ? (
-      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-background/80 backdrop-blur-sm">
-        <Spinner color="accent" size="lg" />
-        <p className="text-sm font-semibold text-foreground">Switching to {switchingTo.label}…</p>
-      </div>
-    ) : null}
     </>
   );
 }
