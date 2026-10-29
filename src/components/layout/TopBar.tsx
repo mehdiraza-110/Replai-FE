@@ -90,7 +90,15 @@ function findTitle(pathname: string) {
   return prefix ? titles[prefix] : titles["/"];
 }
 
-export function TopBar() {
+export function TopBar({
+  className = "lg:ml-[212px]",
+  collapsed = false,
+  onToggleSidebar,
+}: {
+  className?: string;
+  collapsed?: boolean;
+  onToggleSidebar?: () => void;
+}) {
   const { user, activeWorkspace } = useAuth();
   const workspaceId = activeWorkspace?.id ?? null;
   const location = useLocation();
@@ -145,13 +153,22 @@ export function TopBar() {
   }
 
   return (
-    <header className="sticky top-0 z-20 h-[56px] bg-background/90 px-4 backdrop-blur-xl sm:px-5 lg:ml-[212px]">
+    <header className={`sticky top-0 z-20 h-[56px] bg-background/90 px-4 backdrop-blur-xl sm:px-5 ${className}`}>
       <div className="flex h-full items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
           <Button className="lg:hidden" size="sm" variant="secondary" aria-label="Open navigation" onPress={() => window.dispatchEvent(new Event(OPEN_NAV_EVENT))}>
             <Menu className="size-4" />
           </Button>
-          <SidebarIcon className="hidden size-4 text-foreground lg:block" />
+          <button
+            aria-expanded={!collapsed}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="hidden size-8 shrink-0 place-items-center rounded-lg text-foreground transition hover:bg-surface-tertiary/70 lg:grid"
+            onClick={onToggleSidebar}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            type="button"
+          >
+            <SidebarIcon className="size-4" />
+          </button>
           <div className="min-w-0">
             <h1 className="truncate text-base font-semibold tracking-normal text-foreground">{title}</h1>
             {current.subtitle ? <p className="hidden truncate text-sm text-muted sm:block">{current.subtitle}</p> : null}
