@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ApiRequestError, authService, SESSION_EXPIRED_EVENT, TRIAL_ENDED_EVENT, workspaceService, type LoginPayload, type RegisterPayload } from "../services/api";
+import { ApiRequestError, authService, isOtpChallenge, SESSION_EXPIRED_EVENT, TRIAL_ENDED_EVENT, workspaceService, type LoginOtpChallenge, type LoginPayload, type OtpResendResult, type RegisterPayload } from "../services/api";
 import { reconnectRealtime } from "../services/realtime";
 
 import type { AuthUser, WorkspacePlan, WorkspaceSummary, WorkspaceType } from "../types";
@@ -22,8 +22,12 @@ interface AuthContextValue {
   activeWorkspace: WorkspaceSummary | null;
   /** Changes whenever the workspace changes; use as a React key to remount pages so they reload their data. */
   workspaceEpoch: number;
-  login: (payload: LoginPayload) => Promise<void>;
-  register: (payload: RegisterPayload) => Promise<void>;
+  /** Resolves to an OTP challenge when an emailed code is required, or null once signed in. */
+  login: (payload: LoginPayload) => Promise<LoginOtpChallenge | null>;
+  register: (payload: RegisterPayload) => Promise<LoginOtpChallenge | null>;
+  /** Exchanges the emailed code for the session. */
+  verifyLoginOtp: (challengeToken: string, otp: string) => Promise<void>;
+  resendLoginOtp: (challengeToken: string) => Promise<OtpResendResult>;
   logout: () => Promise<void>;
   updateUser: (user: AuthUser) => void;
   refreshUser: () => Promise<AuthUser | null>;
@@ -239,9 +243,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [viewAs, session]);
 
-  const login = useCallback(
-    async (payload: LoginPayload) => {
-      const nextSession = await authService.login(payload);
+  const startSession = useCallback(
+    (nextSession: AuthSession) => {
       commitSession(nextSession);
       setIsReady(true);
       reconnectRealtime();
@@ -251,17 +254,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [commitSession, refreshPlan],
   );
 
+  // A correct password may only lead to an emailed-code challenge; no session exists until that is verified.
+  const login = useCallback(
+    async (payload: LoginPayload) => {
+      const result = await authService.login(payload);
+      if (isOtpChallenge(result)) return result;
+      startSession(result);
+      return null;
+    },
+    [startSession],
+  );
+
   const register = useCallback(
     async (payload: RegisterPayload) => {
-      const nextSession = await authService.register(payload);
-      commitSession(nextSession);
-      setIsReady(true);
-      reconnectRealtime();
-      // Refresh usage first so the sign-in trial notice shows current numbers.
-      void refreshPlan().finally(() => setSignInNoticePending(true));
+      const result = await authService.register(payload);
+      if (isOtpChallenge(result)) return result;
+      startSession(result);
+      return null;
     },
-    [commitSession, refreshPlan],
+    [startSession],
   );
+
+  const verifyLoginOtp = useCallback(
+    async (challengeToken: string, otp: string) => {
+      startSession(await authService.verifyLoginOtp(challengeToken, otp));
+    },
+    [startSession],
+  );
+
+  const resendLoginOtp = useCallback((challengeToken: string) => authService.resendLoginOtp(challengeToken), []);
 
   const logout = useCallback(async () => {
     try {
@@ -355,6 +376,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       workspaceEpoch,
       login,
       register,
+      verifyLoginOtp,
+      resendLoginOtp,
       logout,
       updateUser,
       refreshUser,
@@ -367,7 +390,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       openTrialModal,
       closeTrialModal,
     }),
-    [activeWorkspace, closeTrialModal, createWorkspace, isTrialEnded, openTrialModal, plan, refreshPlan, trialModalOpen, isReady, login, logout, refreshUser, register, session, switchWorkspace, updateUser, user, workspaceEpoch],
+    [activeWorkspace, closeTrialModal, createWorkspace, isTrialEnded, openTrialModal, plan, refreshPlan, trialModalOpen, isReady, login, logout, refreshUser, register, resendLoginOtp, session, switchWorkspace, updateUser, user, verifyLoginOtp, workspaceEpoch],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

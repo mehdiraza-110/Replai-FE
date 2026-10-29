@@ -5,6 +5,8 @@ import { SESSION_EXPIRED_NOTICE_KEY, useAuth } from "../../context/AuthContext";
 import { requestPasswordReset, resetPassword, validateResetToken } from "../../services/authApi";
 import { svPath } from "../nav";
 import { AuthAlt, AuthField, AuthLayout, AuthMessage } from "./AuthLayout";
+import { OtpStep } from "./OtpStep";
+import type { LoginOtpChallenge } from "../../services/api";
 
 const errorText = (error: unknown, fallback: string) => (error instanceof Error && error.message ? error.message : fallback);
 
@@ -15,6 +17,7 @@ export function SignInPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [challenge, setChallenge] = useState<LoginOtpChallenge | null>(null);
   const [expired] = useState(() => {
     try {
       const flag = window.sessionStorage.getItem(SESSION_EXPIRED_NOTICE_KEY) === "1";
@@ -35,13 +38,16 @@ export function SignInPage() {
     setError("");
     setBusy(true);
     try {
-      await login({ email: email.trim(), password });
+      // A correct password may only lead to a code that was emailed; the session starts once that code is verified.
+      setChallenge(await login({ email: email.trim(), password }));
     } catch (caught) {
       setError(errorText(caught, "We couldn't sign you in. Check your details and try again."));
     } finally {
       setBusy(false);
     }
   }
+
+  if (challenge) return <OtpStep challenge={challenge} onRestart={(message) => { setChallenge(null); setPassword(""); setError(message ?? ""); }} />;
 
   return (
     <AuthLayout title="Sign in to SendVybe" termsLead="By logging in">
@@ -69,6 +75,7 @@ export function SignUpPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [challenge, setChallenge] = useState<LoginOtpChallenge | null>(null);
 
   if (isAuthenticated) return <Navigate replace to={svPath("dashboard")} />;
 
@@ -77,13 +84,15 @@ export function SignUpPage() {
     setError("");
     setBusy(true);
     try {
-      await register({ fullName: name.trim(), email: email.trim(), password });
+      setChallenge(await register({ fullName: name.trim(), email: email.trim(), password }));
     } catch (caught) {
       setError(errorText(caught, "We couldn't create your account. Try again."));
     } finally {
       setBusy(false);
     }
   }
+
+  if (challenge) return <OtpStep challenge={challenge} onRestart={(message) => { setChallenge(null); setPassword(""); setError(message ?? ""); }} />;
 
   return (
     <AuthLayout title="Create an account" termsLead="By signing up">

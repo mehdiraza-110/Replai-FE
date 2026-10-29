@@ -52,7 +52,7 @@ function NavSection({ items, label, orderCount = null }: { items: NavEntry[]; la
 }
 
 /** The few pages that still have no screen in the main app (workflows, AI keys, integrations, logs, platform admin). */
-export function Sidebar() {
+export function Sidebar({ collapsed = false }: { collapsed?: boolean }) {
   const { isSuperAdmin, logout, user } = useAuth();
   const isLiveConnected = useRealtimeConnected();
   const [orderCount, setOrderCount] = useState<string | null>(null);
@@ -102,7 +102,7 @@ export function Sidebar() {
       {mobileOpen ? <div aria-hidden className="fixed inset-0 z-40 bg-foreground/30 lg:hidden" onClick={() => setMobileOpen(false)} /> : null}
       <aside
         aria-label="Navigation"
-        className={`fixed inset-y-0 left-0 w-[212px] flex-col border-r border-border/70 bg-background px-3 py-4 lg:z-auto lg:flex ${mobileOpen ? "z-50 flex shadow-2xl" : "hidden"}`}
+        className={`fixed inset-y-0 left-0 w-[212px] flex-col border-r border-border/70 bg-background px-3 py-4 lg:z-auto lg:flex lg:transition-[transform,visibility] lg:duration-300 lg:ease-in-out ${collapsed ? "lg:invisible lg:-translate-x-full" : "lg:visible lg:translate-x-0"} ${mobileOpen ? "z-50 flex shadow-2xl" : "hidden"}`}
       >
       <Link className="mb-3 flex min-w-0 items-center gap-2.5 px-1" title="Home" to="/dashboard">
         <div className="size-8 shrink-0 rounded-full bg-[radial-gradient(circle_at_30%_25%,oklch(0.94_0.07_205),oklch(0.79_0.16_254)_48%,oklch(0.78_0.17_310))]" />

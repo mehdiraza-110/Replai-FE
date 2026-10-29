@@ -218,7 +218,7 @@ export async function downloadFile(path: string, fallbackName: string) {
   URL.revokeObjectURL(url);
 }
 
-const SURFACED_ERROR_CODES = new Set(["WORKSPACE_REQUIRED", "TRIAL_LIMIT_REACHED", "TRIAL_ENDED", "AI_PROVIDER_KEY_MISSING", "AI_KEY_REJECTED", "AI_KEY_INVALID", "AI_KEY_REQUIRED", "AI_PROVIDER_UNSUPPORTED", "CALENDAR_CONFIG_MISSING", "CALENDAR_ENCRYPTION_KEY_MISSING", "CALENDAR_STATE_INVALID", "CALENDAR_CONNECTION_REVOKED"]);
+const SURFACED_ERROR_CODES = new Set(["OTP_LOCKED", "OTP_RESEND_COOLDOWN", "OTP_RESEND_LIMIT", "WORKSPACE_REQUIRED", "TRIAL_LIMIT_REACHED", "TRIAL_ENDED", "AI_PROVIDER_KEY_MISSING", "AI_KEY_REJECTED", "AI_KEY_INVALID", "AI_KEY_REQUIRED", "AI_PROVIDER_UNSUPPORTED", "CALENDAR_CONFIG_MISSING", "CALENDAR_ENCRYPTION_KEY_MISSING", "CALENDAR_STATE_INVALID", "CALENDAR_CONNECTION_REVOKED"]);
 
 function getFriendlyErrorMessage({
   message,
@@ -258,6 +258,7 @@ function getFriendlyErrorMessage({
     return "This item has already been updated. Please refresh and try again.";
   }
   if (status === 429) {
+    if (path === "/api/v1/users/login" && message && !isTechnicalErrorMessage(message)) return message;
     return isPlusVibeRoute
       ? "PlusVibe is receiving too many requests right now. Please wait a minute, then try again."
       : "Too many requests were made at once. Please wait a minute, then try again.";
@@ -308,11 +309,57 @@ function splitFullName(fullName?: string) {
   };
 }
 
+export interface LoginSession {
+  user: AuthUser;
+  token: string;
+}
+
+/** Returned instead of a session when the password was right but an emailed code is still required. */
+export interface LoginOtpChallenge {
+  requires_otp: true;
+  /** Opaque, short-lived; only valid for the OTP endpoints. Never a session token. */
+  challenge_token: string;
+  /** Masked address the code was sent to. */
+  email: string;
+  expires_in: number;
+  resend_available_in: number;
+}
+
+export type LoginResult = LoginSession | LoginOtpChallenge;
+
+export function isOtpChallenge(result: LoginResult): result is LoginOtpChallenge {
+  return "requires_otp" in result && result.requires_otp === true;
+}
+
+export interface OtpResendResult {
+  expires_in: number;
+  resend_available_in: number;
+  resends_remaining: number;
+}
+
 export const authService = {
-  async login(payload: LoginPayload) {
-    const response = await apiRequest<{ user: AuthUser; token: string }>("/api/v1/users/login", {
+  async login(payload: LoginPayload): Promise<LoginResult> {
+    const response = await apiRequest<LoginResult>("/api/v1/users/login", {
       method: "POST",
       body: JSON.stringify(payload),
+    });
+
+    return response.data;
+  },
+
+  async verifyLoginOtp(challengeToken: string, otp: string): Promise<LoginSession> {
+    const response = await apiRequest<LoginSession>("/api/v1/users/login/verify-otp", {
+      method: "POST",
+      body: JSON.stringify({ challenge_token: challengeToken, otp }),
+    });
+
+    return response.data;
+  },
+
+  async resendLoginOtp(challengeToken: string): Promise<OtpResendResult> {
+    const response = await apiRequest<OtpResendResult>("/api/v1/users/login/resend-otp", {
+      method: "POST",
+      body: JSON.stringify({ challenge_token: challengeToken }),
     });
 
     return response.data;
