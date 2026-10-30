@@ -4,7 +4,7 @@ import { ArrowLeft, Check, ChevronDown, Copy, FileText, MoreHorizontal, PhoneCal
 import { aiApi, type Call, type CallType, type Stage } from "../../api/ai";
 import { useSvTitle } from "../../layout/chrome";
 import { svPath } from "../../nav";
-import { Badge, Button, Card, EmptyState, Field, Menu, Modal, PageHeader } from "../../ui";
+import { Badge, Button, Card, EmptyState, Field, Menu, Modal, PageHeader, Skeleton, SkeletonCard } from "../../ui";
 import { errorText, formatDate } from "../cold-email/shared";
 import { Banner, Pager, SearchBox, TableCard, useDebounced, useRemote } from "../crm/shared";
 import { ScoreChip, StatusBadge, readTextFile, scoreTone, useCopy, usePolling, when } from "./shared";
@@ -112,7 +112,7 @@ export function CallsList() {
         <select className="sv-select" aria-label="Type" style={{ width: 160 }} value={type} onChange={(event) => { setType(event.target.value); setPage(1); }}><option value="">All types</option>{TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}</select>
         <select className="sv-select" aria-label="Status" style={{ width: 150 }} value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}><option value="">All statuses</option><option value="completed">Completed</option><option value="processing">Analyzing</option><option value="failed">Failed</option></select>
       </div>
-      <TableCard head={<><th>Meeting/Call</th><th>Status</th><th>Date</th><th>Score</th><th>Insights</th><th style={{ width: 48 }} /></>} empty={data && data.items.length === 0 ? (type || status || q ? "No calls match these filters." : "No calls yet. Click New Call to analyze your first one.") : undefined}>
+      <TableCard head={<><th>Meeting/Call</th><th>Status</th><th>Date</th><th>Score</th><th>Insights</th><th style={{ width: 48 }} /></>} loading={!data && !calls.error} empty={data && data.items.length === 0 ? (type || status || q ? "No calls match these filters." : "No calls yet. Click New Call to analyze your first one.") : undefined}>
         {data?.items.map((c) => (
           <tr key={c.id}>
             <td><Link className="sv-link" style={{ fontWeight: 500 }} to={svPath(`${BASE}/${c.id}`)}>{c.prospectName || "Unnamed prospect"}</Link><div className="sv-hint">{[c.company, c.typeLabel].filter(Boolean).join(" | ")}</div></td>
@@ -179,7 +179,7 @@ export function CallDetail() {
     try { await fn(); } catch (caught) { setError(errorText(caught)); }
   }
 
-  if (!c) return <div className="sv-page"><Banner error={call.error} />{call.error ? <Link className="sv-link" to={svPath(BASE)}>Back to calls</Link> : <p className="sv-hint">Loading…</p>}</div>;
+  if (!c) return <div className="sv-page"><Banner error={call.error} />{call.error ? <Link className="sv-link" to={svPath(BASE)}>Back to calls</Link> : <div role="status" aria-label="Loading" style={{ display: "grid", gap: 16 }}><div className="sv-skel-stack"><Skeleton width={260} height={24} /><Skeleton width={180} /></div><SkeletonCard lines={4} /><SkeletonCard lines={6} /></div>}</div>;
   const r = c.result;
   return (
     <div className="sv-page">

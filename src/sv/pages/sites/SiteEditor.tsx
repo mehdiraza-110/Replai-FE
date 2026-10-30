@@ -4,7 +4,7 @@ import { ArrowLeft, Check, Copy, Download, ExternalLink, History, Monitor, Refre
 import { publicUrl, sitesApi, type SiteWithDns } from "../../api/sites";
 import { useSvTitle } from "../../layout/chrome";
 import { svPath } from "../../nav";
-import { Badge, Button, Card, EmptyState, Field, Modal } from "../../ui";
+import { Badge, Button, Card, EmptyState, Field, Modal, Skeleton, SkeletonCard } from "../../ui";
 import { errorText } from "../cold-email/shared";
 import { Banner, useRemote } from "../crm/shared";
 import { downloadText, slugify, useCopy, usePolling, when } from "../ai/shared";
@@ -34,7 +34,7 @@ export function SiteEditor() {
     try { await fn(); site.reload(); } catch (caught) { setError(errorText(caught)); } finally { setBusy(false); }
   }
 
-  if (!s) return <div className="sv-page"><Banner error={site.error} />{site.error ? <Link className="sv-link" to={svPath(SITES_BASE)}>Back to websites</Link> : <p className="sv-hint">Loading…</p>}</div>;
+  if (!s) return <div className="sv-page"><Banner error={site.error} />{site.error ? <Link className="sv-link" to={svPath(SITES_BASE)}>Back to websites</Link> : <div role="status" aria-label="Loading" style={{ display: "grid", gap: 16 }}><div className="sv-skel-stack"><Skeleton width={260} height={24} /><Skeleton width={180} /></div><SkeletonCard lines={4} /><SkeletonCard lines={6} /></div>}</div>;
   const live = publicUrl(s.slug);
   const dns = dnsInfo?.id === s.id ? dnsInfo : null;
 

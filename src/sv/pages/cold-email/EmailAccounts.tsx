@@ -5,7 +5,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { emailAccountsApi, type AccountKind, type BulkResult, type DomainPage, type HealthFilter, type Inbox, type InboxPage, type InboxSort, type InboxStatus } from "../../api/emailAccounts";
 import { useSvTitle } from "../../layout/chrome";
 import { svPath } from "../../nav";
-import { Badge, type BadgeTone, Button, Card, Menu, Modal } from "../../ui";
+import { Badge, type BadgeTone, Button, Card, Menu, Modal, SkeletonRows } from "../../ui";
 import { domainService, mailboxService } from "../../../services/api";
 import { CreateInboxesModal, DnsModal, HealthPanel, ImportPostalModal, MessagesModal, OnboardModal, SyncMaildosoModal, WarmupPanel } from "./AccountTools";
 import { errorText, formatDate } from "./shared";
@@ -144,7 +144,7 @@ export function EmailAccounts() {
             <table className="sv-table">
               <thead><tr><th>{th("Name", "name")}</th><th>{th("Email", "email")}</th><th className="is-num">{th("Emails sent", "sent")}</th><th className="is-num">{th("Warm-up emails", "warmup")}</th><th>{th("Health score", "health")}</th><th>Account type</th><th>{th("Status", "status")}</th><th style={{ width: 36 }}>Warm-up</th><th style={{ width: 40 }} /></tr></thead>
               <tbody>
-                {!inboxes ? <tr><td colSpan={9} className="sv-hint" style={{ padding: 20 }}>Loading…</td></tr> : null}
+                {!inboxes && !error ? <SkeletonRows columns={9} /> : null}
                 {inboxes && inboxes.items.length === 0 ? <tr><td colSpan={9} className="sv-hint" style={{ padding: 20 }}>{inboxes.summary.total === 0 ? "No inboxes yet. Add some to start sending." : "No inboxes match these filters."}</td></tr> : null}
                 {inboxes?.items.map((box) => (
                   <tr key={box.id}>
@@ -176,7 +176,7 @@ export function EmailAccounts() {
             <table className="sv-table">
               <thead><tr><th>Domain</th><th>Provider</th><th>Status</th><th>SPF</th><th>DKIM</th><th>DMARC</th><th>MX</th><th>Reputation</th><th className="is-num">Bounce</th><th className="is-num">Complaints</th><th className="is-num">Inboxes</th><th>Checked</th><th style={{ width: 40 }} /></tr></thead>
               <tbody>
-                {!domains ? <tr><td colSpan={13} className="sv-hint" style={{ padding: 20 }}>Loading…</td></tr> : null}
+                {!domains && !error ? <SkeletonRows columns={13} /> : null}
                 {domains && domains.items.length === 0 ? <tr><td colSpan={13} className="sv-hint" style={{ padding: 20 }}>No domains yet.</td></tr> : null}
                 {domains?.items.map((d) => (
                   <tr key={d.id}>

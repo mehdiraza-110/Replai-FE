@@ -4,7 +4,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { PLATFORM_WORKSPACE_SLUG } from "../../../services/adminApi";
 import { domainService, mailboxService, warmupPoolService, warmupService } from "../../../services/api";
 import type { AiRampSchedule, Domain, MailboxCostQuote, MailboxCreateResult, MailboxInboxPage, MaildosoSyncSummary, ReputationTrendPoint, WarmupPoolStats, WarmupStrategy, WarmupSummary, WarmupTarget } from "../../../types";
-import { Badge, Button, Card, Field, Modal } from "../../ui";
+import { Badge, Button, Card, Field, Modal, Skeleton, SkeletonCard, SkeletonRows } from "../../ui";
 import { AreaChart } from "../../ui/AreaChart";
 import { emailAccountsApi, type ApplyResult, type DomainDns, type OnboardOutcome, type SyncOutcome } from "../../api/emailAccounts";
 import { Banner, Pager, useRemote } from "../crm/shared";
@@ -22,7 +22,7 @@ export function MessagesModal({ inbox, onClose }: { inbox: { id: number; email: 
   return (
     <Modal wide open title={`Messages for ${inbox.email}`} onClose={onClose} footer={<Button onClick={onClose}>Close</Button>}>
       <Banner error={list.error} />
-      {!data ? <p className="sv-hint">Loading…</p> : null}
+      {!data && !list.error ? <div className="sv-stack">{[0, 1, 2].map((i) => <SkeletonCard key={i} lines={2} />)}</div> : null}
       {data && data.items.length === 0 ? <p className="sv-hint">No messages have been sent or received on this inbox yet.</p> : null}
       <div className="sv-stack" style={{ maxHeight: 360, overflowY: "auto" }}>
         {data?.items.map((m) => (
@@ -238,7 +238,7 @@ export function CreateInboxesModal({ onClose, onDone }: { onClose: () => void; o
         <>
           <Field label="Domain" htmlFor="ci-domain">
             <select id="ci-domain" className="sv-select" value={domain} onChange={(event) => setDomain(event.target.value)}>
-              <option value="">{domains.data ? (domains.data.items.length ? "Choose a domain" : "No domains onboarded yet") : "Loading…"}</option>
+              <option value="">{domains.data ? (domains.data.items.length ? "Choose a domain" : "No domains onboarded yet") : "Choose a domain"}</option>
               {domains.data?.items.filter((d: Domain) => d.provider === "Maildoso" || d.provider === "Postal").map((d: Domain) => <option key={d.id} value={d.domain}>{d.domain} ({d.provider}, {d.status})</option>)}
             </select>
           </Field>
@@ -353,7 +353,7 @@ export function WarmupPanel() {
           <table className="sv-table">
             <thead><tr><th>Strategy</th><th className="is-num">Start / day</th><th className="is-num">Steady state / day</th><th>Ramp</th><th className="is-num">Inboxes</th><th style={{ width: 90 }} /></tr></thead>
             <tbody>
-              {!strategies.data ? <tr><td colSpan={6} className="sv-hint" style={{ padding: 16 }}>Loading…</td></tr> : null}
+              {!strategies.data && !strategies.error ? <SkeletonRows columns={6} /> : null}
               {strategies.data?.length === 0 ? <tr><td colSpan={6} className="sv-hint" style={{ padding: 16 }}>No strategies yet. Create one, or let the AI suggest a schedule.</td></tr> : null}
               {strategies.data?.map((st) => (
                 <tr key={st.id}>
@@ -375,7 +375,7 @@ export function WarmupPanel() {
           <div><h3 className="sv-set-title" style={{ margin: 0 }}>Warm-up lead pool</h3><p className="sv-hint" style={{ margin: 0 }}>Shared, single-use contacts that the always-on warm-up lane writes to.</p></div>
           {canUpload ? <><input ref={fileRef} type="file" accept=".csv,text/csv" hidden onChange={(event) => { void upload(event.target.files?.[0]); event.target.value = ""; }} /><Button icon={Upload} disabled={uploading} onClick={() => fileRef.current?.click()}>{uploading ? "Uploading…" : "Upload CSV"}</Button></> : null}
         </div>
-        {pool.data ? <p style={{ margin: 0 }}><b>{pool.data.available.toLocaleString()}</b> available · {pool.data.used.toLocaleString()} used · {pool.data.suppressed.toLocaleString()} suppressed · {pool.data.failed.toLocaleString()} failed · {pool.data.total.toLocaleString()} total</p> : <p className="sv-hint" style={{ margin: 0 }}>{pool.error || "Loading…"}</p>}
+        {pool.data ? <p style={{ margin: 0 }}><b>{pool.data.available.toLocaleString()}</b> available · {pool.data.used.toLocaleString()} used · {pool.data.suppressed.toLocaleString()} suppressed · {pool.data.failed.toLocaleString()} failed · {pool.data.total.toLocaleString()} total</p> : pool.error ? <p className="sv-hint" style={{ margin: 0 }}>{pool.error}</p> : <Skeleton width="55%" />}
         {!canUpload ? <p className="sv-hint" style={{ margin: "6px 0 0" }}>Only the platform team adds to the pool.</p> : null}
       </Card>
 

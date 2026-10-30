@@ -1,0 +1,30 @@
+/* Platform admin pages (workspaces, users, dashboard). Scoped by the adm- prefix. */
+.adm-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.adm-col { display: flex; flex-direction: column; gap: 16px; max-width: 1180px; }
+.adm-section { padding: 0; overflow: hidden; }
+.adm-section-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--ds-border); }
+.adm-section-head h2 { margin: 0; font-size: 15px; font-weight: 600; }
+.adm-section-head p { margin: 2px 0 0; }
+.adm-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 16px; }
+.adm-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.adm-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 760px) { .adm-grid-2, .adm-grid-3 { grid-template-columns: 1fr; } }
+.adm-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+.adm-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.adm-chip { display: inline-flex; align-items: center; gap: 2px; border: 1px solid var(--ds-border); border-radius: 999px; background: var(--ds-button); padding: 0 4px 0 10px; height: 26px; font-size: 12.5px; }
+.adm-chip a { color: var(--ds-text-primary); font-weight: 500; }
+.adm-chip a:hover { text-decoration: underline; }
+.adm-chip .adm-role { color: var(--ds-text-tertiary); margin-left: 4px; }
+.adm-chip button { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 999px; color: var(--ds-text-secondary); }
+.adm-chip button:hover { background: var(--ds-hover); color: var(--ds-text-primary); }
+.adm-limit-row { display: grid; grid-template-columns: 120px minmax(0, 1fr) 160px auto; gap: 8px; align-items: center; border: 1px solid var(--ds-border); border-radius: 10px; padding: 10px 12px; }
+@media (max-width: 760px) { .adm-limit-row { grid-template-columns: 1fr 1fr; } }
+.adm-meter-row { display: grid; gap: 4px; }
+.adm-meter-row .adm-meter-top { display: flex; justify-content: space-between; font-size: 13px; }
+.adm-danger { border-color: var(--ds-red-border); }
+.adm-danger .adm-section-head { border-color: var(--ds-red-border); }
+.adm-danger h2 { color: var(--ds-red-text); }
+.adm-secret { display: inline-block; padding: 6px 10px; border: 1px solid var(--ds-border); border-radius: 8px; background: var(--ds-button); font: 13px ui-monospace, monospace; }
+.adm-viewas { white-space: nowrap; }
+.adm-th-btn { display: inline-flex; align-items: center; gap: 4px; font: inherit; color: inherit; }
+.adm-th-btn:hover { color: var(--ds-text-primary); }

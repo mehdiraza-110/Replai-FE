@@ -5,7 +5,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { aiApi, type ChatMessage, type ChatThreadFull, type Persona } from "../../api/ai";
 import { useSvTitle } from "../../layout/chrome";
 import { chatRoute, svPath } from "../../nav";
-import { Button, Card } from "../../ui";
+import { Button, Card, Skeleton, SkeletonLines } from "../../ui";
 import { errorText } from "../cold-email/shared";
 import { Banner, useRemote } from "../crm/shared";
 import { Prose } from "./shared";
@@ -80,6 +80,7 @@ export function Chat() {
       <aside className="sv-chat-side" aria-label="Chat history">
         <Button icon={MessageSquarePlus} onClick={() => navigate(svPath(chatRoute))}>New chat</Button>
         <div className="sv-chat-list">
+          {!list.data && !list.error ? <div role="status" aria-label="Loading" className="sv-skel-stack" style={{ padding: "8px 4px" }}>{[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} height={28} style={{ borderRadius: 8 }} />)}</div> : null}
           {list.data?.threads.length === 0 ? <p className="sv-hint" style={{ padding: "8px 4px" }}>Your chats will appear here.</p> : null}
           {list.data?.threads.map((t) => (
             <div key={t.id} className={`sv-chat-item${t.id === threadId ? " is-active" : ""}`}>
@@ -92,7 +93,11 @@ export function Chat() {
 
       <section className="sv-chat-main">
         <Banner error={error} />
-        {messages.length === 0 ? (
+        {threadId && !thread && !error ? (
+          <div className="sv-chat-thread" role="status" aria-label="Loading">
+            {[0, 1, 2].map((i) => <div key={i} className={`sv-cmsg is-${i % 2 ? "assistant" : "user"}`}><div className="sv-cmsg-bubble" style={{ width: i % 2 ? "70%" : "40%" }}><SkeletonLines lines={i % 2 ? 3 : 1} /></div></div>)}
+          </div>
+        ) : messages.length === 0 ? (
           <div className="sv-chat-welcome">
             <h1 className="sv-h1">How can I help you, {first}?</h1>
             <div className="sv-seg" role="tablist" aria-label="Topics">

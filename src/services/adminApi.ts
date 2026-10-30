@@ -277,7 +277,13 @@ const json = (method: string, body?: unknown): RequestInit => ({
   ...(body === undefined ? {} : { body: JSON.stringify(body) }),
 });
 
+export interface InfraHealthItem { key: string; label: string; status: "ok" | "warn" | "bad"; detail: string }
+export interface InfraHealth { status: "ok" | "warn" | "bad"; checkedAt: string; infraDomain: string; items: InfraHealthItem[] }
+
 export const adminApi = {
+  async getInfraHealth() {
+    return (await apiRequest<InfraHealth>("/api/v1/admin/infra-health")).data;
+  },
   async getAnalytics(days: number) {
     return (await apiRequest<AdminAnalytics>(`/api/v1/admin/analytics${qs({ days })}`)).data;
   },

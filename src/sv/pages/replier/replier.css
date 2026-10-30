@@ -1,0 +1,28 @@
+.rp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+.rp-agent { padding: 16px; display: grid; gap: 12px; align-content: start; }
+.rp-agent-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.rp-agent-name { font-weight: 500; font-size: 15px; margin: 0; }
+.rp-agent-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.rp-agent-desc { margin: 0; color: var(--ds-text-secondary); font-size: 13px; line-height: 19px; min-height: 38px; }
+.rp-agent-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.rp-section { margin-top: 20px; display: grid; gap: 12px; }
+.rp-form { display: grid; gap: 14px; max-width: 760px; }
+.rp-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.rp-types { display: grid; gap: 10px; }
+.rp-type { padding: 14px 16px; display: grid; gap: 10px; }
+.rp-type-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.rp-type-name { font-weight: 500; }
+.rp-type-name small { display: block; font-weight: 450; color: var(--ds-text-tertiary); font-size: 12px; margin-top: 2px; }
+.rp-modes { display: inline-flex; gap: 2px; padding: 2px; border-radius: 9px; background: var(--ds-hover); flex-wrap: wrap; }
+.rp-mode { border: 0; background: transparent; padding: 5px 10px; border-radius: 7px; font: inherit; font-size: 12.5px; font-weight: 500; color: var(--ds-text-secondary); cursor: pointer; }
+.rp-mode:hover:not(:disabled) { color: var(--ds-text-primary); }
+.rp-mode.is-active { background: var(--ds-button); color: var(--ds-text-primary); box-shadow: 0 0 0 1px var(--ds-border); }
+.rp-mode:disabled { cursor: not-allowed; opacity: 0.55; }
+.rp-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.rp-back { display: inline-flex; align-items: center; gap: 6px; color: var(--ds-text-secondary); font-size: 13px; margin-bottom: 12px; }
+.rp-back:hover { color: var(--ds-text-primary); }
+.rp-checks { display: grid; gap: 8px; max-height: 220px; overflow: auto; padding: 8px; border: 1px solid var(--ds-border); border-radius: 8px; }
+.rp-check { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.rp-cov { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-top: 1px solid var(--ds-border); }
+.rp-cov:first-child { border-top: 0; }
+@media (max-width: 720px) { .rp-row2 { grid-template-columns: 1fr; } }

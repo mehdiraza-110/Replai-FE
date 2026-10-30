@@ -5,7 +5,7 @@ import { formatRelativeTime } from "../../utils/formatRelativeTime";
 import { aiSdrApi, type BulkAction, type Folder, type Interest, type Outcome, type ThreadDetail, type ThreadList, type ThreadMessage, type ThreadSummary } from "../api/aiSdr";
 import { useSvTitle } from "../layout/chrome";
 import { svPath } from "../nav";
-import { Badge, type BadgeTone, Button, Checkbox, Field, Menu, type MenuItem, Modal, useOutsideClose } from "../ui";
+import { Badge, type BadgeTone, Button, Checkbox, Field, Menu, type MenuItem, Modal, Skeleton, SkeletonLines, useOutsideClose } from "../ui";
 
 const OUTCOME_LABEL: Record<Outcome, string> = {
   none: "No status",
@@ -293,7 +293,17 @@ function DetailPane({ mailboxId, threadId, onChanged }: { mailboxId: number; thr
   }
 
   if (error && !detail) return <div className="sv-pane-empty"><p>{error}</p></div>;
-  if (!detail) return <div className="sv-pane-empty"><p>Loading…</p></div>;
+  if (!detail) return (
+    <section className="sv-detail" aria-label="Conversation" role="status">
+      <header className="sv-detail-head">
+        <Skeleton width={40} height={40} circle />
+        <div style={{ flex: 1, display: "grid", gap: 8 }}><Skeleton width="30%" height={16} /><Skeleton width="50%" /></div>
+      </header>
+      <div style={{ padding: 20, display: "grid", gap: 24 }}>
+        {[0, 1, 2].map((i) => <div key={i} style={{ display: "grid", gap: 10 }}><Skeleton width="25%" height={14} /><SkeletonLines lines={4} /></div>)}
+      </div>
+    </section>
+  );
 
   const { state, contact } = detail;
   const statusItems: MenuItem[] = (Object.keys(OUTCOME_LABEL) as Outcome[]).map((outcome) => ({
@@ -570,7 +580,16 @@ export function AiSdrInbox() {
         </div>
         <div className="sv-list-scroll">
           {error ? <p className="sv-banner is-error" role="alert" style={{ margin: 12 }}>{error}</p> : null}
-          {!list && !error ? <p className="sv-hint" style={{ padding: 16 }}>Loading…</p> : null}
+          {!list && !error ? (
+            <div role="status" aria-label="Loading" style={{ padding: 12, display: "grid", gap: 4 }}>
+              {Array.from({ length: 8 }, (_, i) => (
+                <div key={i} style={{ display: "flex", gap: 10, alignItems: "center", padding: "10px 4px" }}>
+                  <Skeleton width={36} height={36} circle style={{ flex: "none" }} />
+                  <div style={{ flex: 1, display: "grid", gap: 8 }}><Skeleton width="40%" height={13} /><Skeleton width="85%" /></div>
+                </div>
+              ))}
+            </div>
+          ) : null}
           {list && list.items.length === 0 ? (
             <div className="sv-pane-empty" style={{ padding: 24 }}>
               <p>{search || campaignId || outcome ? "No threads match these filters." : folder === "inbox" ? "No replies yet. Replies to your campaigns will show up here." : "Nothing here."}</p>

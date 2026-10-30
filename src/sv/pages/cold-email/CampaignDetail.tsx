@@ -8,7 +8,7 @@ import { campaignInsightsApi, type CampaignAnalytics } from "../../api/campaigns
 import { useSvTitle } from "../../layout/chrome";
 import { svPath } from "../../nav";
 import { AreaChart } from "../../ui/AreaChart";
-import { Badge, type BadgeTone, Button, Card, Checkbox, EmptyState, Field, Menu, Modal } from "../../ui";
+import { Badge, type BadgeTone, Button, Card, Checkbox, EmptyState, Field, Menu, Modal, Skeleton, SkeletonCard, SkeletonRows } from "../../ui";
 import { DAYS, errorText, MERGE_VARIABLES, pctText, STATUS_TONE } from "./shared";
 
 type Tab = "analytics" | "leads" | "sequences" | "options";
@@ -90,7 +90,11 @@ function AnalyticsTab({ id }: { id: number }) {
     }
   }
 
-  if (!data) return <p className={error ? "sv-banner is-error" : "sv-hint"}>{error || "Loading…"}</p>;
+  if (!data && error) return <p className="sv-banner is-error">{error}</p>;
+  if (!data) {
+    const row = (n: number) => <div className="sv-stats" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>{Array.from({ length: n }, (_, i) => <SkeletonCard key={i} lines={2} />)}</div>;
+    return <div role="status" aria-label="Loading">{row(4)}<Skeleton width={90} height={18} style={{ margin: "20px 0 8px" }} />{row(4)}<div style={{ marginTop: 20 }}><SkeletonCard lines={6} /></div></div>;
+  }
   const uploadedPct = data.leadsUploaded > 0 ? (Math.min(data.leadsContacted, data.leadsUploaded) / data.leadsUploaded) * 100 : 0;
 
   return (
@@ -240,7 +244,7 @@ function LeadsTab({ id, onChanged }: { id: number; onChanged: () => void }) {
           <table className="sv-table">
             <thead><tr><th style={{ width: 36 }}><Checkbox checked={items.length > 0 && items.every((l) => selected.has(l.id))} onChange={(next) => setSelected(next ? new Set(items.map((l) => l.id)) : new Set())} label="Select all leads" /></th><th>Name</th><th>Email</th><th>Company</th><th>Role</th><th>Status</th></tr></thead>
             <tbody>
-              {!data ? <tr><td colSpan={6} className="sv-hint" style={{ padding: 20 }}>Loading…</td></tr> : null}
+              {!data ? <SkeletonRows columns={6} /> : null}
               {data && items.length === 0 ? <tr><td colSpan={6} className="sv-hint" style={{ padding: 20 }}>No leads match.</td></tr> : null}
               {items.map((lead) => (
                 <tr key={lead.id}>
@@ -479,7 +483,12 @@ export function CampaignDetail() {
     return (
       <div className="sv-page">
         <Link className="sv-link" to={svPath("cold-email-campaign-agent")} style={{ display: "inline-flex", gap: 4, marginBottom: 16 }}><ChevronLeft className="sv-icon" aria-hidden /> All campaigns</Link>
-        {error ? <p className="sv-banner is-error" role="alert">{error}</p> : <p className="sv-hint">Loading…</p>}
+        {error ? <p className="sv-banner is-error" role="alert">{error}</p> : (
+          <div role="status" aria-label="Loading">
+            <div className="sv-skel-stack" style={{ marginBottom: 16 }}><Skeleton width={260} height={24} /><Skeleton width={180} /></div>
+            <div className="sv-stats" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>{[0, 1, 2, 3].map((i) => <SkeletonCard key={i} lines={2} />)}</div>
+          </div>
+        )}
       </div>
     );
   }

@@ -4,7 +4,7 @@ import { ArrowLeft, Check, Copy, Download, FileText, MoreHorizontal, RefreshCw, 
 import { aiApi, type Report, type ReportSlug } from "../../api/ai";
 import { useSvTitle } from "../../layout/chrome";
 import { svPath } from "../../nav";
-import { Button, Card, EmptyState, Field, Menu, PageHeader } from "../../ui";
+import { Button, Card, EmptyState, Field, Menu, PageHeader, Skeleton, SkeletonCard } from "../../ui";
 import { errorText } from "../cold-email/shared";
 import { Banner, Pager, TableCard, useRemote } from "../crm/shared";
 import { Prose, StatusBadge, downloadText, readTextFile, slugify, useCopy, usePolling, when } from "./shared";
@@ -99,7 +99,7 @@ function History({ config, reload: reloadKey }: { config: Config; reload: number
     <section style={{ marginTop: 32 }}>
       <h2 className="sv-set-title" style={{ marginBottom: 12 }}>History</h2>
       <Banner error={error || list.error} />
-      <TableCard head={<><th>Date</th><th>Status</th><th>{growth ? "Prospect" : "Report"}</th><th>Created by</th><th style={{ width: 48 }} /></>} empty={data && data.items.length === 0 ? `No ${config.noun}s yet.` : undefined}>
+      <TableCard head={<><th>Date</th><th>Status</th><th>{growth ? "Prospect" : "Report"}</th><th>Created by</th><th style={{ width: 48 }} /></>} loading={!data && !list.error} empty={data && data.items.length === 0 ? `No ${config.noun}s yet.` : undefined}>
         {data?.items.map((r) => (
           <tr key={r.id}>
             <td>{when(r.createdAt)}</td>
@@ -271,7 +271,7 @@ export function ReportDetail({ slug }: { slug: ReportSlug }) {
   usePolling(r?.status === "processing", report.reload, 2500);
   async function act(fn: () => Promise<unknown>) { setError(""); try { await fn(); } catch (caught) { setError(errorText(caught)); } }
 
-  if (!r) return <div className="sv-page"><Banner error={report.error} />{report.error ? <Link className="sv-link" to={svPath(config.route)}>Back to {config.title}</Link> : <p className="sv-hint">Loading…</p>}</div>;
+  if (!r) return <div className="sv-page"><Banner error={report.error} />{report.error ? <Link className="sv-link" to={svPath(config.route)}>Back to {config.title}</Link> : <div role="status" aria-label="Loading" style={{ display: "grid", gap: 16 }}><div className="sv-skel-stack"><Skeleton width={260} height={24} /><Skeleton width={180} /></div><SkeletonCard lines={4} /><SkeletonCard lines={6} /></div>}</div>;
   // Growth plan titles name the prospect from the form; the model must not rename them.
   const title = (slug === "growth-plan" ? r.title : r.output?.title || r.title) || config.title;
   return (

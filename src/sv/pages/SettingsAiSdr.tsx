@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Copy, Pencil, Plus, RotateCw, Trash2 } from "lucide-react";
 import { aiSdrApi, type CampaignOverride, type MeetingType, type MeetingTypeInput, type OverrideInput, type SdrSettingsBundle } from "../api/aiSdr";
 import { useSvTitle } from "../layout/chrome";
-import { Badge, Button, Field, Modal, PageHeader, SettingsCard, Toggle } from "../ui";
+import { Badge, Button, Field, Modal, PageHeader, SettingsCard, SkeletonCard, Toggle } from "../ui";
 
 const errorText = (error: unknown) => (error instanceof Error ? error.message : "Something went wrong. Try again.");
 
@@ -219,7 +219,7 @@ export function SettingsAiSdr() {
   if (!bundle || !form) {
     return (
       <div className="sv-page"><div className="sv-settings-col"><PageHeader title="AI SDR Agent Settings" subtitle="Configure your AI SDR agent settings and call assignment preferences" />
-        <p className={error ? "sv-banner is-error" : "sv-hint"} role={error ? "alert" : undefined}>{error || "Loading…"}</p></div></div>
+        {error ? <p className="sv-banner is-error" role="alert">{error}</p> : <div className="sv-stack">{[0, 1, 2].map((i) => <SkeletonCard key={i} lines={4} />)}</div>}</div></div>
     );
   }
 

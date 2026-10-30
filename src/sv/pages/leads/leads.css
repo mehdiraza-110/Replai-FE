@@ -1,0 +1,20 @@
+.lead-layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 20px; align-items: start; }
+.lead-lists ul { list-style: none; margin: 0; padding: 6px; display: grid; gap: 2px; }
+.lead-lists-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--ds-border); }
+.lead-list-btn { width: 100%; display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 7px 10px; border: 0; border-radius: 6px; background: transparent; color: inherit; font: inherit; font-size: 13px; cursor: pointer; text-align: left; }
+.lead-list-btn:hover { background: var(--ds-hover, rgba(127, 127, 127, 0.1)); }
+.lead-list-btn.is-active { background: var(--ds-hover, rgba(127, 127, 127, 0.14)); font-weight: 600; }
+.lead-list-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lead-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.lead-title { display: flex; align-items: center; gap: 4px; }
+.lead-title h2 { margin: 0; font-size: 16px; }
+.lead-bulk { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 8px 12px; margin-bottom: 12px; border: 1px solid var(--ds-border); border-radius: 8px; font-size: 13px; }
+.lead-link { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font: inherit; }
+.lead-row { cursor: pointer; }
+.lead-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.lead-drop { display: flex; align-items: center; gap: 10px; padding: 18px; border: 1px dashed var(--ds-border); border-radius: 8px; cursor: pointer; font-size: 13px; }
+.lead-import-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.lead-import-stats div { border: 1px solid var(--ds-border); border-radius: 8px; padding: 12px; display: grid; gap: 2px; }
+.lead-import-stats b { font-size: 22px; }
+.lead-import-stats span { font-size: 12px; opacity: 0.7; }
+@media (max-width: 800px) { .lead-layout { grid-template-columns: 1fr; } .lead-grid { grid-template-columns: 1fr; } }

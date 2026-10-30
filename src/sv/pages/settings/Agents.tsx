@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { settingsApi } from "../../api/settings";
 import { useSvTitle } from "../../layout/chrome";
-import { Badge, Button, Field, SettingsCard } from "../../ui";
+import { Badge, Button, Field, SettingsCard, SkeletonLines } from "../../ui";
 import { Notice, ReadOnlyNote, SettingsPageFrame, useCanManage, useRemote, useSaver } from "./shared";
 
 // ---- Cold Email Agent ----
@@ -37,7 +37,7 @@ export function SettingsColdEmailAgent() {
       <SettingsCard title="Usage" description="What your plan allows for outreach.">
         {meters.length ? meters.map((l) => { const pct = l.limit ? Math.min(100, Math.round((l.used / l.limit) * 100)) : 0; return (
           <div key={l.key}><div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ fontWeight: 500 }}>{l.label}</span><span className="sv-hint">{l.used.toLocaleString()} of {l.limit === null ? "unlimited" : l.limit.toLocaleString()}{l.period === "day" ? " per day" : ""}</span></div><div className="sv-meter" aria-hidden><i style={{ width: `${pct}%`, background: pct >= 90 ? "var(--ds-red-text)" : "var(--ds-green-text)" }} /></div></div>
-        ); }) : <p className="sv-hint">{billing.data ? "Your plan has no usage limits." : "Loading…"}</p>}
+        ); }) : billing.data ? <p className="sv-hint">Your plan has no usage limits.</p> : <SkeletonLines lines={3} />}
       </SettingsCard>
       <SettingsCard title="AI campaign management" description="Let the AI adjust running campaigns for you.">
         <div><Badge>Not available yet</Badge></div>

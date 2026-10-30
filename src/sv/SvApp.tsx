@@ -1,28 +1,41 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useViewAs } from "../hooks/useViewAs";
 import { clearViewAs } from "../utils/viewAs";
-import { Button, EmptyState } from "./ui";
-import { LoadingState } from "../components/ui/LoadingState";
+import { Button, EmptyState, SkeletonShell } from "./ui";
 import { useAuth } from "../context/AuthContext";
 import { ForgotPasswordPage, ResetPasswordPage, SignInPage, SignUpPage } from "./auth/pages";
 import { AuthLayout, AuthMessage } from "./auth/AuthLayout";
 import { SettingsShell } from "./layout/SettingsShell";
 import { SvShell } from "./layout/SvShell";
 import { svPath } from "./nav";
+import { AdminDashboard } from "./pages/admin/AdminDashboard";
+import { AdminDeliverability } from "./pages/admin/AdminDeliverability";
+import { AdminDomains } from "./pages/admin/AdminDomains";
+import { AdminOrders } from "./pages/admin/AdminOrders";
+import { AdminUsers } from "./pages/admin/AdminUsers";
+import { AdminWorkspaceDetail } from "./pages/admin/AdminWorkspaceDetail";
+import { AdminWorkspaces } from "./pages/admin/AdminWorkspaces";
+import { AIKeys } from "./pages/tools/AIKeys";
+import { EventLogs } from "./pages/tools/EventLogs";
+import { Integrations } from "./pages/tools/Integrations";
+import { WorkflowEditor } from "./pages/tools/WorkflowEditor";
+import { Workflows } from "./pages/tools/Workflows";
 import { SiteEditor } from "./pages/sites/SiteEditor";
 import { Sites } from "./pages/sites/Sites";
-import { CallDetail, CallsList } from "./pages/ai/Calls";
 import { Chat } from "./pages/ai/Chat";
 import { GrowthPlanCreator, MarketResearcher, OfferCreator, ReportDetail } from "./pages/ai/Reports";
 import { CrmLayout, CrmTab, DashboardPage, Placeholder, SettingsPage, SettingsRedirect } from "./pages";
+import { Leads } from "./pages/leads/Leads";
 import { AiSdrInbox } from "./pages/AiSdrInbox";
+import { Replier } from "./pages/replier/Replier";
+import { AgentPage as ReplierAgentPage } from "./pages/replier/AgentPage";
 import { CampaignDetail } from "./pages/cold-email/CampaignDetail";
 import { AddInboxes } from "./pages/cold-email/AddInboxes";
 import { PrefsProvider } from "./prefs";
 import { SettingsAccessTokens, SettingsAppearance, SettingsConferencing, SettingsNotifications, SettingsSecurity } from "./pages/settings/Personal";
 import { SettingsApiKeys, SettingsBilling, SettingsBlocklist, SettingsCustomFields, SettingsGeneral, SettingsMembers, SettingsOutcomes, SettingsScheduling, SettingsSharing, SettingsSnapshots, SettingsTemplates } from "./pages/settings/Workspace";
-import { SettingsCallAnalyzer, SettingsColdEmailAgent, SettingsDeveloperDocs } from "./pages/settings/Agents";
+import { SettingsColdEmailAgent, SettingsDeveloperDocs } from "./pages/settings/Agents";
 import { CampaignsHome } from "./pages/cold-email/CampaignsHome";
 import { EmailAccounts } from "./pages/cold-email/EmailAccounts";
 import { NewCampaign } from "./pages/cold-email/NewCampaign";
@@ -58,7 +71,7 @@ function EnsureWorkspace() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (!error) return <LoadingState label="Setting up your account…" minHeight={320} />;
+  if (!error) return <SkeletonShell />;
 
   return (
     <AuthLayout title="Almost there" subtitle="We couldn't finish setting up your account.">
@@ -106,9 +119,9 @@ function SvGuard({ children }: { children: ReactNode }) {
   const location = useLocation();
 
   if (!isAuthenticated) return <Navigate replace to={svPath("auth/sign-in")} state={{ from: location.pathname }} />;
-  if (!isReady) return <LoadingState label="Loading…" minHeight={320} />;
+  if (!isReady) return <SkeletonShell />;
   // A platform admin with no workspace of their own has nothing to show here; their pages live under /admin.
-  if (!activeWorkspace && isSuperAdmin) return <Navigate replace to="/admin" />;
+  if (!activeWorkspace && isSuperAdmin) return location.pathname.startsWith("/admin") ? <>{children}</> : <Navigate replace to="/admin" />;
   if (!activeWorkspace) return <EnsureWorkspace />;
   if (!viewAs && !isSuperAdmin) {
     if (activeWorkspace.status === "suspended") return <Blocked title={`${activeWorkspace.name} is suspended`} body="This workspace has been suspended, so its data and tools are unavailable for now. Contact support to get it reactivated." />;
@@ -122,6 +135,12 @@ function SvGuard({ children }: { children: ReactNode }) {
   );
 }
 
+/** Sends anyone who isn't a platform admin back to their dashboard instead of showing them platform pages. */
+function SuperAdminOnly() {
+  const { isSuperAdmin } = useAuth();
+  return isSuperAdmin ? <Outlet /> : <Navigate replace to={svPath("dashboard")} />;
+}
+
 function AppRoutes() {
   return (
     <Routes>
@@ -132,14 +151,15 @@ function AppRoutes() {
           <Route index element={<Navigate replace to="tasks" />} />
           <Route path=":tab" element={<CrmTab />} />
         </Route>
+        <Route path="leads" element={<Leads />} />
         <Route path="cold-email-campaign-agent" element={<CampaignsHome />} />
         <Route path="cold-email-campaign-agent/new" element={<NewCampaign />} />
         <Route path="cold-email-campaign-agent/email-accounts" element={<EmailAccounts />} />
         <Route path="cold-email-campaign-agent/email-accounts/new" element={<AddInboxes />} />
         <Route path="cold-email-campaign-agent/:id" element={<CampaignDetail />} />
         <Route path="ai-sdr" element={<AiSdrInbox />} />
-        <Route path="sales-call-analysis" element={<CallsList />} />
-        <Route path="sales-call-analysis/:id" element={<CallDetail />} />
+        <Route path="replier" element={<Replier />} />
+        <Route path="replier/:agentId" element={<ReplierAgentPage />} />
         <Route path="growth-plan-creator" element={<GrowthPlanCreator />} />
         <Route path="growth-plan-creator/:id" element={<ReportDetail slug="growth-plan" />} />
         <Route path="niche-researcher" element={<MarketResearcher />} />
@@ -148,6 +168,21 @@ function AppRoutes() {
         <Route path="offer-creator/:id" element={<ReportDetail slug="offer" />} />
         <Route path="ai-growth-consultant" element={<Chat />} />
         <Route path="ai-growth-consultant/:id" element={<Chat />} />
+        <Route path="workflows" element={<Workflows />} />
+        <Route path="workflows/:id" element={<WorkflowEditor />} />
+        <Route path="ai-keys" element={<AIKeys />} />
+        <Route path="integrations" element={<Integrations />} />
+        <Route path="events" element={<EventLogs />} />
+        {/* Platform pages: super admins only. */}
+        <Route element={<SuperAdminOnly />}>
+          <Route path="admin" element={<AdminDashboard />} />
+          <Route path="admin/workspaces" element={<AdminWorkspaces />} />
+          <Route path="admin/workspaces/:id" element={<AdminWorkspaceDetail />} />
+          <Route path="admin/users" element={<AdminUsers />} />
+          <Route path="admin/domains" element={<AdminDomains />} />
+          <Route path="admin/orders" element={<AdminOrders />} />
+          <Route path="admin/deliverability" element={<AdminDeliverability />} />
+        </Route>
         <Route path="sites/websites" element={<Sites />} />
         <Route path="sites/websites/:id" element={<SiteEditor />} />
         <Route path="whats-new" element={<Placeholder title="What's New" phase="Phase 6" />} />
@@ -177,7 +212,6 @@ function AppRoutes() {
         <Route path="settings/crm-outcomes" element={<SettingsOutcomes />} />
         <Route path="settings/api-keys" element={<SettingsApiKeys />} />
         <Route path="settings/cold-email-agent" element={<SettingsColdEmailAgent />} />
-        <Route path="settings/sales-call-analyzer" element={<SettingsCallAnalyzer />} />
         <Route path="settings/developer-docs" element={<SettingsDeveloperDocs />} />
         <Route path="settings/*" element={<SettingsPage />} />
       </Route>

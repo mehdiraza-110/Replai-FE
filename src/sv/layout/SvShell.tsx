@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Bell, Cable, ChevronDown, ChevronRight, KeyRound, ListTree, LogOut, PanelLeft, Search, Settings as SettingsIcon, ShieldCheck, Sparkles, Workflow } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import { allDestinations, applySidebarPrefs, chatRoute, footerNav, mainNav, svPath, type NavItem } from "../nav";
+import { adminNav, allDestinations, applySidebarPrefs, chatRoute, footerNav, mainNav, svPath, type NavItem } from "../nav";
 import { usePrefs } from "../prefs";
 import { useOutsideClose } from "../ui";
 import { ChromeProvider, useChrome, useSidebarCollapsed } from "./chrome";
@@ -10,7 +10,7 @@ import { CommandPalette } from "./CommandPalette";
 
 function isActivePath(pathname: string, item: NavItem) {
   const prefix = svPath(item.match ?? item.to);
-  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+  return pathname === prefix || (!item.exact && pathname.startsWith(`${prefix}/`));
 }
 
 function NavRow({ item, pathname }: { item: NavItem; pathname: string }) {
@@ -39,7 +39,8 @@ function Sidebar({ collapsed, onCollapse }: { collapsed: boolean; onCollapse: ()
   const personName = [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.email || "";
   const chatMode = pathname.startsWith(svPath(chatRoute));
   const { prefs, workspaceColor } = usePrefs();
-  const navGroups = applySidebarPrefs(mainNav, prefs?.appearance.sidebar);
+  // Super admins get the platform pages as one more collapsible group at the end; it isn't part of anyone's sidebar choices.
+  const navGroups = [...applySidebarPrefs(mainNav, prefs?.appearance.sidebar), ...(user?.is_super_admin ? [adminNav] : [])];
 
   return (
     <aside className={`sv-sidebar${collapsed ? " is-collapsed" : ""}`} aria-label="Main navigation">
@@ -115,12 +116,6 @@ function Sidebar({ collapsed, onCollapse }: { collapsed: boolean; onCollapse: ()
                 <SettingsIcon className="sv-icon" aria-hidden />
                 Settings
               </Link>
-              {[{ to: "/ai-keys", label: "AI keys", icon: KeyRound }, { to: "/workflows", label: "Workflows", icon: Workflow }, { to: "/integrations", label: "Integrations", icon: Cable }, { to: "/events", label: "Event logs", icon: ListTree }, ...(user?.is_super_admin ? [{ to: "/admin", label: "Platform admin", icon: ShieldCheck }] : [])].map((tool) => (
-                <Link key={tool.to} to={tool.to} className="sv-menu-item" role="menuitem" onClick={() => setMenuOpen(false)}>
-                  <tool.icon className="sv-icon" aria-hidden />
-                  {tool.label}
-                </Link>
-              ))}
               <button type="button" className="sv-menu-item" role="menuitem" onClick={() => void logout()}>
                 <LogOut className="sv-icon" aria-hidden />
                 Log out

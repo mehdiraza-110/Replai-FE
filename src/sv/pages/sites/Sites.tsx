@@ -4,7 +4,7 @@ import { Globe, LayoutTemplate, Plus, Sparkles } from "lucide-react";
 import { sitesApi, type Site } from "../../api/sites";
 import { useSvTitle } from "../../layout/chrome";
 import { svPath } from "../../nav";
-import { Badge, Button, Card, EmptyState, PageHeader } from "../../ui";
+import { Badge, Button, Card, EmptyState, PageHeader, Skeleton } from "../../ui";
 import { errorText } from "../cold-email/shared";
 import { Banner, useRemote } from "../crm/shared";
 import { usePolling, when } from "../ai/shared";
@@ -66,7 +66,9 @@ export function Sites() {
         {([["projects", "Projects"], ["templates", "Templates"], ["domains", "Domains"]] as const).map(([id, label]) => <button key={id} type="button" className={`sv-tab${tab === id ? " is-active" : ""}`} aria-current={tab === id ? "page" : undefined} onClick={() => setTab(id)}>{label}</button>)}
       </nav>
 
-      {tab === "projects" ? (
+      {(tab === "projects" || tab === "templates") && !list.data && !list.error ? <div className="sv-site-grid" role="status" aria-label="Loading">{Array.from({ length: 6 }, (_, i) => <div key={i} className="sv-site-card"><Skeleton height={110} style={{ borderRadius: 8 }} /><Skeleton width="60%" height={14} /><Skeleton width="40%" /></div>)}</div> : null}
+
+      {tab === "projects" && (list.data || list.error) ? (
         items.length === 0 && list.data ? <EmptyState title="No websites yet" body="Describe one above, or pick a template to start." /> : (
           <div className="sv-site-grid">
             {items.map((s) => (
@@ -79,7 +81,7 @@ export function Sites() {
         )
       ) : null}
 
-      {tab === "templates" ? (
+      {tab === "templates" && list.data ? (
         <div className="sv-site-grid">
           {templates.map((t) => (
             <Card key={t.id} className="sv-pad">
