@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Copy, Plus, Trash2 } from "lucide-react";
 import { schedulingApi, type Availability, type WeekDay } from "../api/aiSdr";
 import { useSvTitle } from "../layout/chrome";
-import { Button, PageHeader, SettingsCard, Toggle } from "../ui";
+import { Button, PageHeader, SettingsCard, Skeleton, Toggle } from "../ui";
 
 const DAYS: Array<{ key: WeekDay; label: string }> = [
   { key: "mon", label: "Monday" },
@@ -45,7 +45,11 @@ export function SettingsAvailability() {
 
   const dirty = useMemo(() => Boolean(saved && form && (!saved.saved || JSON.stringify({ ...saved, saved: true }) !== JSON.stringify({ ...form, saved: true }))), [saved, form]);
 
-  if (!form) return <div className="sv-page"><div className="sv-settings-col"><PageHeader title="Availability" subtitle="Choose when meetings can be booked." /><p className={error ? "sv-banner is-error" : "sv-hint"}>{error || "Loading…"}</p></div></div>;
+  if (!form) return <div className="sv-page"><div className="sv-settings-col"><PageHeader title="Availability" subtitle="Choose when meetings can be booked." />{error ? <p className="sv-banner is-error">{error}</p> : (
+          <div className="sv-card" style={{ padding: 16 }}>
+            <div role="status" aria-label="Loading" style={{ display: "grid", gap: 16 }}>{Array.from({ length: 7 }, (_, i) => <div key={i} style={{ display: "flex", gap: 16, alignItems: "center" }}><Skeleton width={90} /><Skeleton width={160} height={32} /></div>)}</div>
+          </div>
+        )}</div></div>;
 
   const setRanges = (day: WeekDay, ranges: Array<[string, string]>) => setForm({ ...form, weekly: { ...form.weekly, [day]: ranges } });
 

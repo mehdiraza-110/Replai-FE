@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link2, Trash2 } from "lucide-react";
 import { schedulingApi, type CalendarStatus } from "../api/aiSdr";
 import { useSvTitle } from "../layout/chrome";
-import { Badge, Button, PageHeader, SettingsCard } from "../ui";
+import { Badge, Button, PageHeader, SettingsCard, SkeletonLines } from "../ui";
 
 const errorText = (error: unknown) => (error instanceof Error ? error.message : "Something went wrong. Try again.");
 
@@ -80,7 +80,7 @@ export function SettingsEmailCalendar() {
         {notice ? <p className="sv-banner is-ok" role="status" style={{ marginBottom: 16 }}>{notice}</p> : null}
 
         <SettingsCard title="Connected account" description="The calendar the AI SDR checks for free times and adds booked meetings to, with a video link.">
-          {!status ? <p className="sv-hint">Loading…</p> : null}
+          {!status && !error ? <SkeletonLines lines={2} /> : null}
           {status && !connection ? (
             <>
               <p className="sv-hint">No calendar connected. Until you connect one, the AI SDR can only share your booking link.</p>

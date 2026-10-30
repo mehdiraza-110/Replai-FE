@@ -2658,3 +2658,24 @@ button.sv-choice:disabled { opacity: 0.6; cursor: not-allowed; }
 .sv-site-frame.is-mobile { width: 390px; max-width: 100%; }
 .sv-site-frame iframe { width: 100%; height: 100%; border: 0; background: #fff; }
 .sv-site-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(255, 255, 255, 0.6); }
+
+/* ---------- skeleton loaders ---------- */
+
+.sv-skel {
+  display: block;
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--ds-border) 25%, color-mix(in srgb, var(--ds-border) 45%, transparent) 50%, var(--ds-border) 75%);
+  background-size: 200% 100%;
+  animation: sv-skel-shimmer 1.3s ease-in-out infinite;
+}
+.sv-skel.is-circle { border-radius: 50%; }
+.sv-skel-stack { display: grid; gap: 10px; }
+.sv-skel-row td { padding: 14px 12px; }
+@keyframes sv-skel-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sv-skel { animation: none; }
+}

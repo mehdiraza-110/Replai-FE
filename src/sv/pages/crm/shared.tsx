@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { Children, isValidElement, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Search } from "lucide-react";
-import { Button, Card } from "../../ui";
+import { Button, Card, SkeletonRows } from "../../ui";
 import { type CustomField } from "../../api/settings";
 import { errorText } from "../cold-email/shared";
 
@@ -60,13 +60,13 @@ export function Pager({ page, limit, total, totalPages, onPage }: { page: number
   );
 }
 
-export function TableCard({ head, children, empty }: { head: ReactNode; children: ReactNode; empty?: string }) {
+export function TableCard({ head, children, empty, loading }: { head: ReactNode; children: ReactNode; empty?: string; loading?: boolean }) {
   return (
     <Card>
       <div className="sv-table-wrap">
         <table className="sv-table">
           <thead><tr>{head}</tr></thead>
-          <tbody>{children}</tbody>
+          <tbody>{loading ? <SkeletonRows columns={(isValidElement(head) ? Children.count((head.props as { children?: ReactNode }).children) : 6)} /> : children}</tbody>
         </table>
         {empty ? <p className="sv-hint" style={{ padding: 20, margin: 0 }}>{empty}</p> : null}
       </div>

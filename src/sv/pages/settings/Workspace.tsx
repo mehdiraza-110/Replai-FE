@@ -8,7 +8,7 @@ import { aiSdrApi, type MeetingType } from "../../api/aiSdr";
 import { settingsApi, type CustomField, type FieldType, type Outcome, type Template } from "../../api/settings";
 import { useSvTitle } from "../../layout/chrome";
 import { svPath } from "../../nav";
-import { Badge, Button, Card, Checkbox, Field, Menu, Modal, SettingsCard } from "../../ui";
+import { Badge, Button, Card, Checkbox, Field, Menu, Modal, SettingsCard, SkeletonLines } from "../../ui";
 import { MeetingTypeModal } from "../SettingsAiSdr";
 import { ConfirmModal, dateText, dateTimeText, Notice, Pager, ReadOnlyNote, SearchBox, SettingsPageFrame, SwitchRow, useCanManage, useDebounced, useRemote, useSaver } from "./shared";
 import { TokenManager } from "./Personal";
@@ -187,7 +187,7 @@ export function SettingsBilling() {
             <Badge tone={plan.ended ? "red" : "green"}>{plan.ended ? "Ended" : "Active"}</Badge>
             {plan.type === "trial" ? <span className="sv-hint">{plan.ended ? "Your trial has ended." : `${plan.days_left} ${plan.days_left === 1 ? "day" : "days"} left, ends ${dateText(plan.trial_ends_at)}`}</span> : null}
           </div>
-        ) : <p className="sv-hint">Loading…</p>}
+        ) : <SkeletonLines lines={2} />}
         <p className="sv-hint">Payments are handled by the SendVybe team. To change your plan or limits, contact support.</p>
       </SettingsCard>
 
@@ -200,7 +200,7 @@ export function SettingsBilling() {
               <div className="sv-meter" aria-hidden><i style={{ width: `${pct}%`, background: pct >= 90 ? "var(--ds-red-text)" : "var(--ds-green-text)" }} /></div>
             </div>
           );
-        }) : <p className="sv-hint">{data ? "Your plan has no usage limits." : "Loading…"}</p>}
+        }) : data ? <p className="sv-hint">Your plan has no usage limits.</p> : <SkeletonLines lines={3} />}
       </SettingsCard>
 
       <SettingsCard title="Email accounts and domains" description={data ? `${data.totals.domains} domains, ${data.totals.inboxes} inboxes (${data.totals.activeInboxes} active)` : undefined}>
@@ -456,7 +456,7 @@ export function SettingsApiKeys() {
       <SettingsCard title="Workspace API keys" description="Send the key as an Authorization: Bearer header. See Developer Docs for examples.">
         <TokenManager kind="workspace" canCreate={canManage} emptyText="No API keys yet." />
       </SettingsCard>
-      <SettingsCard title="AI provider keys" description="Your own OpenAI, Anthropic or Gemini key, used by the AI SDR, the AI Consultant, the Sales Call Analyzer and the report tools.">
+      <SettingsCard title="AI provider keys" description="Your own OpenAI, Anthropic or Gemini key, used by the AI SDR, the AI Consultant and the report tools.">
         <div><Link className="sv-link" to="/ai-keys">Manage AI keys</Link></div>
       </SettingsCard>
       <SettingsCard title="Connected apps" description="Apps that signed in with your account through OAuth.">

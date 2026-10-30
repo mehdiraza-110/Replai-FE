@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
 import { svPath } from "../nav";
@@ -233,4 +233,65 @@ export function Modal({ open, title, onClose, children, footer, wide }: { open: 
 
 export function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: (next: boolean) => void; label: string }) {
   return <input type="checkbox" className="sv-check" checked={checked} aria-label={label} onChange={(event) => onChange(event.target.checked)} />;
+}
+
+/** A shimmering placeholder block shown while data loads. Size it with width/height (numbers are px). */
+export function Skeleton({ width = "100%", height = 12, circle, style }: { width?: number | string; height?: number | string; circle?: boolean; style?: CSSProperties }) {
+  return <span className={cx("sv-skel", circle && "is-circle")} style={{ width, height, ...style }} aria-hidden="true" />;
+}
+
+/** Stacked text-line placeholders. The last line is shorter, like a paragraph. */
+export function SkeletonLines({ lines = 3 }: { lines?: number }) {
+  return (
+    <div className="sv-skel-stack" role="status" aria-label="Loading">
+      {Array.from({ length: lines }, (_, i) => <Skeleton key={i} width={i === lines - 1 && lines > 1 ? "60%" : "100%"} />)}
+    </div>
+  );
+}
+
+/** Placeholder table rows. Drop inside a <tbody> while data is null. */
+export function SkeletonRows({ columns, rows = 5 }: { columns: number; rows?: number }) {
+  return (
+    <>
+      {Array.from({ length: rows }, (_, r) => (
+        <tr key={r} className="sv-skel-row" aria-hidden="true">
+          {Array.from({ length: columns }, (_, c) => <td key={c}><Skeleton width={c === 0 ? "70%" : `${45 + ((r + c) % 4) * 12}%`} /></td>)}
+        </tr>
+      ))}
+    </>
+  );
+}
+
+/** A card-shaped placeholder: a title line and a few body lines. Use in a grid while cards load. */
+export function SkeletonCard({ lines = 3 }: { lines?: number }) {
+  return (
+    <div className="sv-card" style={{ padding: 16, display: "grid", gap: 12 }} role="status" aria-label="Loading">
+      <Skeleton width="40%" height={16} />
+      <SkeletonLines lines={lines} />
+    </div>
+  );
+}
+
+/** A whole-page placeholder: header, a row of stat cards, and a table. */
+export function SkeletonPage() {
+  return (
+    <div className="sv-page" role="status" aria-label="Loading">
+      <div className="sv-skel-stack" style={{ marginBottom: 20 }}><Skeleton width={220} height={24} /><Skeleton width={360} /></div>
+      <div className="sv-stats" style={{ marginBottom: 20 }}>{[0, 1, 2, 3].map((i) => <SkeletonCard key={i} lines={1} />)}</div>
+      <div className="sv-card" style={{ padding: 8 }}><table className="sv-table"><tbody><SkeletonRows columns={5} rows={6} /></tbody></table></div>
+    </div>
+  );
+}
+
+/** The app frame (sidebar and a page) as placeholders, shown while the session and workspace load. */
+export function SkeletonShell() {
+  return (
+    <div className="sv-root" style={{ display: "flex", height: "100vh", minHeight: 0 }} role="status" aria-label="Loading">
+      <div className="sv-sidebar-skel" style={{ width: 232, flexShrink: 0, padding: 16, display: "grid", alignContent: "start", gap: 14 }}>
+        <Skeleton width="60%" height={20} />
+        {Array.from({ length: 9 }, (_, i) => <Skeleton key={i} width={`${55 + ((i * 17) % 35)}%`} height={14} />)}
+      </div>
+      <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}><SkeletonPage /></div>
+    </div>
+  );
 }

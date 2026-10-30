@@ -5,7 +5,7 @@ import { aiSdrApi } from "../api/aiSdr";
 import { crmApi, type DashboardView, type ViewWidget, type WidgetData, type WidgetDef, type WidgetSize } from "../api/crm";
 import { useSvTitle } from "../layout/chrome";
 import { svPath } from "../nav";
-import { Badge, Button, Card, Menu, Modal } from "../ui";
+import { Badge, Button, Card, Menu, Modal, Skeleton, SkeletonCard, SkeletonLines } from "../ui";
 import { AreaChart, type ChartSeries } from "../ui/AreaChart";
 import { dateTime, errorText, money, useRemote } from "./crm/shared";
 
@@ -27,7 +27,11 @@ function delta(value: number, previous: number | undefined, days: number) {
 }
 
 function WidgetBody({ def, data, days }: { def: WidgetDef; data: WidgetData | undefined; days: number }) {
-  if (!data) return <p className="sv-hint">Loading…</p>;
+  if (!data) {
+    if (def.type === "stat") return <div className="sv-skel-stack" role="status" aria-label="Loading"><Skeleton width="50%" height={28} /><Skeleton width="65%" /></div>;
+    if (def.type === "chart") return <div role="status" aria-label="Loading"><Skeleton height={def.key === "sent_vs_replies" ? 240 : 180} style={{ borderRadius: 8 }} /></div>;
+    return <SkeletonLines lines={4} />;
+  }
   if (def.type === "stat") {
     const value = data.value ?? 0;
     const change = delta(value, data.previous, days);
@@ -149,6 +153,7 @@ export function Dashboard() {
       ) : null}
 
       <div className="sv-dash-grid">
+        {!view && !error && !views.error && !catalog.error ? [1, 1, 1, 1, 2, 2].map((span, i) => <div key={i} className="sv-dash-cell" style={{ gridColumn: `span ${span}` }}><SkeletonCard lines={span === 1 ? 1 : 4} /></div>) : null}
         {view?.widgets.map((w) => {
           const def = defs[w.key];
           if (!def) return null;

@@ -8,7 +8,7 @@ import { useSvTitle } from "../../layout/chrome";
 import { mainNav } from "../../nav";
 import { usePrefs } from "../../prefs";
 import { playTone } from "../../sound";
-import { Badge, Button, Card, Field, Modal, SettingsCard } from "../../ui";
+import { Badge, Button, Card, Field, Modal, SettingsCard, SkeletonCard } from "../../ui";
 import { ConfirmModal, dateTimeText, Notice, ReadOnlyNote, SettingsPageFrame, SwitchRow, useCanManage, useRemote, useSaver } from "./shared";
 
 const SOUND_LABEL: Record<string, string> = { classic: "Classic", soft: "Soft", bright: "Bright", off: "Off", chime: "Chime", pop: "Pop", alert: "Alert", double: "Double beep", success: "Success", sparkle: "Sparkle" };
@@ -24,7 +24,7 @@ export function SettingsNotifications() {
   useEffect(() => { if (prefs && !draft) setDraft(prefs.notifications); }, [prefs, draft]);
   const permission = typeof Notification === "undefined" ? "unsupported" : Notification.permission;
   const [perm, setPerm] = useState(permission);
-  if (!prefs || !draft) return <SettingsPageFrame title="Notifications" subtitle="Choose how SendVybe gets your attention"><p className="sv-hint">Loading…</p></SettingsPageFrame>;
+  if (!prefs || !draft) return <SettingsPageFrame title="Notifications" subtitle="Choose how SendVybe gets your attention"><div className="sv-stack">{[0, 1, 2].map((i) => <SkeletonCard key={i} lines={3} />)}</div></SettingsPageFrame>;
   const dirty = JSON.stringify(draft) !== JSON.stringify(prefs.notifications);
   const timezones = typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : ["UTC"];
 
@@ -104,7 +104,7 @@ export function SettingsAppearance() {
     const rank = (to: string) => { const i = saved.indexOf(to); return i === -1 ? 999 : i; };
     return { label: g.label as string, items: [...g.items].sort((a, b) => rank(a.to) - rank(b.to)) };
   }), [order]);
-  if (!prefs) return <SettingsPageFrame title="Appearance" subtitle="Make SendVybe look the way you like"><p className="sv-hint">Loading…</p></SettingsPageFrame>;
+  if (!prefs) return <SettingsPageFrame title="Appearance" subtitle="Make SendVybe look the way you like"><div className="sv-stack">{[0, 1, 2].map((i) => <SkeletonCard key={i} lines={3} />)}</div></SettingsPageFrame>;
 
   const dirty = JSON.stringify([hidden, names, order]) !== JSON.stringify([prefs.appearance.sidebar.hidden, prefs.appearance.sidebar.groupNames, prefs.appearance.sidebar.order]);
   const move = (label: string, to: string, delta: -1 | 1) => {

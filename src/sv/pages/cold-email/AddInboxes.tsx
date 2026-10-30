@@ -4,7 +4,7 @@ import { ArrowLeft, Check, Link2, Sparkles, Zap } from "lucide-react";
 import { orderService, OPEN_STATUSES, ORDER_STATUS_LABEL, type OrderRequest, type OrderStatus } from "../../../services/orderApi";
 import { useSvTitle } from "../../layout/chrome";
 import { svPath } from "../../nav";
-import { Badge, type BadgeTone, Button, Card, Field } from "../../ui";
+import { Badge, type BadgeTone, Button, Card, Field, SkeletonRows } from "../../ui";
 import { errorText, formatDate } from "./shared";
 
 const STATUS_TONE: Record<OrderStatus, BadgeTone> = { requested: "yellow", approved: "blue", in_progress: "blue", fulfilled: "green", rejected: "red", cancelled: "neutral" };
@@ -106,7 +106,7 @@ export function AddInboxes() {
           <table className="sv-table">
             <thead><tr><th>Request</th><th className="is-num">Quantity</th><th>Status</th><th>Requested</th><th>Notes from us</th><th style={{ width: 90 }} /></tr></thead>
             <tbody>
-              {!orders ? <tr><td colSpan={6} className="sv-hint" style={{ padding: 20 }}>Loading…</td></tr> : null}
+              {!orders && !error ? <SkeletonRows columns={6} /> : null}
               {orders && orders.length === 0 ? <tr><td colSpan={6} className="sv-hint" style={{ padding: 20 }}>No requests yet.</td></tr> : null}
               {orders?.map((o) => (
                 <tr key={o.id}>

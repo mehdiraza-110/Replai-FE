@@ -1,6 +1,13 @@
 import {
   Bell,
   BookText,
+  Cable,
+  ListTree,
+  MailCheck,
+  PackageCheck,
+  ShieldCheck,
+  UsersRound,
+  Workflow,
   Bot,
   Brain,
   Building2,
@@ -9,6 +16,7 @@ import {
   CircleHelp,
   Clock,
   Compass,
+  Contact,
   CreditCard,
   FileText,
   Folder,
@@ -26,8 +34,8 @@ import {
   Newspaper,
   Package,
   Palette,
-  PhoneCall,
   Plug,
+  Reply,
   Settings as SettingsIcon,
   Settings2,
   Shield,
@@ -51,6 +59,8 @@ export interface NavItem {
   icon: LucideIcon;
   /** Path prefix that keeps the item highlighted on its sub-pages. Defaults to `to`. */
   match?: string;
+  /** Only highlight on the exact path, not on its sub-pages. */
+  exact?: boolean;
 }
 
 export interface NavGroup {
@@ -64,6 +74,7 @@ export const mainNav: NavGroup[] = [
     items: [
       { to: "dashboard", label: "Dashboard", icon: LayoutGrid },
       { to: "crm/tasks", label: "CRM", icon: Users, match: "crm" },
+      { to: "leads", label: "Leads", icon: Contact },
     ],
   },
   {
@@ -71,7 +82,7 @@ export const mainNav: NavGroup[] = [
     items: [
       { to: "cold-email-campaign-agent", label: "Cold Email Agent", icon: Mail },
       { to: "ai-sdr", label: "AI SDR Inbox", icon: Inbox },
-      { to: "sales-call-analysis", label: "Sales Call Analyzer", icon: PhoneCall },
+      { to: "replier", label: "Replier", icon: Reply, match: "replier" },
     ],
   },
   {
@@ -88,7 +99,29 @@ export const mainNav: NavGroup[] = [
       { to: "offer-creator", label: "Offer Creator", icon: Package },
     ],
   },
+  {
+    label: "Tools",
+    items: [
+      { to: "workflows", label: "Workflows", icon: Workflow, match: "workflows" },
+      { to: "ai-keys", label: "AI Keys", icon: KeyRound },
+      { to: "integrations", label: "Integrations", icon: Cable },
+      { to: "events", label: "Event Logs", icon: ListTree },
+    ],
+  },
 ];
+
+/** Platform pages for super admins. Shown as their own collapsible group, never part of a person's sidebar choices. */
+export const adminNav: NavGroup = {
+  label: "Admin",
+  items: [
+    { to: "admin", label: "Dashboard", icon: ShieldCheck, exact: true },
+    { to: "admin/workspaces", label: "Workspaces", icon: Building2, match: "admin/workspaces" },
+    { to: "admin/users", label: "Users", icon: UsersRound },
+    { to: "admin/domains", label: "Domains", icon: Globe },
+    { to: "admin/orders", label: "Orders", icon: PackageCheck },
+    { to: "admin/deliverability", label: "Deliverability", icon: MailCheck },
+  ],
+};
 
 export const footerNav: NavItem[] = [
   { to: "whats-new", label: "What's New", icon: Newspaper },
@@ -143,7 +176,6 @@ export const settingsNav: SettingsGroup[] = [
       { to: "settings/brain", label: "Brain", icon: Brain, keywords: "company knowledge what we sell" },
       { to: "settings/cold-email-agent", label: "Cold Email Agent", icon: Mail },
       { to: "settings/ai-sdr-agent", label: "AI SDR Agent", icon: Bot, keywords: "knowledge base rules" },
-      { to: "settings/sales-call-analyzer", label: "Sales Call Analyzer", icon: PhoneCall },
     ],
   },
   {

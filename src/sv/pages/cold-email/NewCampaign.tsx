@@ -1,6 +1,6 @@
 import { settingsApi } from "../../api/settings";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Check, FileUp, Library, Plus, Sparkles, Trash2, Upload } from "lucide-react";
 import { RichTextEditor } from "../../../components/ui/RichTextEditor";
 import { campaignService, mailboxService } from "../../../services/api";
@@ -190,7 +190,7 @@ export function NewCampaign() {
               <OptionCard selected={leadMode === "upload"} icon={Upload} title="Upload your own" body="Upload a CSV file of leads" onClick={() => setLeadMode("upload")} />
               <OptionCard selected={leadMode === "library"} icon={Library} title="Lead library" body="Pick lists you saved earlier" onClick={() => setLeadMode("library")} disabled={lists.length === 0} />
             </div>
-            {lists.length === 0 ? <p className="sv-hint">Your lead library is empty. Upload a CSV, and you can save it to the library from the Leads tab later.</p> : null}
+            {lists.length === 0 ? <p className="sv-hint">Your lead library is empty. Add leads on the <Link to={svPath("leads")} style={{ textDecoration: "underline" }}>Leads page</Link>, or upload a CSV here for this campaign.</p> : null}
             {leadMode === "upload" ? (
               <>
                 <button type="button" className="sv-drop" onClick={() => fileRef.current?.click()} disabled={uploading}>

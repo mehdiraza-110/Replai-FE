@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Check, MoreHorizontal, Pencil, Plus, Trash2, Video } from "lucide-react";
 import { crmApi, DEAL_STAGES, STAGE_LABEL, type Company, type Deal, type DealStage, type Member, type Task } from "../../api/crm";
 import { svPath } from "../../nav";
-import { Badge, Button, Card, EmptyState, Field, Menu, Modal, PageHeader } from "../../ui";
+import { Badge, Button, Card, EmptyState, Field, Menu, Modal, PageHeader, Skeleton, SkeletonCard } from "../../ui";
 import { settingsApi } from "../../api/settings";
 import { Banner, CustomFieldInputs, customPayload, dateTime, fromLocalInput, money, Pager, SearchBox, TableCard, toLocalInput, useDebounced, useRemote } from "./shared";
 import { formatDate } from "../cold-email/shared";
@@ -66,7 +66,7 @@ export function TasksTab() {
         {status === "open" ? <button type="button" className={`sv-tab${overdue ? " is-active" : ""}`} onClick={() => { setOverdue(!overdue); setPage(1); }}>Overdue{data && data.overdueTotal ? ` (${data.overdueTotal})` : ""}</button> : null}
       </nav>
       <Banner error={error} />
-      <TableCard head={<><th style={{ width: 44 }} /><th>Task</th><th>Due date</th><th>Record</th><th>Assignee</th><th style={{ width: 40 }} /></>} empty={data && data.items.length === 0 ? (status === "open" ? "No open tasks. Escalated replies from the AI SDR show up here." : "No completed tasks yet.") : !data ? "Loading…" : undefined}>
+      <TableCard head={<><th style={{ width: 44 }} /><th>Task</th><th>Due date</th><th>Record</th><th>Assignee</th><th style={{ width: 40 }} /></>} loading={!data && !error} empty={data && data.items.length === 0 ? (status === "open" ? "No open tasks. Escalated replies from the AI SDR show up here." : "No completed tasks yet.") : undefined}>
         {data?.items.map((t) => (
           <tr key={t.id}>
             <td><button type="button" className="sv-icon-btn" aria-label={t.status === "done" ? `Reopen ${t.title}` : `Mark ${t.title} done`} onClick={() => void act(() => crmApi.updateTask(t.id, { status: t.status === "done" ? "open" : "done" }))}><Check className="sv-icon" style={{ color: t.status === "done" ? "var(--ds-green-text)" : "var(--ds-text-tertiary)" }} aria-hidden /></button></td>
@@ -129,7 +129,16 @@ export function DealsTab() {
       <PageHeader title="Deals" actions={<><SearchBox value={text} onChange={setText} placeholder="Search deals…" /><Button variant="primary" icon={Plus} onClick={() => setEditing("new")}>Add deal</Button></>} />
       {data ? <p className="sv-hint" style={{ margin: "0 0 12px" }}>{data.summary.openCount} open {data.summary.openCount === 1 ? "deal" : "deals"} worth {money(data.summary.openValue)} · {data.summary.wonCount} won worth {money(data.summary.wonValue)}</p> : null}
       <Banner error={error} />
-      {!data ? <p className="sv-hint">Loading…</p> : (
+      {!data ? (error ? null : (
+        <div className="sv-board" role="status" aria-label="Loading">
+          {DEAL_STAGES.map((stage) => (
+            <section key={stage} className="sv-board-col" aria-label={STAGE_LABEL[stage]}>
+              <header><span>{STAGE_LABEL[stage]}</span><Skeleton width={50} /></header>
+              {[0, 1, 2].slice(0, stage === "lead" ? 3 : 2).map((i) => <SkeletonCard key={i} lines={2} />)}
+            </section>
+          ))}
+        </div>
+      )) : (
         <div className="sv-board">
           {DEAL_STAGES.map((stage) => (
             <section key={stage} className={`sv-board-col${dragId !== null ? " is-target" : ""}`} aria-label={STAGE_LABEL[stage]}
@@ -194,7 +203,7 @@ export function CompaniesTab() {
     <>
       <PageHeader title="Companies" actions={<><SearchBox value={text} onChange={(v) => { setText(v); setPage(1); }} placeholder="Search companies…" /><Button variant="primary" icon={Plus} onClick={() => setEditing("new")}>Add company</Button></>} />
       <Banner error={error} />
-      <TableCard head={<><th>Name</th><th>Industry</th><th>Location</th><th className="is-num">People</th><th className="is-num">Deals</th><th className="is-num">Open value</th><th style={{ width: 40 }} /></>} empty={!data ? "Loading…" : data.items.length === 0 ? "No companies yet. Add one to link it to deals." : undefined}>
+      <TableCard head={<><th>Name</th><th>Industry</th><th>Location</th><th className="is-num">People</th><th className="is-num">Deals</th><th className="is-num">Open value</th><th style={{ width: 40 }} /></>} loading={!data && !error} empty={data && data.items.length === 0 ? "No companies yet. Add one to link it to deals." : undefined}>
         {data?.items.map((c) => (
           <tr key={c.id}>
             <td style={{ fontWeight: 500 }}>{c.name}{c.website ? <div className="sv-hint">{c.website}</div> : null}</td><td>{c.industry ?? "—"}</td><td>{c.location ?? "—"}</td>
@@ -219,7 +228,7 @@ export function PeopleTab() {
     <>
       <PageHeader title="People" actions={<><SearchBox value={text} onChange={(v) => { setText(v); setPage(1); }} placeholder="Search people…" /><Link className="sv-btn" to={svPath("cold-email-campaign-agent")}>Add leads in a campaign</Link></>} />
       <Banner error={error} />
-      <TableCard head={<><th>Name</th><th>Email</th><th>Company</th><th>Role</th><th className="is-num">Campaigns</th><th>Replied</th><th>Last contacted</th></>} empty={!data ? "Loading…" : data.items.length === 0 ? "No people yet. Leads you upload for campaigns appear here." : undefined}>
+      <TableCard head={<><th>Name</th><th>Email</th><th>Company</th><th>Role</th><th className="is-num">Campaigns</th><th>Replied</th><th>Last contacted</th></>} loading={!data && !error} empty={data && data.items.length === 0 ? "No people yet. Leads you upload for campaigns appear here." : undefined}>
         {data?.items.map((p) => (
           <tr key={p.email}><td style={{ fontWeight: 500 }}>{p.name}</td><td>{p.email}</td><td>{p.company ?? "—"}</td><td>{p.role ?? "—"}</td><td className="is-num">{p.campaigns}</td><td>{p.replied ? <Badge tone="green">Replied</Badge> : <span className="sv-hint">No</span>}</td><td>{formatDate(p.lastContactedAt)}</td></tr>
         ))}
@@ -241,7 +250,7 @@ export function AppointmentsTab() {
     <>
       <PageHeader title="Appointments" actions={<Menu label="Show appointments" trigger={<>{when === "upcoming" ? "Upcoming" : when === "past" ? "Past" : "All"}</>} items={(["upcoming", "past", "all"] as const).map((w) => ({ label: w === "upcoming" ? "Upcoming" : w === "past" ? "Past" : "All", selected: when === w, onSelect: () => { setWhen(w); setPage(1); } }))} />} />
       <Banner error={error} />
-      <TableCard head={<><th>When</th><th>With</th><th>Meeting type</th><th>Handled by</th><th>Status</th><th>Outcome</th><th>Link</th></>} empty={!data ? "Loading…" : data.items.length === 0 ? "No appointments here. Calls the AI SDR books land in this list." : undefined}>
+      <TableCard head={<><th>When</th><th>With</th><th>Meeting type</th><th>Handled by</th><th>Status</th><th>Outcome</th><th>Link</th></>} loading={!data && !error} empty={data && data.items.length === 0 ? "No appointments here. Calls the AI SDR books land in this list." : undefined}>
         {data?.items.map((a) => (
           <tr key={a.id}><td style={{ fontWeight: 500 }}>{dateTime(a.start)}</td><td>{a.leadName ?? a.leadEmail}{a.leadName && a.leadEmail ? <div className="sv-hint">{a.leadEmail}</div> : null}</td><td>{a.meetingType ?? "—"}</td><td>{a.handlerName ?? "—"}</td><td><Badge tone={a.status === "booked" ? "green" : "neutral"}>{a.status}</Badge></td><td><select className="sv-select" style={{ width: 150, height: 32 }} aria-label={`Outcome for ${a.leadName ?? a.leadEmail}`} value={a.outcome ?? ""} onChange={async (e) => { setSaveError(""); try { await crmApi.setOutcome(a.id, e.target.value || null); reload(); } catch (caught) { setSaveError(caught instanceof Error ? caught.message : "Could not save."); } }}><option value="">Not set</option>{outcomes.some((o) => o.name === a.outcome) || !a.outcome ? null : <option value={a.outcome}>{a.outcome}</option>}{outcomes.map((o) => <option key={o.id} value={o.name}>{o.name}</option>)}</select></td><td>{a.meetLink ? <a className="sv-link" href={a.meetLink} target="_blank" rel="noreferrer"><Video className="sv-icon" aria-hidden /> Join</a> : "—"}</td></tr>
         ))}
@@ -259,7 +268,7 @@ export function ScheduledTab() {
     <>
       <PageHeader title="Scheduled" />
       <Banner error={error} />
-      <TableCard head={<><th>Goes out</th><th>To</th><th>Conversation</th><th>Scheduled by</th><th className="is-num">Follow-ups sent</th></>} empty={!data ? "Loading…" : data.items.length === 0 ? "Nothing scheduled. Follow-ups the AI SDR or you schedule from the inbox show here." : undefined}>
+      <TableCard head={<><th>Goes out</th><th>To</th><th>Conversation</th><th>Scheduled by</th><th className="is-num">Follow-ups sent</th></>} loading={!data && !error} empty={data && data.items.length === 0 ? "Nothing scheduled. Follow-ups the AI SDR or you schedule from the inbox show here." : undefined}>
         {data?.items.map((s) => (
           <tr key={`${s.mailboxId}:${s.threadId}`}><td style={{ fontWeight: 500 }}>{dateTime(s.dueAt)}</td><td>{s.prospect ?? "—"}</td><td>{s.subject ?? "—"}</td><td>{s.scheduledBy === "ai" ? <Badge tone="purple">AI SDR</Badge> : <Badge>You</Badge>}</td><td className="is-num">{s.sentSoFar}</td></tr>
         ))}
@@ -277,7 +286,7 @@ export function SubmissionsTab() {
     <>
       <PageHeader title="Lead submissions" subtitle="Positive replies forwarded to your team" />
       <Banner error={error} />
-      <TableCard head={<><th>Forwarded</th><th>Prospect</th><th>Subject</th><th>Sent to</th></>} empty={!data ? "Loading…" : data.items.length === 0 ? "No forwarded leads yet. Forwarding a positive reply from the AI SDR inbox records it here." : undefined}>
+      <TableCard head={<><th>Forwarded</th><th>Prospect</th><th>Subject</th><th>Sent to</th></>} loading={!data && !error} empty={data && data.items.length === 0 ? "No forwarded leads yet. Forwarding a positive reply from the AI SDR inbox records it here." : undefined}>
         {data?.items.map((s) => <tr key={s.id}><td>{dateTime(s.at)}</td><td style={{ fontWeight: 500 }}>{s.prospect ?? "—"}</td><td>{s.subject ?? "—"}</td><td>{s.forwardedTo}</td></tr>)}
       </TableCard>
       {data ? <Pager {...data} onPage={setPage} /> : null}

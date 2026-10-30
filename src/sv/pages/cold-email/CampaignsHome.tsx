@@ -5,7 +5,7 @@ import { campaignService } from "../../../services/api";
 import { campaignInsightsApi, type CampaignOverview, type CampaignRow, type CampaignStatus, type DateRange } from "../../api/campaigns";
 import { useSvTitle } from "../../layout/chrome";
 import { svPath } from "../../nav";
-import { Badge, Button, Card, Checkbox, EmptyState, FilterButton, Menu, Modal, PageHeader, StatCard } from "../../ui";
+import { Badge, Button, Card, Checkbox, EmptyState, FilterButton, Menu, Modal, PageHeader, StatCard, SkeletonRows } from "../../ui";
 import { errorText, formatDate, pctText, STATUS_TONE } from "./shared";
 
 const RANGE_LABEL: Record<DateRange, string> = { all: "All time", "7d": "Last 7 days", "30d": "Last 30 days", "90d": "Last 90 days" };
@@ -161,7 +161,7 @@ export function CampaignsHome() {
                 </tr>
               </thead>
               <tbody>
-                {!data ? <tr><td colSpan={10} className="sv-hint" style={{ padding: 20 }}>Loading…</td></tr> : null}
+                {!data && !error ? <SkeletonRows columns={10} /> : null}
                 {data && rows.length === 0 ? <tr><td colSpan={10} className="sv-hint" style={{ padding: 20 }}>No campaigns match these filters.</td></tr> : null}
                 {rows.map((row) => (
                   <tr key={row.id} className={selected.has(row.id) ? "is-selected" : undefined}>
