@@ -104,7 +104,7 @@ function ViewAsBar() {
   const navigate = useNavigate();
   if (!viewAs) return null;
   return (
-    <div className="sv-root" style={{ position: "sticky", top: 0, zIndex: 100, minHeight: 0 }}>
+    <div className="sv-root sv-viewas-bar">
       <p className="sv-banner is-warn" role="status" style={{ margin: 0, borderRadius: 0, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
         <span>Viewing {viewAs.name} as super admin. Changes you make here affect this workspace.</span>
         <Button size="sm" onClick={() => { clearViewAs(); navigate("/admin/workspaces"); }}>Exit</Button>
@@ -127,11 +127,12 @@ function SvGuard({ children }: { children: ReactNode }) {
     if (activeWorkspace.status === "suspended") return <Blocked title={`${activeWorkspace.name} is suspended`} body="This workspace has been suspended, so its data and tools are unavailable for now. Contact support to get it reactivated." />;
     if (isTrialEnded) return <Blocked title="Your trial has ended" body={`The free trial for ${activeWorkspace.name} is over, so its data and tools are unavailable. Contact support to continue.`} />;
   }
+  if (!viewAs) return <>{children}</>;
   return (
-    <>
+    <div className="sv-viewas-wrap">
       <ViewAsBar />
       {children}
-    </>
+    </div>
   );
 }
 

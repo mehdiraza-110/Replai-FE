@@ -2679,3 +2679,8 @@ button.sv-choice:disabled { opacity: 0.6; cursor: not-allowed; }
 @media (prefers-reduced-motion: reduce) {
   .sv-skel { animation: none; }
 }
+
+/* View as: the warning bar sits above the app, which shrinks to the rest of the window. */
+.sv-viewas-wrap { display: flex; flex-direction: column; height: 100vh; width: 100%; }
+.sv-viewas-wrap > .sv-viewas-bar { height: auto; flex: none; overflow: visible; display: block; }
+.sv-viewas-wrap > .sv-root:not(.sv-viewas-bar) { height: auto; flex: 1; min-height: 0; }
