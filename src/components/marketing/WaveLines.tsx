@@ -25,7 +25,7 @@ export function WaveLines({ className = "" }: { className?: string }) {
           <path
             d={line.d}
             key={index}
-            stroke="var(--mkt-accent-text)"
+            stroke="var(--mkt-wave)"
             strokeOpacity={line.opacity}
             strokeWidth="1"
             vectorEffect="non-scaling-stroke"

@@ -5,13 +5,8 @@ import { footerNav, mainNav } from "../nav";
 import { Badge } from "../ui";
 import "../sv.css";
 
-export function Logo({ size = 32 }: { size?: number }) {
-  return (
-    <svg className="sv-auth-logo" width={size} height={(size * 28) / 32} viewBox="0 0 32 28" fill="none" aria-hidden>
-      <path d="M4 5 16 23 28 5" stroke="currentColor" strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="16" cy="4.5" r="3" fill="currentColor" />
-    </svg>
-  );
+export function Logo({ size = 48 }: { size?: number }) {
+  return <img className="sv-auth-logo" src="/sendvybe-icon.png" alt="SendVybe" height={size} style={{ height: size, width: "auto" }} />;
 }
 
 interface AuthFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "type"> {
@@ -150,7 +145,9 @@ export function AuthLayout({ title, subtitle, termsLead, children }: AuthLayoutP
       <main className="sv-auth-left">
         <div className="sv-auth-card">
           <Logo />
-          <h1 className="sv-auth-title">{title}</h1>
+          <h1 className="sv-auth-title">
+            {title}
+          </h1>
           {subtitle ? <p className="sv-auth-sub">{subtitle}</p> : null}
           {children}
         </div>

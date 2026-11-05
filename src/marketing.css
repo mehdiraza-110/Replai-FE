@@ -6,8 +6,9 @@
   --mkt-ink-dim: oklch(0.78 0.014 258);
   --mkt-ink-faint: oklch(0.66 0.016 258);
   /* Solid fill for buttons (white text passes 4.5:1) and a separate tone for accent-colored text. */
-  --mkt-accent: #0a6cf0;
-  --mkt-accent-text: #6cb0ff;
+  --mkt-accent: #e2b253;
+  --mkt-accent-text: #ebc77d;
+  --mkt-wave: #ebc77d;
   --mkt-line: color-mix(in oklch, white 12%, transparent);
   --mkt-line-soft: color-mix(in oklch, white 7%, transparent);
   --mkt-success: oklch(0.76 0.16 152);
@@ -35,7 +36,8 @@
   --mkt-ink: oklch(0.2 0.02 258);
   --mkt-ink-dim: oklch(0.4 0.02 258);
   --mkt-ink-faint: oklch(0.5 0.018 258);
-  --mkt-accent-text: #0a5fd6;
+  --mkt-accent-text: #96690f;
+  --mkt-wave: #e2b253;
   --mkt-success: oklch(0.5 0.14 152);
   --mkt-warn: oklch(0.5 0.13 70);
   --mkt-line: color-mix(in oklch, black 13%, transparent);
@@ -45,7 +47,7 @@
 
 .mkt ::selection {
   background: var(--mkt-accent);
-  color: white;
+  color: #1c1e21;
 }
 
 .mkt section[id] {
@@ -121,7 +123,7 @@
 
 .mkt-btn--primary {
   background: var(--mkt-accent);
-  color: white;
+  color: #1c1e21;
 }
 
 .mkt-btn--primary:hover {

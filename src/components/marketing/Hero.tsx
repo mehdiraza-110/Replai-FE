@@ -16,7 +16,7 @@ export function Hero() {
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3 sm:gap-5">
             <a className="mkt-btn mkt-btn--primary mkt-pill mkt-focusable h-14 px-8 text-[15px]" href="/app/login">
-              Start free
+              Sign in
               <ArrowUpRight className="size-4" />
             </a>
             <a className="mkt-focusable mkt-link flex min-h-[44px] items-center px-2 text-[15px] font-medium" href="#how-it-works">

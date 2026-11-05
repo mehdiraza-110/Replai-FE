@@ -33,7 +33,7 @@ export function Products() {
         <Reveal className="flex flex-wrap items-end justify-between gap-6">
           <h2 className="mkt-h2 max-w-xl text-[var(--mkt-ink)]">Two products, one workspace.</h2>
           <a className="mkt-btn mkt-btn--ghost mkt-pill mkt-focusable" href="/app/login">
-            Start free
+            Sign in
             <ArrowUpRight className="size-4" />
           </a>
         </Reveal>

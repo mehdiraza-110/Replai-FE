@@ -11,8 +11,8 @@ export function FinalCta({ theme }: { theme: Theme }) {
       <div className="relative isolate overflow-hidden rounded-3xl border border-[var(--mkt-line)] bg-[var(--mkt-bg-raised)] px-5 py-24 text-center sm:rounded-[32px] sm:py-32">
         <div aria-hidden="true" className="absolute inset-0">
           <Lightfall
-            backgroundColor="#0a6cf0"
-            colors={isLight ? ["#0a6cf0", "#0a5fd6"] : ["#6cb0ff", "#0a6cf0"]}
+            backgroundColor={isLight ? "#fbf1d8" : "#2b2210"}
+            colors={["#f8e3b0", "#ebc77d", "#e2b253", "#c68a2c"]}
             fade={0.35}
             key={theme}
             lightMode={isLight}
@@ -25,11 +25,8 @@ export function FinalCta({ theme }: { theme: Theme }) {
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
             <a className="mkt-btn mkt-btn--primary mkt-pill mkt-focusable h-14 px-8 text-[15px]" href="/app/login">
-              Start free
-              <ArrowUpRight className="size-4" />
-            </a>
-            <a className="mkt-btn mkt-btn--ghost mkt-pill mkt-focusable h-14 px-8 text-[15px]" href="/app/login">
               Sign in
+              <ArrowUpRight className="size-4" />
             </a>
           </div>
         </Reveal>

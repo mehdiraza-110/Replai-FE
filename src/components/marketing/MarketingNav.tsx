@@ -54,7 +54,7 @@ export function MarketingNav({ theme, onToggleTheme }: { theme: Theme; onToggleT
     >
       <div className="mkt-pill flex h-14 w-full max-w-[760px] items-center justify-between gap-2 border border-[var(--mkt-line)] bg-[var(--mkt-bg-raised)] pl-5 pr-1.5 shadow-[0_10px_30px_-18px_rgba(0,0,0,0.6)]">
         <a className="mkt-focusable text-[16px] font-semibold tracking-[-0.02em] text-[var(--mkt-ink)]" href="#top">
-          SendVybe
+          <img alt="SendVybe" className="h-7 w-auto" src="/sendvybe-wordmark.png" />
         </a>
 
         <nav aria-label="Primary" className="hidden items-center gap-7 md:flex">
@@ -68,7 +68,7 @@ export function MarketingNav({ theme, onToggleTheme }: { theme: Theme; onToggleT
         <div className="flex items-center gap-1.5">
           <MarketingThemeToggle onToggle={onToggleTheme} theme={theme} />
           <a className="mkt-btn mkt-btn--primary mkt-pill mkt-focusable" href="/app/login">
-            Start free
+            Sign in
           </a>
           <button
             aria-controls="mkt-mobile-menu"

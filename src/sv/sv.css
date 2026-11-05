@@ -1083,6 +1083,14 @@
   text-align: center;
 }
 
+.sv-auth-title-img {
+  display: block;
+  margin: 6px auto 0;
+  height: auto;
+  width: 200px;
+  max-width: 100%;
+}
+
 .sv-auth-sub {
   margin: 8px 0 0;
   font-size: 12px;
@@ -1181,15 +1189,16 @@
   height: 36px;
   margin-top: 12px;
   border-radius: 10px;
-  background: var(--ds-ai-bg);
-  color: var(--ds-on-solid);
-  border: 1px solid var(--ds-ai-bg);
+  background: #d99c3e;
+  color: #1c1e21;
+  border: 1px solid #d99c3e;
   font-size: 14px;
   font-weight: 500;
 }
 
 .sv-auth-submit:hover:not(:disabled) {
-  background: var(--ds-sidebar-alt);
+  background: #c68a2c;
+  border-color: #c68a2c;
 }
 
 .sv-auth-submit:disabled {
@@ -1285,7 +1294,7 @@
   margin: 7px 7px 7px 0;
   border-radius: 18px;
   overflow: hidden;
-  background: linear-gradient(118deg, #83dbec 0%, #9bd5ee 23%, #7ec6e7 48%, #4ea1d4 73%, #2680c0 100%);
+  background: linear-gradient(118deg, #f6dfaa 0%, #ebc77d 23%, #f0d08e 48%, #e9c06c 73%, #e2b253 100%);
   background-size: 215% 215%;
   background-position: 100% 70%;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
