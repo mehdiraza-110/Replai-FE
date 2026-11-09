@@ -44,6 +44,10 @@ function Sidebar({ collapsed, onCollapse }: { collapsed: boolean; onCollapse: ()
 
   return (
     <aside className={`sv-sidebar${collapsed ? " is-collapsed" : ""}`} aria-label="Main navigation">
+      <Link to={svPath("dashboard")} className="sv-brand" aria-label="SendVybe home">
+        <img src="/new-logo.png" alt="SendVybe" />
+      </Link>
+
       <div className="sv-account">
         <span className="sv-avatar" aria-hidden style={workspaceColor ? { background: workspaceColor, color: "#fff" } : undefined}>
           {initials(accountName)}
