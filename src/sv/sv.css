@@ -1091,13 +1091,16 @@
 .sv-brand {
   display: flex;
   align-items: center;
-  padding: 14px 12px 4px;
+  justify-content: center;
+  padding: 18px 12px 10px;
 }
 
 .sv-brand img {
   display: block;
-  height: 26px;
+  height: 30px;
   width: auto;
+  max-width: 100%;
+  object-fit: contain;
 }
 
 .sv-auth-title {
