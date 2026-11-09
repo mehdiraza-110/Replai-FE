@@ -30,7 +30,8 @@
   --ds-pill-bg: #f1f2f4;
   --ds-pill-border: #e6e8ea;
   --ds-pill-text: #3f3f46;
-  --ds-ai-bg: #1c1e21;
+  --ds-ai-bg: #0a0a0a;
+  --ds-primary-hover: #3f3f46;
   --ds-ai-gradient-light: #5ea0b5;
   --ds-ai-gradient-dark: #163f55;
   --ds-green-bg: #e8f9f1;
@@ -60,7 +61,7 @@
   --ds-board: #f8f9fa;
   --ds-button: #fff;
   --ds-button-border: #e6e8ea;
-  --ds-on-solid: #f8f9fa;
+  --ds-on-solid: #fff;
   --ds-card-shadow: 0 0 0 0.75px #fff inset, 0 1px 1.5px rgba(0, 0, 0, 0.05), 0 2px 6px rgba(0, 0, 0, 0.03);
   --ds-panel-shadow: 0 0 0 0.75px #f8f9fa inset;
   --ds-control-border: rgba(28, 30, 33, 0.1);
@@ -84,7 +85,8 @@
   --ds-pill-bg: #1a1b1d;
   --ds-pill-border: #2a2c2f;
   --ds-pill-text: #c9cbcf;
-  --ds-ai-bg: #d5efff;
+  --ds-ai-bg: #d89b40;
+  --ds-primary-hover: #e8b05c;
   --ds-ai-gradient-light: #58b5ca;
   --ds-ai-gradient-dark: #356473;
   --ds-green-bg: #0d1f1a;
@@ -114,7 +116,7 @@
   --ds-board: #0c0c0e;
   --ds-button: #1e1f23;
   --ds-button-border: #34353a;
-  --ds-on-solid: #0e0f10;
+  --ds-on-solid: #0a0a0a;
   --ds-card-shadow: 0 0 0 0.75px rgba(255, 255, 255, 0.03) inset, 0 1px 2px rgba(0, 0, 0, 0.3);
   --ds-panel-shadow: 0 0 0 0.75px rgba(255, 255, 255, 0.024) inset;
   --ds-control-border: rgba(230, 232, 234, 0.12);
@@ -583,8 +585,8 @@
 }
 
 .sv-btn.is-primary:hover {
-  background: var(--ds-sidebar-alt);
-  border-color: var(--ds-sidebar-alt);
+  background: var(--ds-primary-hover);
+  border-color: var(--ds-primary-hover);
 }
 
 .sv-btn.is-danger {
@@ -1071,7 +1073,31 @@
 }
 
 .sv-auth-logo {
-  color: var(--ds-text-primary);
+  display: block;
+  max-width: 100%;
+}
+
+/* The logo file is yellow. Light mode (and the always-light auth screens) shows it black; dark mode keeps the yellow. */
+.sv-auth-logo,
+.sv-brand img {
+  filter: brightness(0);
+}
+
+.dark .sv-root:not(.sv-force-light) .sv-brand img,
+[data-theme="dark"] .sv-root:not(.sv-force-light) .sv-brand img {
+  filter: none;
+}
+
+.sv-brand {
+  display: flex;
+  align-items: center;
+  padding: 14px 12px 4px;
+}
+
+.sv-brand img {
+  display: block;
+  height: 26px;
+  width: auto;
 }
 
 .sv-auth-title {
@@ -1189,7 +1215,7 @@
 }
 
 .sv-auth-submit:hover:not(:disabled) {
-  background: var(--ds-sidebar-alt);
+  background: var(--ds-primary-hover);
 }
 
 .sv-auth-submit:disabled {
