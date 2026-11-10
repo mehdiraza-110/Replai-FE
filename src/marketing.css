@@ -1,85 +1,102 @@
+/*
+ * SendVybe marketing page.
+ * Brand carried over from the app: Aspekta, black and white neutrals, the logo's amber (#d89b40) as the one accent.
+ * Amber is only ever a fill, underline or dot in light mode (it fails contrast as text on white); text stays ink.
+ */
+
+@font-face {
+  font-family: "Aspekta";
+  src: url("./sv/fonts/AspektaVF.woff2") format("woff2");
+  font-weight: 50 1000;
+  font-style: normal;
+  font-display: swap;
+}
+
 .mkt {
-  --mkt-bg: oklch(0.16 0.014 258);
-  --mkt-bg-raised: oklch(0.205 0.017 258);
-  --mkt-bg-raised-2: oklch(0.25 0.02 258);
-  --mkt-ink: oklch(0.97 0.004 258);
-  --mkt-ink-dim: oklch(0.78 0.014 258);
-  --mkt-ink-faint: oklch(0.66 0.016 258);
-  /* Solid fill for buttons (white text passes 4.5:1) and a separate tone for accent-colored text. */
-  --mkt-accent: #0a6cf0;
-  --mkt-accent-text: #6cb0ff;
-  --mkt-line: color-mix(in oklch, white 12%, transparent);
-  --mkt-line-soft: color-mix(in oklch, white 7%, transparent);
-  --mkt-success: oklch(0.76 0.16 152);
-  --mkt-warn: oklch(0.8 0.14 80);
-  --mkt-font-sans: "General Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mkt-bg: #fff;
+  --mkt-bg-raised: #f8f9fa;
+  --mkt-ink: #1c1e21;
+  --mkt-ink-dim: #484d53;
+  --mkt-ink-faint: #666b72;
+  --mkt-line: #e2e4e7;
+  --mkt-line-strong: #1c1e21;
+  --mkt-amber: #d89b40;
+  --mkt-amber-text: #1c1e21;
+  --mkt-on-amber: #1c1e21;
+  --mkt-on-amber-dim: #3a2d12;
+  --mkt-ok: #1f7a52;
+  --mkt-font-sans: "Aspekta", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --mkt-font-mono: "Fragment Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
-  --mkt-fg-mix: white;
+  --z-header: 50;
+  --z-menu: 60;
 
   background: var(--mkt-bg);
   color: var(--mkt-ink);
-  transition:
-    background-color 300ms ease,
-    color 300ms ease;
   font-family: var(--mkt-font-sans);
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   overflow-x: clip;
+  transition: background-color 250ms ease, color 250ms ease;
 }
 
-.mkt[data-theme="light"] {
-  --mkt-bg: oklch(0.985 0.003 258);
-  --mkt-bg-raised: oklch(1 0 0);
-  --mkt-bg-raised-2: oklch(0.96 0.006 258);
-  --mkt-ink: oklch(0.2 0.02 258);
-  --mkt-ink-dim: oklch(0.4 0.02 258);
-  --mkt-ink-faint: oklch(0.5 0.018 258);
-  --mkt-accent-text: #0a5fd6;
-  --mkt-success: oklch(0.5 0.14 152);
-  --mkt-warn: oklch(0.5 0.13 70);
-  --mkt-line: color-mix(in oklch, black 13%, transparent);
-  --mkt-line-soft: color-mix(in oklch, black 7%, transparent);
-  --mkt-fg-mix: black;
+.mkt[data-theme="dark"] {
+  --mkt-bg: #0e0f10;
+  --mkt-bg-raised: #151618;
+  --mkt-ink: #e6e8ea;
+  --mkt-ink-dim: #b4b9bf;
+  --mkt-ink-faint: #8f959c;
+  --mkt-line: #25272a;
+  --mkt-line-strong: #e6e8ea;
+  --mkt-amber-text: #e8b05c;
+  --mkt-ok: #5ee5b5;
 }
 
 .mkt ::selection {
-  background: var(--mkt-accent);
-  color: white;
+  background: var(--mkt-amber);
+  color: #1c1e21;
 }
 
 .mkt section[id] {
-  scroll-margin-top: 112px;
+  scroll-margin-top: 72px;
 }
 
 .mkt-shell {
-  max-width: 1180px;
+  max-width: 1200px;
   margin-inline: auto;
   padding-inline: clamp(20px, 5vw, 48px);
 }
 
-.mkt-h1 {
+/* Type scale: 1.25+ steps. */
+.mkt-display {
   font-weight: 600;
   letter-spacing: -0.035em;
-  line-height: 1.04;
+  line-height: 1.02;
   text-wrap: balance;
-  font-size: clamp(2.5rem, 2.6vw + 1.7rem, 4.5rem);
+  font-size: clamp(2.5rem, 1.5rem + 3.4vw, 4.5rem);
 }
 
 .mkt-h2 {
   font-weight: 600;
   letter-spacing: -0.03em;
-  line-height: 1.1;
+  line-height: 1.06;
   text-wrap: balance;
-  font-size: clamp(1.75rem, 1.2vw + 1.4rem, 2.75rem);
+  font-size: clamp(1.875rem, 1.2rem + 2.4vw, 3.25rem);
 }
 
 .mkt-h3 {
   font-weight: 600;
-  letter-spacing: -0.015em;
-  line-height: 1.25;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
   text-wrap: balance;
-  font-size: clamp(1.125rem, 0.4vw + 1rem, 1.375rem);
+  font-size: clamp(1.25rem, 1rem + 0.8vw, 1.625rem);
+}
+
+.mkt-lede {
+  color: var(--mkt-ink-dim);
+  line-height: 1.55;
+  text-wrap: pretty;
+  max-width: 54ch;
+  font-size: clamp(1.0625rem, 1rem + 0.3vw, 1.25rem);
 }
 
 .mkt-body {
@@ -87,61 +104,70 @@
   line-height: 1.6;
   text-wrap: pretty;
   max-width: 62ch;
+  font-size: 1rem;
 }
 
 .mkt-mono {
   font-family: var(--mkt-font-mono);
-  letter-spacing: 0.01em;
   font-variant-numeric: tabular-nums;
 }
 
-.mkt-label {
-  font-family: var(--mkt-font-mono);
-  font-size: 12px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--mkt-accent-text);
-}
-
+/* Buttons: square-ish, not pills. */
 .mkt-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 44px;
-  padding-inline: 20px;
-  border-radius: 8px;
-  font-size: 14px;
+  min-height: 48px;
+  padding-inline: 22px;
+  border-radius: 6px;
+  font-size: 15px;
   font-weight: 600;
   white-space: nowrap;
-  transition:
-    background 160ms ease,
-    border-color 160ms ease;
+  border: 1px solid transparent;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
 }
 
-.mkt-btn--primary {
-  background: var(--mkt-accent);
-  color: white;
+.mkt-btn--solid {
+  background: var(--mkt-ink);
+  color: var(--mkt-bg);
 }
 
-.mkt-btn--primary:hover {
-  background: color-mix(in oklch, var(--mkt-accent) 86%, black);
+.mkt-btn--solid:hover {
+  background: var(--mkt-amber);
+  color: #1c1e21;
 }
 
-.mkt-btn--ghost {
-  background: transparent;
+.mkt-btn--line {
+  border-color: var(--mkt-line-strong);
   color: var(--mkt-ink);
-  border: 1px solid var(--mkt-line);
 }
 
-.mkt-btn--ghost:hover {
-  border-color: color-mix(in oklch, var(--mkt-fg-mix) 35%, transparent);
+.mkt-btn--line:hover {
+  background: var(--mkt-ink);
+  color: var(--mkt-bg);
+}
+
+.mkt-btn--sm {
+  min-height: 44px;
+  padding-inline: 16px;
+  font-size: 14px;
+}
+
+.mkt-btn--on-amber {
+  background: #1c1e21;
+  color: #fff;
+}
+
+.mkt-btn--on-amber:hover {
+  background: #fff;
+  color: #1c1e21;
 }
 
 .mkt-focusable:focus-visible {
-  outline: 2px solid var(--mkt-accent-text);
+  outline: 2px solid var(--mkt-ink);
   outline-offset: 3px;
   border-radius: 4px;
+  box-shadow: 0 0 0 5px var(--mkt-amber);
 }
 
 .mkt-link {
@@ -153,105 +179,308 @@
   color: var(--mkt-ink);
 }
 
-/* Event-log motif: mono timestamp, then a message. Repeats in the hero and the how-it-works steps. */
-.mkt-log {
-  font-family: var(--mkt-font-mono);
-  font-size: 12.5px;
-  line-height: 1.55;
+/* Header */
+.mkt-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-header);
+  background: color-mix(in srgb, var(--mkt-bg) 94%, transparent);
+  border-bottom: 1px solid var(--mkt-line);
 }
 
-.mkt-rule {
-  border-top: 1px solid var(--mkt-line);
-}
-
-.mkt-display {
-  font-weight: 500;
-  letter-spacing: -0.04em;
-  line-height: 1;
-  text-wrap: balance;
-  font-size: clamp(2.75rem, 4.2vw + 1.4rem, 6rem);
-}
-
-.mkt-chip {
-  display: inline-flex;
+.mkt-header-inner {
+  display: flex;
   align-items: center;
-  gap: 8px;
-  min-height: 32px;
-  padding-inline: 14px;
-  border-radius: 999px;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 64px;
+}
+
+.mkt-logo {
+  display: block;
+  height: 28px;
+  width: auto;
+}
+
+/* The logo is amber on a transparent ground: readable on both themes, so it is used as is. */
+
+.mkt-iconbtn {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
   border: 1px solid var(--mkt-line);
-  font-size: 13px;
+  color: var(--mkt-ink-dim);
+  transition: color 160ms ease, border-color 160ms ease;
+}
+
+.mkt-iconbtn:hover {
+  color: var(--mkt-ink);
+  border-color: var(--mkt-line-strong);
+}
+
+.mkt-menu {
+  position: absolute;
+  inset-inline: 0;
+  top: 100%;
+  z-index: var(--z-menu);
+  background: var(--mkt-bg);
+  border-bottom: 1px solid var(--mkt-line);
+  padding: 8px clamp(20px, 5vw, 48px) 20px;
+}
+
+.mkt-menu a {
+  display: flex;
+  align-items: center;
+  min-height: 52px;
+  border-bottom: 1px solid var(--mkt-line);
+  font-size: 17px;
   font-weight: 500;
+}
+
+/* Reply desk (hero visual): a real-looking triage list, labelled as an example. */
+.mkt-desk {
+  border: 1px solid var(--mkt-line-strong);
+  border-radius: 8px;
+  background: var(--mkt-bg-raised);
+  overflow: hidden;
+}
+
+.mkt-desk-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--mkt-line);
+  font-size: 13px;
+  color: var(--mkt-ink-faint);
+}
+
+.mkt-desk-row {
+  padding: 18px;
+  border-bottom: 1px solid var(--mkt-line);
+}
+
+.mkt-desk-row:last-of-type {
+  border-bottom: 0;
+}
+
+.mkt-desk-quote {
+  font-size: 17px;
+  line-height: 1.4;
+  color: var(--mkt-ink);
+  text-wrap: pretty;
+}
+
+.mkt-desk-meta {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.mkt-desk-do {
+  font-size: 13px;
   color: var(--mkt-ink-dim);
 }
 
-.mkt-pill {
-  border-radius: 999px;
+.mkt-desk-foot {
+  padding: 12px 18px;
+  border-top: 1px solid var(--mkt-line);
+  font-size: 13px;
+  color: var(--mkt-ink-faint);
 }
 
-.mkt-reveal {
-  animation: mkt-reveal 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+/* Outcome stamp: the identity motif. Same shape wherever an outcome appears. */
+.mkt-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding-inline: 10px;
+  border: 1.5px solid currentColor;
+  border-radius: 3px;
+  font-family: var(--mkt-font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--mkt-ink);
+  background: var(--mkt-bg);
 }
 
-/* Line-art motif behind the hero and the closing section. Period is 720 or 1440, so a 1440 shift loops cleanly. */
-.mkt-wave {
-  animation: mkt-wave 90s linear infinite;
+.mkt-stamp::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mkt-ok);
 }
 
-@keyframes mkt-wave {
-  to {
-    transform: translateX(-1440px);
-  }
+.mkt-stamp--held {
+  background: var(--mkt-amber);
+  color: #1c1e21;
+  border-color: #1c1e21;
 }
 
-.mkt-marquee {
-  overflow: hidden;
-  -webkit-mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
-  mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
+.mkt-stamp--held::before {
+  background: #1c1e21;
+  border-radius: 0;
 }
 
-.mkt-marquee-track {
-  display: flex;
-  width: max-content;
-  animation: mkt-marquee 50s linear infinite;
+.mkt-stamp--answered::before {
+  background: var(--mkt-ink);
 }
 
-.mkt-marquee-track--reverse {
-  animation-direction: reverse;
+/* Stamps land one after another in the hero, the way a queue gets worked. */
+.mkt-stamp-in {
+  animation: mkt-stamp 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--d, 0ms);
 }
 
-.mkt-marquee:hover .mkt-marquee-track,
-.mkt-marquee:focus-within .mkt-marquee-track {
-  animation-play-state: paused;
-}
-
-.mkt-marquee-group {
-  display: flex;
-  flex-shrink: 0;
-  gap: 16px;
-  padding-right: 16px;
-}
-
-@keyframes mkt-marquee {
-  to {
-    transform: translateX(-50%);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .mkt-marquee {
-    overflow-x: auto;
-  }
-  .mkt-marquee-track {
-    animation: none !important;
-  }
-}
-
-@keyframes mkt-reveal {
+@keyframes mkt-stamp {
   from {
-    opacity: 0;
-    transform: translateY(10px);
+    transform: scale(1.12);
+    box-shadow: 0 0 0 4px var(--mkt-amber);
   }
+}
+
+/* Outcome rows */
+.mkt-outcome {
+  display: grid;
+  gap: 20px 40px;
+  padding-block: 36px;
+  border-top: 1px solid var(--mkt-line);
+}
+
+@media (min-width: 860px) {
+  .mkt-outcome {
+    grid-template-columns: 1fr 1.2fr;
+  }
+}
+
+.mkt-outcome--held {
+  background: var(--mkt-amber);
+  color: var(--mkt-on-amber);
+  border-top-color: transparent;
+  padding-inline: clamp(20px, 3vw, 36px);
+  margin-inline: calc(-1 * clamp(20px, 3vw, 36px));
+  border-radius: 8px;
+}
+
+.mkt-outcome--held .mkt-body,
+.mkt-outcome--held .mkt-log {
+  color: var(--mkt-on-amber-dim);
+}
+
+.mkt-log {
+  font-family: var(--mkt-font-mono);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--mkt-ink-dim);
+}
+
+.mkt-log li::before {
+  content: "> ";
+  opacity: 0.6;
+}
+
+/* Pipeline */
+.mkt-flow {
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--mkt-line-strong);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--mkt-bg);
+}
+
+@media (min-width: 900px) {
+  .mkt-flow {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.mkt-flow-side {
+  padding: clamp(24px, 3vw, 40px);
+}
+
+.mkt-flow-side + .mkt-flow-side {
+  border-top: 1px solid var(--mkt-line-strong);
+}
+
+@media (min-width: 900px) {
+  .mkt-flow-side + .mkt-flow-side {
+    border-top: 0;
+    border-left: 1px solid var(--mkt-line-strong);
+  }
+}
+
+.mkt-steps {
+  margin-top: 28px;
+  display: grid;
+  gap: 0;
+}
+
+.mkt-steps li {
+  display: flex;
+  gap: 14px;
+  align-items: baseline;
+  padding-block: 14px;
+  border-top: 1px solid var(--mkt-line);
+  font-size: 16px;
+  color: var(--mkt-ink);
+}
+
+.mkt-steps li span {
+  color: var(--mkt-ink-faint);
+  font-size: 14px;
+  margin-left: auto;
+  text-align: right;
+}
+
+/* Ledger: by hand vs with SendVybe */
+.mkt-ledger-row {
+  display: grid;
+  gap: 8px 40px;
+  padding-block: 24px;
+  border-top: 1px solid var(--mkt-line);
+}
+
+@media (min-width: 860px) {
+  .mkt-ledger-row {
+    grid-template-columns: 0.8fr 1.1fr 1.3fr;
+    align-items: baseline;
+  }
+}
+
+.mkt-old {
+  color: var(--mkt-ink-faint);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.mkt-label-m {
+  display: block;
+  font-size: 13px;
+  color: var(--mkt-ink-faint);
+  margin-bottom: 2px;
+}
+
+@media (min-width: 860px) {
+  .mkt-label-m {
+    display: none;
+  }
+}
+
+/* Final call */
+.mkt-final {
+  background: var(--mkt-amber);
+  color: var(--mkt-on-amber);
+}
+
+.mkt-final .mkt-body {
+  color: var(--mkt-on-amber-dim);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -259,8 +488,7 @@
   .mkt *::before,
   .mkt *::after {
     animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
   }
 }
