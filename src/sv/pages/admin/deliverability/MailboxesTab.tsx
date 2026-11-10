@@ -117,7 +117,7 @@ export function MailboxesTab({ notify }: { notify: Notify }) {
       {pending?.action === "release" ? (
         <ConfirmModal title="Release to the normal lane" confirmLabel="Release mailboxes" busy={busy} onClose={closePending} onConfirm={() => void apply("release", pending.ids, { force })}>
           <p style={{ margin: 0 }}>Hand {n} mailbox(es) to their workspace's normal sending lane. They become Active with the workspace's first warm-up strategy, so campaigns and the old warm-up lane can use them. Warm-up continues in the background at the low maintenance volume.</p>
-          <label style={{ display: "flex", gap: 8, alignItems: "flex-start" }}><input type="checkbox" className="sv-check" checked={force} onChange={(e) => setForce(e.target.checked)} style={{ marginTop: 2 }} /><span>Release even if not marked Ready. Only for mailboxes that are still warming or paused. They will not have met the readiness bar (21 days with a high inbox rate by default).</span></label>
+          <label style={{ display: "flex", gap: 8, alignItems: "flex-start" }}><input type="checkbox" className="sv-check" checked={force} onChange={(e) => setForce(e.target.checked)} style={{ marginTop: 2 }} /><span>Release even if not marked Ready. Only for mailboxes that are still warming or paused. They will not have met the readiness bar (14 days with a high inbox rate by default).</span></label>
           <Err message={dialogError} />
         </ConfirmModal>
       ) : null}
