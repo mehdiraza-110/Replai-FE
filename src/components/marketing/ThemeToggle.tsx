@@ -7,7 +7,7 @@ export function MarketingThemeToggle({ theme, onToggle }: { theme: Theme; onTogg
   return (
     <button
       aria-label={`Switch to ${next} mode`}
-      className="mkt-focusable grid size-11 place-items-center mkt-pill border border-[var(--mkt-line)] text-[var(--mkt-ink-dim)] transition-colors hover:text-[var(--mkt-ink)]"
+      className="mkt-iconbtn mkt-focusable"
       onClick={onToggle}
       title={`Switch to ${next} mode`}
       type="button"
