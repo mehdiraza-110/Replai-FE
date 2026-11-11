@@ -165,6 +165,25 @@ export interface AdminDomainWorkspaceRef {
   status: WorkspaceStatus;
 }
 
+/** Warm-up network progress of a domain (all its mailboxes together). Inbox rate = last 5 days, the same window the engine uses to mark a mailbox ready. */
+export interface AdminDomainWarmnet {
+  state: "not_started" | "warming" | "ready" | "paused";
+  enrolled: number;
+  warming: number;
+  queued: number;
+  paused: number;
+  ready: number;
+  released: number;
+  ramp_day: number | null;
+  started_at: string | null;
+  total_sent: number;
+  placed_5d: number;
+  inbox_rate_5d: number | null;
+  sendable_mailboxes: number;
+  ip: string | null;
+  ip_clean: boolean | null;
+}
+
 export interface AdminDomain {
   id: number;
   domain: string;
@@ -174,6 +193,7 @@ export interface AdminDomain {
   mailbox_count: number;
   active_mailbox_count: number;
   warmup: { stages: Record<string, number>; avg_daily_limit: number | null };
+  warmnet: AdminDomainWarmnet;
   workspace: AdminDomainWorkspaceRef;
   owner: { id: number; email: string; name: string } | null;
   assigned_at: string | null;
@@ -191,6 +211,10 @@ export interface AdminDomainMailbox {
   daily_limit: number | null;
   warmup_stage: string | null;
   warmup_strategy_name: string | null;
+  warmnet_state: string | null;
+  warmnet_ramp_day: number | null;
+  warmnet_placed_5d: number;
+  warmnet_inbox_rate_5d: number | null;
 }
 
 export interface AdminDomainHistoryEntry {
@@ -211,6 +235,10 @@ export interface AdminDomainListParams {
   workspaceId?: number | "";
   provider?: string;
   status?: string;
+  readiness?: "" | "ready" | "warming" | "paused" | "not_started";
+  minInbox?: number | "";
+  canSend?: "" | "1";
+  sort?: "" | "inbox" | "days" | "ready";
   page?: number;
   limit?: number;
 }
@@ -236,6 +264,8 @@ export interface AssignPreview {
     remainingMailboxes: number;
     willPause: boolean;
   }>;
+  /** Own-server mailboxes that have never been warmed and will start warming with priority once assigned to a client. */
+  warmup?: { willEnroll?: { domains: number; mailboxes: number } };
   mailboxesMoving: number;
   warnings: string[];
   blocked: string[];
@@ -256,7 +286,7 @@ export interface AssignDomainsResult {
   domains: Array<{ id: number; domain: string; from_workspace: string | { id?: number; name: string } | null; mailboxes?: unknown[] }>;
   mailboxesMoved: number;
   campaigns: Array<{ id: number; name: string; outcome: "kept" | "paused"; remainingMailboxes: number }>;
-  warmup?: unknown;
+  warmup?: { enrollment?: { domains: number; enrolled: number; started: number; prioritised: number; alreadyWarmed: number; skippedProvider: number } | null };
   order?: unknown;
 }
 
