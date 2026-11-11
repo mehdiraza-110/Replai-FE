@@ -74,6 +74,35 @@ export function AssignedTo({ domain }: { domain: AdminDomain }) {
   );
 }
 
+const WARMNET_LABEL: Record<string, { label: string; tone: Tone }> = {
+  ready: { label: "Ready", tone: "green" },
+  warming: { label: "Warming", tone: "blue" },
+  paused: { label: "Paused", tone: "yellow" },
+  not_started: { label: "Not started", tone: "neutral" },
+};
+export const inboxText = (rate: number | null | undefined) => (rate == null ? "—" : `${Math.round(rate * 100)}%`);
+/** Green from 75% (the bar the engine uses for "ready"), yellow from 60%, red below. */
+const inboxTone = (rate: number | null | undefined): Tone => (rate == null ? "neutral" : rate >= 0.75 ? "green" : rate >= 0.6 ? "yellow" : "red");
+
+/** Warm-up network progress of a domain: state, day, inbox rate over the last 5 days (and how many emails that rests on), ready mailboxes, and what can send campaigns now. */
+export function WarmnetCell({ domain }: { domain: AdminDomain }) {
+  const w = domain.warmnet;
+  if (!w) return <span className="ops-muted">—</span>;
+  const meta = WARMNET_LABEL[w.state] ?? WARMNET_LABEL.not_started;
+  if (w.state === "not_started") return <div><Badge tone={meta.tone}>{meta.label}</Badge><p className="ops-sub">{plural(w.sendable_mailboxes, "mailbox")} can send campaigns</p></div>;
+  const readyCount = w.ready + w.released;
+  return (
+    <div>
+      <div className="ops-chips">
+        <Badge tone={meta.tone}>{meta.label}</Badge>
+        <Badge tone={inboxTone(w.inbox_rate_5d)}>{inboxText(w.inbox_rate_5d)} inbox</Badge>
+      </div>
+      <p className="ops-sub">Day {w.ramp_day ?? 0} · {readyCount}/{w.enrolled} ready · {w.placed_5d} checked in 5d</p>
+      <p className="ops-sub">{w.sendable_mailboxes}/{domain.mailbox_count} can send campaigns{w.ip_clean === false ? " · IP listed" : ""}</p>
+    </div>
+  );
+}
+
 export function WarmupCell({ domain }: { domain: AdminDomain }) {
   const entries = Object.entries(domain.warmup?.stages ?? {}).filter(([, n]) => n > 0);
   if (entries.length === 0) return <span className="ops-muted">Not warming</span>;
@@ -157,17 +186,19 @@ export function DomainDetailModal({ domain, onClose, onAssign }: { domain: Admin
             <div><p className="ops-label">Assigned to</p><AssignedTo domain={shown} /></div>
             <div style={{ textAlign: "right" }}><p className="ops-label">Status</p><DomainStatus status={shown.status} /><p className="ops-sub">{shown.active_mailbox_count}/{shown.mailbox_count} mailboxes active</p></div>
           </div>
+          <div className="ops-box"><p className="ops-label">Warm-up network</p><WarmnetCell domain={shown} />{shown.warmnet?.ip ? <p className="ops-sub">Sending IP {shown.warmnet.ip}{shown.warmnet.ip_clean === false ? " (on a blocklist)" : shown.warmnet.ip_clean ? " (clean)" : ""}</p> : null}</div>
           <Banner error={error} />
           <section aria-label="Mailboxes">
             <h3 style={{ margin: "0 0 8px", fontSize: 14 }}>Mailboxes</h3>
-            {loading ? <table className="sv-table"><tbody><SkeletonRows columns={5} rows={3} /></tbody></table> : detail ? (detail.mailboxes.length === 0 ? <p className="sv-hint">This domain has no mailboxes.</p> : (
-              <div className="sv-table-wrap"><table className="sv-table ops-table"><thead><tr><th>Mailbox</th><th>Provider</th><th>Status</th><th>Warm-up</th><th className="is-right">Daily limit</th></tr></thead><tbody>
+            {loading ? <table className="sv-table"><tbody><SkeletonRows columns={6} rows={3} /></tbody></table> : detail ? (detail.mailboxes.length === 0 ? <p className="sv-hint">This domain has no mailboxes.</p> : (
+              <div className="sv-table-wrap"><table className="sv-table ops-table"><thead><tr><th>Mailbox</th><th>Provider</th><th>Status</th><th>Warm-up</th><th>Warm-up network</th><th className="is-right">Daily limit</th></tr></thead><tbody>
                 {detail.mailboxes.map((m) => (
                   <tr key={m.id}>
                     <td className="ops-strong">{m.email}</td>
                     <td className="ops-muted">{providerLabel(m.provider, m.provider_label)}</td>
                     <td><DomainStatus status={m.status} /></td>
                     <td>{m.warmup_stage ? <Badge tone="blue">{stageLabel(m.warmup_stage)}</Badge> : <span className="ops-muted">None</span>}{m.warmup_strategy_name ? <p className="ops-sub">{m.warmup_strategy_name}</p> : null}</td>
+                    <td>{m.warmnet_state ? <div><Badge tone={(WARMNET_LABEL[m.warmnet_state] ?? WARMNET_LABEL.not_started).tone}>{(WARMNET_LABEL[m.warmnet_state] ?? WARMNET_LABEL.not_started).label}</Badge><p className="ops-sub">Day {m.warmnet_ramp_day ?? 0} · {inboxText(m.warmnet_inbox_rate_5d)} inbox ({m.warmnet_placed_5d})</p></div> : <span className="ops-muted">Not enrolled</span>}</td>
                     <td className="is-right">{m.daily_limit ?? "-"}</td>
                   </tr>
                 ))}

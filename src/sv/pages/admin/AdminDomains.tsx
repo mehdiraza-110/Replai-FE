@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Eye, RefreshCw, Undo2, UserRoundPlus } from "lucide-react";
-import { adminApi, errorMessage, PLATFORM_WORKSPACE_SLUG, type AdminDomain, type AdminWorkspace } from "../../../services/adminApi";
+import { adminApi, errorMessage, PLATFORM_WORKSPACE_SLUG, type AdminDomain, type AdminDomainListParams, type AdminWorkspace } from "../../../services/adminApi";
 import { Badge, Button, Card, Checkbox, PageHeader, StatCard, SkeletonRows } from "../../ui";
 import { useSvTitle } from "../../layout/chrome";
 import { Banner, Pager, SearchBox, useDebounced } from "../crm/shared";
 import { SyncMaildosoModal } from "../cold-email/AccountTools";
-import { AssignDomainsModal, AssignedTo, DomainDetailModal, DomainStatus, isPoolDomain, providerLabel, WarmupCell } from "./domainParts";
+import { AssignDomainsModal, AssignedTo, DomainDetailModal, DomainStatus, isPoolDomain, providerLabel, WarmnetCell } from "./domainParts";
 import "./ops.css";
 
 const LIMIT = 20;
@@ -14,6 +14,19 @@ const PROVIDERS = [
   { value: "postal", label: "Own server (Hetzner)" },
 ];
 const STATUSES = ["verified", "pending", "failed"];
+const READINESS = [
+  { value: "ready", label: "Ready (all mailboxes)" },
+  { value: "warming", label: "Warming" },
+  { value: "paused", label: "Paused" },
+  { value: "not_started", label: "Not started" },
+] as const;
+const MIN_INBOX = [50, 60, 70, 75, 80, 90];
+const SORTS = [
+  { value: "", label: "Sort: name" },
+  { value: "inbox", label: "Sort: inbox rate, best first" },
+  { value: "days", label: "Sort: warm-up days, most first" },
+  { value: "ready", label: "Sort: ready first" },
+] as const;
 
 interface Summary { total: number; pool: number; byProvider: Array<{ label: string; count: number }> }
 
@@ -24,6 +37,10 @@ export function AdminDomains() {
   const [workspaceId, setWorkspaceId] = useState<number | "">("");
   const [provider, setProvider] = useState("");
   const [status, setStatus] = useState("");
+  const [readiness, setReadiness] = useState<AdminDomainListParams["readiness"]>("");
+  const [minInbox, setMinInbox] = useState<number | "">("");
+  const [canSend, setCanSend] = useState(false);
+  const [sort, setSort] = useState<AdminDomainListParams["sort"]>("");
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<AdminDomain[]>([]);
   const [total, setTotal] = useState(0);
@@ -46,10 +63,10 @@ export function AdminDomains() {
   const load = useCallback(async () => {
     setLoading(true); setError("");
     try {
-      const result = await adminApi.listDomains({ search: debounced.trim(), workspaceId, provider, status, page, limit: LIMIT });
+      const result = await adminApi.listDomains({ search: debounced.trim(), workspaceId, provider, status, readiness, minInbox, canSend: canSend ? "1" : "", sort, page, limit: LIMIT });
       setItems(result.items); setTotal(result.total);
     } catch (e) { setError(errorMessage(e, "Unable to load domains.")); } finally { setLoading(false); }
-  }, [debounced, workspaceId, provider, status, page]);
+  }, [debounced, workspaceId, provider, status, readiness, minInbox, canSend, sort, page]);
 
   const loadSummary = useCallback(async () => {
     try {
@@ -61,7 +78,7 @@ export function AdminDomains() {
 
   useEffect(() => { void load(); }, [load]);
   useEffect(() => { if (workspacesError || workspaces.length > 0) void loadSummary(); }, [loadSummary, workspaces.length, workspacesError]);
-  useEffect(() => { setPage(1); }, [debounced, workspaceId, provider, status]);
+  useEffect(() => { setPage(1); }, [debounced, workspaceId, provider, status, readiness, minInbox, canSend, sort]);
 
   const selectedList = Object.values(selected);
   const pageAllSelected = items.length > 0 && items.every((d) => selected[d.id]);
@@ -74,7 +91,7 @@ export function AdminDomains() {
     const ids = new Set(assign.domains.map((d) => d.workspace.id));
     return ids.size === 1 ? assign.domains[0].workspace.id : null;
   }, [assign]);
-  const filtered = Boolean(search || workspaceId || provider || status);
+  const filtered = Boolean(search || workspaceId || provider || status || readiness || minInbox || canSend);
 
   return (
     <div className="sv-page">
@@ -113,13 +130,25 @@ export function AdminDomains() {
             <option value="">All statuses</option>
             {STATUSES.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
           </select>
+          <select aria-label="Filter by warm-up status" className="sv-select" value={readiness} onChange={(e) => setReadiness(e.target.value as AdminDomainListParams["readiness"])}>
+            <option value="">Any warm-up status</option>
+            {READINESS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+          </select>
+          <select aria-label="Minimum inbox rate" className="sv-select" value={minInbox} onChange={(e) => setMinInbox(e.target.value ? Number(e.target.value) : "")}>
+            <option value="">Any inbox rate</option>
+            {MIN_INBOX.map((n) => <option key={n} value={n}>Inbox rate {n}%+</option>)}
+          </select>
+          <label className="sv-check" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13 }}><input type="checkbox" checked={canSend} onChange={(e) => setCanSend(e.target.checked)} /> Can send campaigns now</label>
+          <select aria-label="Sort domains" className="sv-select" value={sort} onChange={(e) => setSort(e.target.value as AdminDomainListParams["sort"])}>
+            {SORTS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
           {selectedList.length > 0 ? <Button size="sm" onClick={() => setSelected({})}>Clear selection</Button> : null}
         </div>
         <div className="sv-table-wrap">
-          <table className="sv-table ops-table" style={{ minWidth: 1000 }}>
+          <table className="sv-table ops-table" style={{ minWidth: 1100 }}>
             <thead><tr>
               <th style={{ width: 36 }}><Checkbox label="Select all domains on this page" checked={pageAllSelected} onChange={togglePage} /></th>
-              <th>Domain</th><th>Provider</th><th>Status</th><th>Mailboxes</th><th>Warm-up</th><th>Assigned to</th><th className="is-right">Actions</th>
+              <th>Domain</th><th>Provider</th><th>Status</th><th>Mailboxes</th><th>Warm-up network</th><th>Assigned to</th><th className="is-right">Actions</th>
             </tr></thead>
             <tbody>
               {loading ? <SkeletonRows columns={8} />
@@ -133,7 +162,7 @@ export function AdminDomains() {
                       <td><Badge>{providerLabel(d.provider, d.provider_label)}</Badge></td>
                       <td><DomainStatus status={d.status} /></td>
                       <td>{d.active_mailbox_count}/{d.mailbox_count}</td>
-                      <td><WarmupCell domain={d} /></td>
+                      <td><WarmnetCell domain={d} /></td>
                       <td><AssignedTo domain={d} /></td>
                       <td className="is-right"><span className="sv-actions" style={{ justifyContent: "flex-end" }}>
                         <Button size="sm" icon={Eye} onClick={() => setViewing(d)}>View</Button>
