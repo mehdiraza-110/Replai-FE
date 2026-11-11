@@ -320,6 +320,7 @@ function PreviewView({ preview, target, needsConfirm, confirmed, onConfirm }: { 
     <div aria-live="polite" style={{ display: "grid", gap: 12 }}>
       <div style={{ fontWeight: 500, fontSize: 13 }}>{plural(preview.domains.length, "domain")} and {plural(preview.mailboxesMoving, "mailbox", "mailboxes")} will move to {target.name}.</div>
       {preview.blocked.length > 0 ? <Note tone="red" title="This move is blocked"><ul>{preview.blocked.map((b) => <li key={b}>{b}</li>)}</ul></Note> : null}
+      {preview.warmup?.willEnroll?.mailboxes ? <Note tone="blue" title="Warm-up starts now">{plural(preview.warmup.willEnroll.mailboxes, "mailbox")} on {plural(preview.warmup.willEnroll.domains, "own-server domain")} {preview.warmup.willEnroll.mailboxes === 1 ? "has" : "have"} not been through the warm-up network. They start warming through the seed accounts now, ahead of everything else, and are released to the client automatically once they reach the ready bar.</Note> : null}
       {preview.warnings.length > 0 ? <Note tone="yellow" title="Heads up"><ul>{preview.warnings.map((w) => <li key={w}>{w}</li>)}</ul></Note> : null}
       <ul aria-label="Domains moving" className="ops-list">
         {preview.domains.map((d) => {
@@ -368,6 +369,9 @@ function ResultView({ result }: { result: AssignDomainsResult }) {
           return <li key={d.id}><div className="ops-list-head"><span className="ops-strong">{d.domain}</span><span className="ops-sub">{from ? `from ${from}` : ""}</span><span className="is-end" style={{ color: "#30a46c" }}>Moved</span></div></li>;
         })}
       </ul>
+      {result.warmup?.enrollment && (result.warmup.enrollment.prioritised > 0 || result.warmup.enrollment.alreadyWarmed > 0) ? (
+        <p className="sv-hint">{result.warmup.enrollment.prioritised > 0 ? `${plural(result.warmup.enrollment.prioritised, "mailbox")} started warming with priority; they go to the client automatically once ready.` : ""}{result.warmup.enrollment.alreadyWarmed > 0 ? ` ${plural(result.warmup.enrollment.alreadyWarmed, "mailbox")} already warmed.` : ""}</p>
+      ) : null}
       {result.campaigns.length > 0 ? (
         <section aria-label="Campaign outcomes">
           <div style={{ fontWeight: 500, fontSize: 13, marginBottom: 6 }}>Campaigns</div>

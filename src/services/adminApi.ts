@@ -264,6 +264,8 @@ export interface AssignPreview {
     remainingMailboxes: number;
     willPause: boolean;
   }>;
+  /** Own-server mailboxes that have never been warmed and will start warming with priority once assigned to a client. */
+  warmup?: { willEnroll?: { domains: number; mailboxes: number } };
   mailboxesMoving: number;
   warnings: string[];
   blocked: string[];
@@ -284,7 +286,7 @@ export interface AssignDomainsResult {
   domains: Array<{ id: number; domain: string; from_workspace: string | { id?: number; name: string } | null; mailboxes?: unknown[] }>;
   mailboxesMoved: number;
   campaigns: Array<{ id: number; name: string; outcome: "kept" | "paused"; remainingMailboxes: number }>;
-  warmup?: unknown;
+  warmup?: { enrollment?: { domains: number; enrolled: number; started: number; prioritised: number; alreadyWarmed: number; skippedProvider: number } | null };
   order?: unknown;
 }
 
