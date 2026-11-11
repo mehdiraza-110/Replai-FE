@@ -21,7 +21,7 @@ export interface WorkspaceSettings {
   colorConfigured: boolean;
   conferencing: { type: "google_meet" | "static"; staticUrl: string };
   sharing: { communication: boolean };
-  coldEmail: { schedule: { from: string; to: string; timezone: string; days: string[] } };
+  coldEmail: { schedule: { from: string; to: string; timezone: string; days: string[] }; optOutFooter: { enabled: boolean; disabledAt: string | null; autoEnabledAt: string | null; autoReason: string | null } };
   callAnalyzer: { language: string; frameworks: Record<string, string> };
   coldEmailConfigured: boolean;
   weekdays: string[];
@@ -30,7 +30,7 @@ export interface WorkspaceSettingsInput {
   color?: string;
   conferencing?: Partial<WorkspaceSettings["conferencing"]>;
   sharing?: Partial<WorkspaceSettings["sharing"]>;
-  coldEmail?: { schedule: Partial<WorkspaceSettings["coldEmail"]["schedule"]> };
+  coldEmail?: { schedule?: Partial<WorkspaceSettings["coldEmail"]["schedule"]>; optOutFooter?: { enabled: boolean } };
   callAnalyzer?: { language?: string; frameworks?: Record<string, string> };
 }
 export interface AuditEntry { id: number; summary: string; at: string; who: string }
