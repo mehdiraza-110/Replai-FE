@@ -78,27 +78,37 @@ const WARMNET_LABEL: Record<string, { label: string; tone: Tone }> = {
   ready: { label: "Ready", tone: "green" },
   warming: { label: "Warming", tone: "blue" },
   paused: { label: "Paused", tone: "yellow" },
-  not_started: { label: "Not started", tone: "neutral" },
+  not_started: { label: "Not in warm-up", tone: "neutral" },
 };
 export const inboxText = (rate: number | null | undefined) => (rate == null ? "—" : `${Math.round(rate * 100)}%`);
 /** Green from 75% (the bar the engine uses for "ready"), yellow from 60%, red below. */
 const inboxTone = (rate: number | null | undefined): Tone => (rate == null ? "neutral" : rate >= 0.75 ? "green" : rate >= 0.6 ? "yellow" : "red");
 
-/** Warm-up network progress of a domain: state, day, inbox rate over the last 5 days (and how many emails that rests on), ready mailboxes, and what can send campaigns now. */
+/** An inbox rate only means something once enough emails were checked; below the engine's bar (20) it stays neutral. */
+const MIN_SAMPLE = 20;
+
+/** Warm-up network progress of a domain, one fact per line: state + inbox rate, day and ready mailboxes, then what can send campaigns. */
 export function WarmnetCell({ domain }: { domain: AdminDomain }) {
   const w = domain.warmnet;
   if (!w) return <span className="ops-muted">—</span>;
+  const canSend = `${w.sendable_mailboxes}/${domain.mailbox_count} can send campaigns`;
+  if (w.state === "provider_managed") {
+    return <div className="ops-warm"><Badge>Warmed by {providerLabel(domain.provider, domain.provider_label)}</Badge><p className="ops-sub">{canSend}</p></div>;
+  }
+  if (w.state === "not_started") {
+    return <div className="ops-warm"><Badge>Not in warm-up</Badge><p className="ops-sub">{canSend}</p></div>;
+  }
   const meta = WARMNET_LABEL[w.state] ?? WARMNET_LABEL.not_started;
-  if (w.state === "not_started") return <div><Badge tone={meta.tone}>{meta.label}</Badge><p className="ops-sub">{plural(w.sendable_mailboxes, "mailbox")} can send campaigns</p></div>;
   const readyCount = w.ready + w.released;
+  const enough = w.placed_5d >= MIN_SAMPLE;
   return (
-    <div>
+    <div className="ops-warm">
       <div className="ops-chips">
         <Badge tone={meta.tone}>{meta.label}</Badge>
-        <Badge tone={inboxTone(w.inbox_rate_5d)}>{inboxText(w.inbox_rate_5d)} inbox</Badge>
+        <span title={`${w.placed_5d} seed emails checked in the last 5 days${enough ? "" : " (too few to rely on yet)"}`}><Badge tone={enough ? inboxTone(w.inbox_rate_5d) : "neutral"}>{inboxText(w.inbox_rate_5d)} inbox</Badge></span>
       </div>
-      <p className="ops-sub">Day {w.ramp_day ?? 0} · {readyCount}/{w.enrolled} ready · {w.placed_5d} checked in 5d</p>
-      <p className="ops-sub">{w.sendable_mailboxes}/{domain.mailbox_count} can send campaigns{w.ip_clean === false ? " · IP listed" : ""}</p>
+      <p className="ops-sub">Day {w.ramp_day ?? 0} · {readyCount}/{w.enrolled} ready · {w.placed_5d} checked</p>
+      <p className="ops-sub">{canSend}{w.ip_clean === false ? <span className="ops-bad"> · IP listed</span> : null}</p>
     </div>
   );
 }

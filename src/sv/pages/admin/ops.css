@@ -2,6 +2,12 @@
 .ops-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--ds-border); }
 .ops-bar .sv-select, .ops-bar .sv-input { width: auto; max-width: 220px; height: 36px; }
 .ops-bar-grow { flex: 1; }
+/* Two deliberate rows: who owns it (search + selects) and how warm it is (warm-up filters + sort at the end). */
+.ops-bar.is-stacked { border-bottom: 0; padding-bottom: 0; }
+.ops-bar.is-stacked > .sv-settings-search { flex: 1 1 240px; min-width: 200px; max-width: 360px; }
+/* Same shape and type size as the selects beside it, so the row reads as one control family. */
+.ops-toggle { white-space: nowrap; border-radius: 10px; font-size: 14px; font-weight: 450; }
+.ops-toggle[aria-pressed="false"] { color: var(--ds-text-secondary); }
 .ops-table .is-right { text-align: right; }
 .ops-table td { vertical-align: top; padding-top: 10px; padding-bottom: 10px; }
 .ops-link { background: none; border: 0; padding: 0; font: inherit; font-weight: 500; color: var(--ds-text-primary); cursor: pointer; text-align: left; }
@@ -10,6 +16,11 @@
 .ops-strong { font-weight: 600; }
 .ops-muted { color: var(--ds-text-secondary); }
 .ops-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+/* Warm-up cell: keep each fact on one line; the column is wide enough that nothing needs to wrap. */
+.ops-col-warm { min-width: 250px; }
+.ops-warm .ops-chips { flex-wrap: nowrap; }
+.ops-warm .ops-sub { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ops-bad { color: #e5484d; font-weight: 500; }
 .ops-row-sel { background: var(--ds-hover); }
 .ops-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--ds-border); border-radius: 10px; font-size: 13px; }
 .ops-list > li { padding: 9px 12px; border-bottom: 1px solid var(--ds-border); }

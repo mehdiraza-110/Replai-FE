@@ -41,9 +41,9 @@ export function useDebounced(value: string, ms = 300) {
   return out;
 }
 
-export function SearchBox({ value, onChange, placeholder }: { value: string; onChange: (next: string) => void; placeholder: string }) {
+export function SearchBox({ value, onChange, placeholder, width = 260 }: { value: string; onChange: (next: string) => void; placeholder: string; width?: number | string }) {
   return (
-    <label className="sv-settings-search" style={{ margin: 0, width: 260, height: 36 }}>
+    <label className="sv-settings-search" style={{ margin: 0, width, height: 36 }}>
       <Search className="sv-icon" aria-hidden />
       <input placeholder={placeholder} aria-label={placeholder} value={value} onChange={(event) => onChange(event.target.value)} />
     </label>
