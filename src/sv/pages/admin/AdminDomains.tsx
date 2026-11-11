@@ -18,7 +18,8 @@ const READINESS = [
   { value: "ready", label: "Ready (all mailboxes)" },
   { value: "warming", label: "Warming" },
   { value: "paused", label: "Paused" },
-  { value: "not_started", label: "Not started" },
+  { value: "not_started", label: "Not started (own server)" },
+  { value: "provider_managed", label: "Warmed by provider" },
 ] as const;
 const MIN_INBOX = [50, 60, 70, 75, 80, 90];
 const SORTS = [
@@ -116,8 +117,8 @@ export function AdminDomains() {
       <Banner error={workspacesError} />
 
       <Card>
-        <div className="ops-bar">
-          <SearchBox placeholder="Search domains" value={search} onChange={setSearch} />
+        <div className="ops-bar is-stacked">
+          <SearchBox placeholder="Search domains" value={search} onChange={setSearch} width="100%" />
           <select aria-label="Filter by workspace" className="sv-select" value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value ? Number(e.target.value) : "")}>
             <option value="">All workspaces</option>
             {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
@@ -130,6 +131,8 @@ export function AdminDomains() {
             <option value="">All statuses</option>
             {STATUSES.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
           </select>
+        </div>
+        <div className="ops-bar">
           <select aria-label="Filter by warm-up status" className="sv-select" value={readiness} onChange={(e) => setReadiness(e.target.value as AdminDomainListParams["readiness"])}>
             <option value="">Any warm-up status</option>
             {READINESS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
@@ -138,17 +141,18 @@ export function AdminDomains() {
             <option value="">Any inbox rate</option>
             {MIN_INBOX.map((n) => <option key={n} value={n}>Inbox rate {n}%+</option>)}
           </select>
-          <label className="sv-check" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13 }}><input type="checkbox" checked={canSend} onChange={(e) => setCanSend(e.target.checked)} /> Can send campaigns now</label>
+          <button type="button" className={`sv-btn ops-toggle${canSend ? " is-primary" : ""}`} aria-pressed={canSend} onClick={() => setCanSend((v) => !v)}>Can send campaigns now</button>
+          <span className="ops-bar-grow" />
+          {selectedList.length > 0 ? <Button size="sm" onClick={() => setSelected({})}>Clear selection ({selectedList.length})</Button> : null}
           <select aria-label="Sort domains" className="sv-select" value={sort} onChange={(e) => setSort(e.target.value as AdminDomainListParams["sort"])}>
             {SORTS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
-          {selectedList.length > 0 ? <Button size="sm" onClick={() => setSelected({})}>Clear selection</Button> : null}
         </div>
         <div className="sv-table-wrap">
           <table className="sv-table ops-table" style={{ minWidth: 1100 }}>
             <thead><tr>
               <th style={{ width: 36 }}><Checkbox label="Select all domains on this page" checked={pageAllSelected} onChange={togglePage} /></th>
-              <th>Domain</th><th>Provider</th><th>Status</th><th>Mailboxes</th><th>Warm-up network</th><th>Assigned to</th><th className="is-right">Actions</th>
+              <th>Domain</th><th>Provider</th><th>Status</th><th>Mailboxes</th><th className="ops-col-warm">Warm-up network</th><th>Assigned to</th><th className="is-right">Actions</th>
             </tr></thead>
             <tbody>
               {loading ? <SkeletonRows columns={8} />

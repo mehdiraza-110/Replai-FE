@@ -167,7 +167,7 @@ export interface AdminDomainWorkspaceRef {
 
 /** Warm-up network progress of a domain (all its mailboxes together). Inbox rate = last 5 days, the same window the engine uses to mark a mailbox ready. */
 export interface AdminDomainWarmnet {
-  state: "not_started" | "warming" | "ready" | "paused";
+  state: "not_started" | "provider_managed" | "warming" | "ready" | "paused";
   enrolled: number;
   warming: number;
   queued: number;
@@ -235,7 +235,7 @@ export interface AdminDomainListParams {
   workspaceId?: number | "";
   provider?: string;
   status?: string;
-  readiness?: "" | "ready" | "warming" | "paused" | "not_started";
+  readiness?: "" | "ready" | "warming" | "paused" | "not_started" | "provider_managed";
   minInbox?: number | "";
   canSend?: "" | "1";
   sort?: "" | "inbox" | "days" | "ready";
