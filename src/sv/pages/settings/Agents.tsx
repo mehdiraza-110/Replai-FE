@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { settingsApi } from "../../api/settings";
 import { useSvTitle } from "../../layout/chrome";
 import { Badge, Button, Field, SettingsCard, SkeletonLines } from "../../ui";
-import { Notice, ReadOnlyNote, SettingsPageFrame, useCanManage, useRemote, useSaver } from "./shared";
+import { dateTimeText, Notice, ReadOnlyNote, SettingsPageFrame, SwitchRow, useCanManage, useRemote, useSaver } from "./shared";
 
 // ---- Cold Email Agent ----
 export function SettingsColdEmailAgent() {
@@ -11,6 +11,8 @@ export function SettingsColdEmailAgent() {
   const { data, reload } = useRemote(() => settingsApi.workspace(), []);
   const billing = useRemote(() => settingsApi.billing(), []);
   const saver = useSaver();
+  const footerSaver = useSaver();
+  const footer = data?.coldEmail.optOutFooter;
   const [days, setDays] = useState<string[]>([]);
   const [from, setFrom] = useState("09:00");
   const [to, setTo] = useState("17:00");
@@ -33,6 +35,12 @@ export function SettingsColdEmailAgent() {
           <Field label="Time zone" htmlFor="ce-tz"><select id="ce-tz" className="sv-select" disabled={!canManage} value={timezone} onChange={(e) => setTimezone(e.target.value)}>{zones.map((z) => <option key={z} value={z}>{z.replace(/_/g, " ")}</option>)}</select></Field>
         </div>
         <div><Button variant="primary" disabled={!canManage || !dirty || saver.busy} onClick={() => void saver.run(async () => { await settingsApi.saveWorkspace({ coldEmail: { schedule: { days, from, to, timezone } } }); reload(); }, "Default schedule saved.")}>Save schedule</Button></div>
+      </SettingsCard>
+      <SettingsCard title="Opt-out line" description="Adds a line to the end of every campaign email and follow-up that tells people how to stop hearing from you.">
+        {footerSaver.notice ? <Notice tone={footerSaver.notice.tone}>{footerSaver.notice.text}</Notice> : null}
+        {footer?.autoEnabledAt ? <Notice tone="warn">Turned back on automatically on {dateTimeText(footer.autoEnabledAt)}: {footer.autoReason}. You can turn it off again; it will switch back on if sending goes bad again.</Notice> : null}
+        <SwitchRow label="Add the opt-out line to my emails" hint={'It reads: "If you\'d prefer not to hear from us again, just reply to this email with "OPT OUT" and we\'ll remove you from our list right away." Anyone who replies that way is never emailed again.'} checked={footer?.enabled ?? true} disabled={!canManage || !data || footerSaver.busy} onChange={(enabled) => void footerSaver.run(async () => { await settingsApi.saveWorkspace({ coldEmail: { optOutFooter: { enabled } } }); reload(); }, enabled ? "Opt-out line turned on." : "Opt-out line turned off.")} />
+        <p className="sv-hint">If it is off and your recent campaigns draw spam complaints or many bounces, we turn it back on for you to protect your sending reputation. This applies to emails not yet sent, including running campaigns.</p>
       </SettingsCard>
       <SettingsCard title="Usage" description="What your plan allows for outreach.">
         {meters.length ? meters.map((l) => { const pct = l.limit ? Math.min(100, Math.round((l.used / l.limit) * 100)) : 0; return (
