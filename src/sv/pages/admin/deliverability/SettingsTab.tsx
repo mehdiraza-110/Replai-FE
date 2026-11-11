@@ -26,7 +26,7 @@ const GROUPS: Array<{ title: string; description: string; fields: FieldDef[] }> 
   ] },
   { title: "Ready to release", description: "A mailbox is marked Ready when it has warmed long enough with a high inbox rate. You still release it by hand.", fields: [
     { key: "readyAfterDays", label: "Minimum days warming", hint: "7 to 90.", min: 7, max: 90, unit: "days" },
-    { key: "readyMinInboxRate", label: "Inbox rate needed", hint: "Over the last 14 days.", min: 30, max: 100, step: 5, percent: true, unit: "%" },
+    { key: "readyMinInboxRate", label: "Inbox rate needed", hint: "Over the last 5 days.", min: 30, max: 100, step: 5, percent: true, unit: "%" },
     { key: "readyMinPlaced", label: "Messages measured", hint: "Seed-checked emails needed before the rate counts.", min: 5, max: 500, unit: "emails" },
   ] },
   { title: "Safety", description: "Protects the domains when mail lands in spam or sending breaks.", fields: [
