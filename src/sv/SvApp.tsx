@@ -2,7 +2,9 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useViewAs } from "../hooks/useViewAs";
 import { clearViewAs } from "../utils/viewAs";
-import { Button, EmptyState, SkeletonShell } from "./ui";
+import { Button, EmptyState, PageHeader, SkeletonShell } from "./ui";
+import { useSvTitle } from "./layout/chrome";
+import { APP_VERSION } from "./feedback/whatsNew";
 import { useAuth } from "../context/AuthContext";
 import { ForgotPasswordPage, ResetPasswordPage, SignInPage, SignUpPage } from "./auth/pages";
 import { AuthLayout, AuthMessage } from "./auth/AuthLayout";
@@ -24,6 +26,10 @@ import { Workflows } from "./pages/tools/Workflows";
 import { SiteEditor } from "./pages/sites/SiteEditor";
 import { Sites } from "./pages/sites/Sites";
 import { Chat } from "./pages/ai/Chat";
+import { FeedbackRecording } from "./pages/support/FeedbackRecording";
+import { MyTickets } from "./pages/support/MyTickets";
+import { TicketDashboard } from "./pages/support/TicketDashboard";
+import { ReleaseList } from "./feedback/WhatsNewDialog";
 import { GrowthPlanCreator, MarketResearcher, OfferCreator, ReportDetail } from "./pages/ai/Reports";
 import { CrmLayout, CrmTab, DashboardPage, Placeholder, SettingsPage, SettingsRedirect } from "./pages";
 import { Leads } from "./pages/leads/Leads";
@@ -137,6 +143,16 @@ function SvGuard({ children }: { children: ReactNode }) {
 }
 
 /** Sends anyone who isn't a platform admin back to their dashboard instead of showing them platform pages. */
+function WhatsNewPage() {
+  useSvTitle([{ label: "What's New" }]);
+  return (
+    <div className="sv-page">
+      <PageHeader title="What's New" subtitle={`You're on v${APP_VERSION}`} />
+      <ReleaseList />
+    </div>
+  );
+}
+
 function SuperAdminOnly() {
   const { isSuperAdmin } = useAuth();
   return isSuperAdmin ? <Outlet /> : <Navigate replace to={svPath("dashboard")} />;
@@ -175,7 +191,11 @@ function AppRoutes() {
         <Route path="integrations" element={<Integrations />} />
         <Route path="events" element={<EventLogs />} />
         {/* Platform pages: super admins only. */}
+        <Route path="my-tickets" element={<MyTickets />} />
+        <Route path="feedback/:id/recording" element={<FeedbackRecording />} />
+        <Route path="feedback" element={<Navigate replace to={svPath("my-tickets")} />} />
         <Route element={<SuperAdminOnly />}>
+          <Route path="ticket-dashboard" element={<TicketDashboard />} />
           <Route path="admin" element={<AdminDashboard />} />
           <Route path="admin/workspaces" element={<AdminWorkspaces />} />
           <Route path="admin/workspaces/:id" element={<AdminWorkspaceDetail />} />
@@ -186,7 +206,7 @@ function AppRoutes() {
         </Route>
         <Route path="sites/websites" element={<Sites />} />
         <Route path="sites/websites/:id" element={<SiteEditor />} />
-        <Route path="whats-new" element={<Placeholder title="What's New" phase="Phase 6" />} />
+        <Route path="whats-new" element={<WhatsNewPage />} />
         <Route path="docs" element={<Placeholder title="Help Center" phase="Phase 6" />} />
       </Route>
       <Route element={<SettingsShell />}>
