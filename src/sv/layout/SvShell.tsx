@@ -2,7 +2,13 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Bell, Cable, ChevronDown, ChevronRight, KeyRound, ListTree, LogOut, PanelLeft, Search, Settings as SettingsIcon, ShieldCheck, Sparkles, Workflow } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import { adminNav, allDestinations, applySidebarPrefs, chatRoute, footerNav, mainNav, svPath, type NavItem } from "../nav";
+import { adminNav, allDestinations, applySidebarPrefs, chatRoute, footerNav, mainNav, supportNav, svPath, ticketDashboardNav, type NavItem } from "../nav";
+import { FeedbackWidget } from "../feedback/FeedbackWidget";
+import { ToastHost, showToast } from "../feedback/toast";
+import { TICKET_NEW_EVENT, UNREAD_CHANGED_EVENT, useTicketAlerts } from "../feedback/useTicketAlerts";
+import { onTicketNew, onTicketUpdated } from "../../services/realtime";
+import { WhatsNewDialog } from "../feedback/WhatsNewDialog";
+import { APP_VERSION, setWhatsNewOpen } from "../feedback/whatsNew";
 import { usePrefs } from "../prefs";
 import { useOutsideClose } from "../ui";
 import { ChromeProvider, useChrome, useSidebarCollapsed } from "./chrome";
@@ -13,12 +19,13 @@ function isActivePath(pathname: string, item: NavItem) {
   return pathname === prefix || (!item.exact && pathname.startsWith(`${prefix}/`));
 }
 
-function NavRow({ item, pathname }: { item: NavItem; pathname: string }) {
+function NavRow({ item, pathname, badge }: { item: NavItem; pathname: string; badge?: number }) {
   const active = isActivePath(pathname, item);
   return (
     <Link to={svPath(item.to)} className={`sv-nav-item${active ? " is-active" : ""}`} aria-current={active ? "page" : undefined}>
       <item.icon className="sv-icon" aria-hidden />
       <span className="sv-nav-label">{item.label}</span>
+      {badge ? <span className="sv-fb-badge" aria-label={`${badge} new`}>{badge > 99 ? "99+" : badge}</span> : null}
     </Link>
   );
 }
@@ -29,7 +36,7 @@ function initials(name: string) {
 
 function Sidebar({ collapsed, onCollapse }: { collapsed: boolean; onCollapse: () => void }) {
   const { pathname } = useLocation();
-  const { user, activeWorkspace, logout, switchWorkspace } = useAuth();
+  const { user, activeWorkspace, logout, switchWorkspace, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   const [closedGroups, setClosedGroups] = useState<Record<string, boolean>>({});
   const [menuOpen, setMenuOpen] = useState(false);
@@ -40,6 +47,8 @@ function Sidebar({ collapsed, onCollapse }: { collapsed: boolean; onCollapse: ()
   const chatMode = pathname.startsWith(svPath(chatRoute));
   const { prefs, workspaceColor } = usePrefs();
   // Super admins get the platform pages as one more collapsible group at the end; it isn't part of anyone's sidebar choices.
+  const ticketAlerts = useTicketAlerts();
+  const supportItem = isSuperAdmin ? ticketDashboardNav : supportNav;
   const navGroups = [...applySidebarPrefs(mainNav, prefs?.appearance.sidebar), ...(user?.is_super_admin ? [adminNav] : [])];
 
   return (
@@ -90,9 +99,11 @@ function Sidebar({ collapsed, onCollapse }: { collapsed: boolean; onCollapse: ()
       </nav>
 
       <div className="sv-sidebar-foot">
+        <NavRow item={supportItem} pathname={pathname} badge={ticketAlerts} />
         {footerNav.map((item) => (
           <NavRow key={item.to} item={item} pathname={pathname} />
         ))}
+        <button type="button" className="sv-fb-version" title="Release version. See what's new" onClick={() => setWhatsNewOpen(true)}>v{APP_VERSION}</button>
         <div style={{ position: "relative" }} ref={menuRef}>
           <button type="button" className="sv-user" aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
             <span className="sv-avatar" aria-hidden>
@@ -225,7 +236,22 @@ export function useCommandShortcut(onOpen: () => void) {
   }, [onOpen]);
 }
 
+/** Live notices: the team hears about new tickets, everyone hears when the team replies or changes a status. */
+function useTicketToasts() {
+  const { user, isSuperAdmin } = useAuth();
+  const staff = isSuperAdmin;
+  useEffect(() => {
+    if (!user) return;
+    const offNew = staff
+      ? onTicketNew((t) => { showToast({ title: `New support ticket #${t.ticketNumber}`, body: `${t.from}: “${t.title}”`, to: svPath("ticket-dashboard") }); window.dispatchEvent(new Event(TICKET_NEW_EVENT)); })
+      : () => undefined;
+    const offUpdated = onTicketUpdated((t) => { showToast({ title: t.title, to: svPath("my-tickets") }); window.dispatchEvent(new Event(UNREAD_CHANGED_EVENT)); });
+    return () => { offNew(); offUpdated(); };
+  }, [user, staff]);
+}
+
 export function SvShell() {
+  useTicketToasts();
   const [collapsed, setCollapsed] = useSidebarCollapsed();
   const [paletteOpen, setPaletteOpen] = useState(false);
   useCommandShortcut(() => setPaletteOpen(true));
@@ -238,6 +264,9 @@ export function SvShell() {
           <Outlet />
         </MainColumn>
         <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+        <FeedbackWidget />
+        <ToastHost />
+        <WhatsNewDialog />
       </div>
     </ChromeProvider>
   );

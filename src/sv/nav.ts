@@ -26,6 +26,7 @@ import {
   KeyRound,
   LayoutGrid,
   Layers,
+  LifeBuoy,
   ListChecks,
   ListFilter,
   type LucideIcon,
@@ -128,6 +129,10 @@ export const footerNav: NavItem[] = [
   { to: "docs", label: "Help Center", icon: CircleHelp },
   { to: "settings/profile", label: "Settings", icon: SettingsIcon, match: "settings" },
 ];
+
+/** Support: everyone sees their own tickets; the platform team gets the dashboard instead. */
+export const supportNav: NavItem = { to: "my-tickets", label: "Support", icon: LifeBuoy };
+export const ticketDashboardNav: NavItem = { to: "ticket-dashboard", label: "Ticket Dashboard", icon: LifeBuoy };
 
 export const chatRoute = "ai-growth-consultant";
 

@@ -60,3 +60,20 @@ export function reconnectRealtime() {
   socket.disconnect();
   socket.connect();
 }
+
+/** A new support ticket arrived (support team only). */
+export interface TicketNewPayload { id: string; ticketNumber: number; title: string; from: string }
+/** The team replied to, or changed the status of, one of your tickets. */
+export interface TicketUpdatedPayload { id: string; ticketNumber: number; title: string; status: string | null }
+
+export function onTicketNew(handler: (payload: TicketNewPayload) => void) {
+  const s = getRealtimeSocket();
+  s.on("ticket:new", handler);
+  return () => { s.off("ticket:new", handler); };
+}
+
+export function onTicketUpdated(handler: (payload: TicketUpdatedPayload) => void) {
+  const s = getRealtimeSocket();
+  s.on("ticket:updated", handler);
+  return () => { s.off("ticket:updated", handler); };
+}
