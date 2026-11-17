@@ -211,7 +211,7 @@ export function Menu({
   );
 }
 
-export function Modal({ open, title, onClose, children, footer, wide }: { open: boolean; title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; wide?: boolean }) {
+export function Modal({ open, title, onClose, children, footer, wide, className, closable }: { open: boolean; title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; wide?: boolean; className?: string; closable?: boolean }) {
   useEffect(() => {
     if (!open) return;
     const handler = (event: KeyboardEvent) => event.key === "Escape" && onClose();
@@ -222,8 +222,13 @@ export function Modal({ open, title, onClose, children, footer, wide }: { open: 
   if (!open) return null;
   return (
     <div className="sv-overlay" style={{ alignItems: "center", paddingTop: 0 }} onMouseDown={onClose} role="presentation">
-      <div className="sv-modal" role="dialog" aria-modal="true" aria-label={title} style={wide ? { width: "min(920px, 94vw)", maxWidth: "none", maxHeight: "90vh", overflowY: "auto" } : undefined} onMouseDown={(event) => event.stopPropagation()}>
-        <h2 className="sv-set-title">{title}</h2>
+      <div className={cx("sv-modal", className)} role="dialog" aria-modal="true" aria-label={title} style={wide ? { width: "min(920px, 94vw)", maxWidth: "none", maxHeight: "90vh", overflowY: "auto" } : undefined} onMouseDown={(event) => event.stopPropagation()}>
+        {closable ? (
+          <div className="sv-modal-head">
+            <h2 className="sv-set-title">{title}</h2>
+            <button type="button" className="sv-modal-close" aria-label="Close" onClick={onClose}>×</button>
+          </div>
+        ) : <h2 className="sv-set-title">{title}</h2>}
         <div className="sv-modal-body">{children}</div>
         {footer ? <div className="sv-modal-foot">{footer}</div> : null}
       </div>

@@ -1,15 +1,18 @@
 import { useEffect } from "react";
+import { useAuth } from "../../context/AuthContext";
 import { Button, Modal } from "../ui";
 import { APP_VERSION, hasSeenCurrent, markSeenCurrent, RELEASE_NOTES, setWhatsNewOpen, useWhatsNewOpen } from "./whatsNew";
 
 /** Opens by itself once per new release; the sidebar's version label reopens it any time. */
 export function WhatsNewDialog() {
   const open = useWhatsNewOpen();
-  useEffect(() => { if (!hasSeenCurrent()) setWhatsNewOpen(true); }, []);
-  const close = () => { markSeenCurrent(); setWhatsNewOpen(false); };
+  const { user } = useAuth();
+  const userId = user?.id;
+  useEffect(() => { if (userId != null && !hasSeenCurrent(userId)) setWhatsNewOpen(true); }, [userId]);
+  const close = () => { markSeenCurrent(userId); setWhatsNewOpen(false); };
 
   return (
-    <Modal open={open} title="What's new" onClose={close} footer={<Button variant="primary" onClick={close}>Got it</Button>}>
+    <Modal open={open} title="What's new" onClose={close} className="sv-modal-fixed" closable footer={<Button variant="primary" onClick={close}>Got it</Button>}>
       <p className="sv-hint">You're on v{APP_VERSION}</p>
       <ReleaseList />
     </Modal>
