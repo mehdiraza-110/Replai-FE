@@ -25,9 +25,10 @@ export const setWhatsNewOpen = (next: boolean) => { open = next; listeners.forEa
 export const useWhatsNewOpen = () => useSyncExternalStore((l) => { listeners.add(l); return () => { listeners.delete(l); }; }, () => open);
 
 export const SEEN_KEY = "whats-new-seen-version";
-export function hasSeenCurrent() {
-  try { return localStorage.getItem(SEEN_KEY) === APP_VERSION; } catch { return false; } // blocked storage: it shows again next load
+const seenKey = (userId?: number | string) => `${SEEN_KEY}:${userId ?? "anon"}`; // per user, so a shared browser still shows it to each person
+export function hasSeenCurrent(userId?: number | string) {
+  try { return localStorage.getItem(seenKey(userId)) === APP_VERSION; } catch { return false; } // blocked storage: it shows again next load
 }
-export function markSeenCurrent() {
-  try { localStorage.setItem(SEEN_KEY, APP_VERSION); } catch { /* ignore */ }
+export function markSeenCurrent(userId?: number | string) {
+  try { localStorage.setItem(seenKey(userId), APP_VERSION); } catch { /* ignore */ }
 }

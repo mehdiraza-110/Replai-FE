@@ -1536,6 +1536,16 @@
   gap: 16px;
 }
 
+.sv-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.sv-modal-head .sv-set-title { margin: 0; }
+.sv-modal-close {
+  width: 28px; height: 28px; border: 0; border-radius: 8px; background: transparent;
+  color: var(--ds-text-secondary); font-size: 20px; line-height: 1; cursor: pointer;
+}
+.sv-modal-close:hover { background: var(--ds-border); }
+.sv-modal-fixed { height: min(520px, calc(100vh - 64px)); }
+.sv-modal-fixed .sv-modal-body { flex: 1; min-height: 0; overflow-y: auto; }
+
 .sv-modal-foot {
   display: flex;
   justify-content: flex-end;
@@ -2797,7 +2807,7 @@ button.sv-choice:disabled { opacity: 0.6; cursor: not-allowed; }
 .sv-fb-toast-main { flex: 1; display: flex; flex-direction: column; text-align: left; min-width: 0; }
 .sv-fb-toast-main span { color: var(--ds-text-secondary); font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
 
-.sv-fb-releases { display: flex; flex-direction: column; gap: 20px; max-height: 50vh; overflow-y: auto; }
+.sv-fb-releases { display: flex; flex-direction: column; gap: 20px; }
 .sv-fb-releases h3 { margin: 0 0 8px; display: flex; align-items: center; gap: 8px; font-size: 15px; }
 .sv-fb-releases ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; }
 .sv-fb-releases li span { display: block; color: var(--ds-text-secondary); font-size: 13px; }
