@@ -29,7 +29,9 @@ import { Chat } from "./pages/ai/Chat";
 import { FeedbackRecording } from "./pages/support/FeedbackRecording";
 import { MyTickets } from "./pages/support/MyTickets";
 import { TicketDashboard } from "./pages/support/TicketDashboard";
-import { ReleaseList } from "./feedback/WhatsNewDialog";
+import { ReleaseList, WhatsNewDialog } from "./feedback/WhatsNewDialog";
+import { FeedbackWidget } from "./feedback/FeedbackWidget";
+import { ToastHost } from "./feedback/toast";
 import { GrowthPlanCreator, MarketResearcher, OfferCreator, ReportDetail } from "./pages/ai/Reports";
 import { CrmLayout, CrmTab, DashboardPage, Placeholder, SettingsPage, SettingsRedirect } from "./pages";
 import { Leads } from "./pages/leads/Leads";
@@ -158,9 +160,25 @@ function SuperAdminOnly() {
   return isSuperAdmin ? <Outlet /> : <Navigate replace to={svPath("dashboard")} />;
 }
 
+/**
+ * Support-ticket widget, toasts and release popup live above both shells so that moving between
+ * the main app and Settings never unmounts them (that would cancel an in-progress screen recording).
+ */
+function PersistentLayer() {
+  return (
+    <div className="sv-root">
+      <Outlet />
+      <FeedbackWidget />
+      <ToastHost />
+      <WhatsNewDialog />
+    </div>
+  );
+}
+
 function AppRoutes() {
   return (
     <Routes>
+      <Route element={<PersistentLayer />}>
       <Route element={<SvShell />}>
         <Route index element={<Navigate replace to="dashboard" />} />
         <Route path="dashboard" element={<DashboardPage />} />
@@ -235,6 +253,7 @@ function AppRoutes() {
         <Route path="settings/cold-email-agent" element={<SettingsColdEmailAgent />} />
         <Route path="settings/developer-docs" element={<SettingsDeveloperDocs />} />
         <Route path="settings/*" element={<SettingsPage />} />
+      </Route>
       </Route>
       <Route path="*" element={<Navigate replace to={svPath("dashboard")} />} />
     </Routes>

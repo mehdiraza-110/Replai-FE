@@ -3,11 +3,9 @@ import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Bell, Cable, ChevronDown, ChevronRight, KeyRound, ListTree, LogOut, PanelLeft, Search, Settings as SettingsIcon, ShieldCheck, Sparkles, Workflow } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { adminNav, allDestinations, applySidebarPrefs, chatRoute, footerNav, mainNav, supportNav, svPath, ticketDashboardNav, type NavItem } from "../nav";
-import { FeedbackWidget } from "../feedback/FeedbackWidget";
-import { ToastHost, showToast } from "../feedback/toast";
+import { showToast } from "../feedback/toast";
 import { TICKET_NEW_EVENT, UNREAD_CHANGED_EVENT, useTicketAlerts } from "../feedback/useTicketAlerts";
 import { onTicketNew, onTicketUpdated } from "../../services/realtime";
-import { WhatsNewDialog } from "../feedback/WhatsNewDialog";
 import { APP_VERSION, setWhatsNewOpen } from "../feedback/whatsNew";
 import { usePrefs } from "../prefs";
 import { useOutsideClose } from "../ui";
@@ -264,9 +262,6 @@ export function SvShell() {
           <Outlet />
         </MainColumn>
         <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
-        <FeedbackWidget />
-        <ToastHost />
-        <WhatsNewDialog />
       </div>
     </ChromeProvider>
   );
