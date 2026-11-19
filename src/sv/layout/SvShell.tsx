@@ -5,7 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 import { adminNav, allDestinations, applySidebarPrefs, chatRoute, footerNav, mainNav, supportNav, svPath, ticketDashboardNav, type NavItem } from "../nav";
 import { showToast } from "../feedback/toast";
 import { TICKET_NEW_EVENT, UNREAD_CHANGED_EVENT, useTicketAlerts } from "../feedback/useTicketAlerts";
-import { onTicketNew, onTicketUpdated } from "../../services/realtime";
+import { onLeadPositive, onTicketNew, onTicketUpdated } from "../../services/realtime";
 import { APP_VERSION, setWhatsNewOpen } from "../feedback/whatsNew";
 import { usePrefs } from "../prefs";
 import { useOutsideClose } from "../ui";
@@ -244,7 +244,8 @@ function useTicketToasts() {
       ? onTicketNew((t) => { showToast({ title: `New support ticket #${t.ticketNumber}`, body: `${t.from}: “${t.title}”`, to: svPath("ticket-dashboard") }); window.dispatchEvent(new Event(TICKET_NEW_EVENT)); })
       : () => undefined;
     const offUpdated = onTicketUpdated((t) => { showToast({ title: t.title, to: svPath("my-tickets") }); window.dispatchEvent(new Event(UNREAD_CHANGED_EVENT)); });
-    return () => { offNew(); offUpdated(); };
+    const offLead = onLeadPositive((l) => showToast({ title: `New positive lead in ${l.workspaceName}`, body: `${l.leadName || l.leadEmail}${l.campaignName ? ` · ${l.campaignName}` : ""}` }));
+    return () => { offNew(); offUpdated(); offLead(); };
   }, [user, staff]);
 }
 

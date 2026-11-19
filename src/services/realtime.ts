@@ -77,3 +77,12 @@ export function onTicketUpdated(handler: (payload: TicketUpdatedPayload) => void
   s.on("ticket:updated", handler);
   return () => { s.off("ticket:updated", handler); };
 }
+
+/** A lead replied positively in a workspace you are alerted for (workspace admins, and the all-workspaces people). */
+export interface LeadPositivePayload { workspaceId: number; workspaceName: string; leadName: string | null; leadEmail: string; campaignName: string | null }
+
+export function onLeadPositive(handler: (payload: LeadPositivePayload) => void) {
+  const s = getRealtimeSocket();
+  s.on("lead:positive", handler);
+  return () => { s.off("lead:positive", handler); };
+}
